@@ -53,7 +53,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
     console.error('[register] error', error);
-    return NextResponse.json({ error: 'UNKNOWN' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
+    const code = message.includes('relation "users"') ? 'MIGRATIONS_MISSING' : 'UNKNOWN';
+    return NextResponse.json({ error: code, message }, { status: 500 });
   }
 }
 
