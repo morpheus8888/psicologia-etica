@@ -24,11 +24,33 @@ export async function POST(request: Request) {
   const name = parsed.data.name ?? null;
   const password = parsed.data.password;
 
-  const connectionFingerprint = process.env.DATABASE_URL
-    ? process.env.DATABASE_URL.slice(-12)
+  const connectionString = process.env.DATABASE_URL;
+  const connectionFingerprint = connectionString
+    ? `${connectionString.slice(0, 8)}…${connectionString.slice(-8)}`
     : 'missing';
 
-  let diagnostics: Record<string, unknown> = { connectionFingerprint };
+  let connectionHost: string | undefined;
+  if (connectionString) {
+    try {
+      const parsed = new URL(connectionString.replace('postgresql', 'http'));
+      connectionHost = parsed.host;
+    } catch (error) {
+      connectionHost = `unparsed: ${(error as Error).message}`;
+    }
+  }
+
+  const envInfo = {
+    nodeEnv: process.env.NODE_ENV,
+    vercelEnv: process.env.VERCEL_ENV,
+    vercelRegion: process.env.VERCEL_REGION,
+    vercelUrl: process.env.VERCEL_URL,
+  } satisfies Record<string, string | undefined>;
+
+  let diagnostics: Record<string, unknown> = {
+    connectionFingerprint,
+    connectionHost,
+    env: envInfo,
+  };
 
   try {
     const dbInfo = await db.execute(sql`select current_database() as db_name, current_schema() as schema_name`);
@@ -40,18 +62,37 @@ export async function POST(request: Request) {
     `);
 
     const dbRows = (dbInfo as unknown as { rows?: Array<Record<string, unknown>>; length?: number })?.rows
-      ?? ((Array.isArray(dbInfo) ? dbInfo : []) as Array<Record<string, unknown>>);
+      ?? (Array.isArray(dbInfo) ? dbInfo : []);
     const tablesRows = (tablesResult as unknown as { rows?: Array<{ table_name: string }> })?.rows
-      ?? ((Array.isArray(tablesResult) ? tablesResult : []) as Array<{ table_name: string }>);
+      ?? (Array.isArray(tablesResult) ? tablesResult : []);
+
+    let usersCount: number | null = null;
+    let usersCountError: string | undefined;
+    try {
+      const countResult = await db.execute(sql`select count(*)::int as count from users`);
+      const countRows = (countResult as unknown as { rows?: Array<{ count: number }> })?.rows
+        ?? (Array.isArray(countResult) ? countResult : []);
+      usersCount = countRows[0]?.count ?? null;
+    } catch (countError) {
+      usersCountError = countError instanceof Error ? countError.message : String(countError);
+    }
 
     diagnostics = {
       connectionFingerprint,
+      connectionHost,
+      env: envInfo,
       db: dbRows[0] ?? null,
       tables: tablesRows.map(row => row.table_name ?? row),
+      hasUsersTable: tablesRows.some(row => row.table_name === 'users'),
+      usersCount,
+      usersCountError,
+      driver: 'drizzle(neon-http) via @neondatabase/serverless',
     };
   } catch (diagnosticError) {
     diagnostics = {
       connectionFingerprint,
+      connectionHost,
+      env: envInfo,
       diagnosticError: diagnosticError instanceof Error
         ? { name: diagnosticError.name, message: diagnosticError.message, stack: diagnosticError.stack }
         : diagnosticError,
@@ -105,7 +146,7 @@ export async function POST(request: Request) {
       details,
     });
 
-    return NextResponse.json({ error: code, message }, { status: 500 });
+    return NextResponse.json({ error: code, message, diagnostics }, { status: 500 });
   }
 }
 
