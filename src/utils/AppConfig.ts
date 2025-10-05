@@ -9,12 +9,15 @@ export const AppConfig = {
   name: 'SaaS Template',
   locales: [
     {
+      id: 'it',
+      name: 'Italiano',
+    },
+    {
       id: 'en',
       name: 'English',
     },
-    { id: 'fr', name: 'Français' },
   ],
-  defaultLocale: 'en',
+  defaultLocale: 'it',
   localePrefix,
 };
 

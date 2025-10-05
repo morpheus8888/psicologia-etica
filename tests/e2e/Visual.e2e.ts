@@ -3,20 +3,20 @@ import { expect, test } from '@playwright/test';
 
 test.describe('Visual testing', () => {
   test.describe('Static pages', () => {
-    test('should take screenshot of the homepage', async ({ page }) => {
+    test('should take screenshot of the Italian homepage', async ({ page }) => {
       await page.goto('/');
 
-      await expect(page.getByText('The perfect SaaS template to build')).toBeVisible();
+      await expect(page.getByText('Ultimi articoli')).toBeVisible();
 
-      await percySnapshot(page, 'Homepage');
+      await percySnapshot(page, 'Homepage - it');
     });
 
-    test('should take screenshot of the French homepage', async ({ page }) => {
-      await page.goto('/fr');
+    test('should take screenshot of the English homepage', async ({ page }) => {
+      await page.goto('/en');
 
-      await expect(page.getByText('Le parfait SaaS template pour construire')).toBeVisible();
+      await expect(page.getByText('Latest posts')).toBeVisible();
 
-      await percySnapshot(page, 'Homepage - French');
+      await percySnapshot(page, 'Homepage - en');
     });
   });
 });
