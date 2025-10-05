@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/morpheus8888/psicologia-etica/compare/v1.0.0...v1.0.1) (2025-10-05)
+
+
+### Bug Fixes
+
+* **routes:** resolve optional catch-all specificity conflicts by nesting non-optional [...slug] ([1f26ac8](https://github.com/morpheus8888/psicologia-etica/commit/1f26ac8fbe86d71bd87fedc584d9481d8e93ba12))
+
 # 1.0.0 (2025-10-05)
 
 
