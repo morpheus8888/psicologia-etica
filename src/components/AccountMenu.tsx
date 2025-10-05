@@ -1,5 +1,6 @@
 'use client';
 
+import { UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Session } from 'next-auth';
@@ -42,9 +43,9 @@ export const AccountMenu = ({ session, signInPath, profilePath, settingsPath }: 
         type="button"
         onClick={handleLogin}
         aria-label={t('login')}
-        className="flex size-9 items-center justify-center rounded-full border border-border bg-muted font-semibold uppercase text-muted-foreground transition-colors hover:text-foreground"
+        className="group relative flex size-12 items-center justify-center rounded-full border border-primary/50 bg-gradient-to-br from-primary/10 via-primary/20 to-primary/30 text-primary shadow-sm transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
       >
-        ?
+        <UserRound className="size-6 text-primary-foreground" aria-hidden="true" />
       </button>
     );
   }
@@ -55,9 +56,10 @@ export const AccountMenu = ({ session, signInPath, profilePath, settingsPath }: 
         <button
           type="button"
           aria-label={t('account_trigger')}
-          className="flex size-9 items-center justify-center rounded-full bg-muted font-semibold uppercase text-foreground"
+          className="group relative flex size-12 items-center justify-center rounded-full border border-primary/50 bg-gradient-to-br from-primary/20 via-primary/30 to-primary text-lg font-semibold uppercase text-white shadow-sm transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
         >
           {userInitial}
+          <UserRound className="absolute bottom-1 right-1 size-3 text-primary-foreground/80" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">

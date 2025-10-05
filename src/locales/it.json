@@ -71,7 +71,27 @@
       "help_text": "Hai bisogno di aiuto?",
       "forgot_password": "Password dimenticata",
       "show_password": "Mostra password",
-      "hide_password": "Nascondi password"
+      "hide_password": "Nascondi password",
+      "no_account": "Non hai un account?",
+      "create_account": "Registrati"
+    },
+    "SignUp": {
+      "meta_title": "Registrati",
+      "meta_description": "Crea il tuo account Psicologia Etica per accedere ai contenuti riservati.",
+      "title": "Crea il tuo account",
+      "subtitle": "Registrati per accedere a Psicologia Etica.",
+      "name_label": "Nome",
+      "name_placeholder": "Il tuo nome",
+      "email_label": "Indirizzo email",
+      "email_placeholder": "tu@example.com",
+      "password_label": "Password",
+      "password_placeholder": "Crea una password",
+      "submit": "Registrati",
+      "login_cta": "Hai già un account?",
+      "login_link": "Login",
+      "email_in_use": "Questa email è già registrata.",
+      "password_requirement": "La password deve contenere almeno 8 caratteri.",
+      "unknown_error": "Non è stato possibile creare l'account. Riprova."
     }
   },
   "Dashboard": {

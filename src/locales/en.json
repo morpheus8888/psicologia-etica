@@ -71,7 +71,27 @@
       "help_text": "Need help?",
       "forgot_password": "Forgot password",
       "show_password": "Show password",
-      "hide_password": "Hide password"
+      "hide_password": "Hide password",
+      "no_account": "Don't have an account?",
+      "create_account": "Register"
+    },
+    "SignUp": {
+      "meta_title": "Create account",
+      "meta_description": "Create your Psicologia Etica account to access protected content and tools.",
+      "title": "Create your account",
+      "subtitle": "Register to access Psicologia Etica.",
+      "name_label": "Name",
+      "name_placeholder": "Your name",
+      "email_label": "Email address",
+      "email_placeholder": "you@example.com",
+      "password_label": "Password",
+      "password_placeholder": "Create a password",
+      "submit": "Register",
+      "login_cta": "Already have an account?",
+      "login_link": "Login",
+      "email_in_use": "This email is already registered.",
+      "password_requirement": "Password must be at least 8 characters long.",
+      "unknown_error": "We couldn't create your account. Please try again."
     }
   },
   "Dashboard": {

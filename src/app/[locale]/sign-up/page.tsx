@@ -1,15 +1,14 @@
 import Link from 'next/link';
 import { getTranslations, unstable_setRequestLocale } from 'next-intl/server';
-import { Suspense } from 'react';
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { SignInForm } from '@/features/auth/SignInForm';
+import { SignUpForm } from '@/features/auth/SignUpForm';
 import { getI18nPath } from '@/utils/Helpers';
 
 export async function generateMetadata(props: { params: { locale: string } }) {
   const t = await getTranslations({
     locale: props.params.locale,
-    namespace: 'auth.SignIn',
+    namespace: 'auth.SignUp',
   });
 
   return {
@@ -18,12 +17,12 @@ export async function generateMetadata(props: { params: { locale: string } }) {
   };
 }
 
-export default async function SignInPage(props: { params: { locale: string } }) {
+export default async function SignUpPage(props: { params: { locale: string } }) {
   unstable_setRequestLocale(props.params.locale);
 
   const t = await getTranslations({
     locale: props.params.locale,
-    namespace: 'auth.SignIn',
+    namespace: 'auth.SignUp',
   });
 
   return (
@@ -37,50 +36,22 @@ export default async function SignInPage(props: { params: { locale: string } }) 
             <CardDescription>{t('subtitle')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Suspense fallback={<SignInFormSkeleton />}>
-              <SignInForm />
-            </Suspense>
+            <SignUpForm />
           </CardContent>
-          <CardFooter className="flex flex-col gap-4 text-sm text-muted-foreground">
-            <div className="flex w-full items-center justify-between">
-              <span>{t('help_text')}</span>
-              <button
-                type="button"
-                disabled
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {t('forgot_password')}
-              </button>
-            </div>
+          <CardFooter className="flex flex-col gap-2 text-sm text-muted-foreground">
             <div className="text-center">
-              <span>{t('no_account')}</span>
+              <span>{t('login_cta')}</span>
               {' '}
               <Link
-                href={getI18nPath('/sign-up', props.params.locale)}
+                href={getI18nPath('/sign-in', props.params.locale)}
                 className="font-medium text-primary transition-colors hover:underline"
               >
-                {t('create_account')}
+                {t('login_link')}
               </Link>
             </div>
           </CardFooter>
         </Card>
       </div>
-    </div>
-  );
-}
-
-function SignInFormSkeleton() {
-  return (
-    <div className="space-y-4" aria-hidden="true">
-      <div className="space-y-2">
-        <div className="h-4 w-24 rounded bg-muted" />
-        <div className="h-10 w-full rounded bg-muted" />
-      </div>
-      <div className="space-y-2">
-        <div className="h-4 w-28 rounded bg-muted" />
-        <div className="h-10 w-full rounded bg-muted" />
-      </div>
-      <div className="h-10 w-full rounded bg-muted" />
     </div>
   );
 }
