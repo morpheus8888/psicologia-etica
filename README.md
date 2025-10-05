@@ -144,6 +144,7 @@ SUPPORTED_LOCALES=it,en
 - `/admin` · `/en/admin`
 - `/pro` · `/en/pro`
 - `/sign-in` · `/en/sign-in`
+- Regola di routing: non definire `segment/page.tsx` e `segment[[...slug]]/page.tsx` allo stesso livello; se servono sottopagine insieme alla pagina base, usare `segment/[...slug]/page.tsx` annidato.
 
 ## 🧰 Check di qualità (PR/CI)
 Prima di aprire una PR assicurarsi che tutti i check locali siano verdi:
