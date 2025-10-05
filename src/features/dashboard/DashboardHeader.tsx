@@ -1,11 +1,13 @@
 'use client';
 
-import { OrganizationSwitcher, UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
-import { useLocale } from 'next-intl';
+import type { Session } from 'next-auth';
+import { signOut } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 
 import { ActiveLink } from '@/components/ActiveLink';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { Logo } from '@/components/Logo';
 import { ToggleMenuButton } from '@/components/ToggleMenuButton';
 import {
   DropdownMenu,
@@ -14,21 +16,32 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
-import { Logo } from '@/templates/Logo';
 import { getI18nPath } from '@/utils/Helpers';
 
-export const DashboardHeader = (props: {
+type DashboardHeaderProps = {
   menu: {
     href: string;
     label: string;
   }[];
-}) => {
-  const locale = useLocale();
+  session: Session | null;
+  locale: string;
+};
+
+export const DashboardHeader = ({ menu, session, locale }: DashboardHeaderProps) => {
+  const tUserMenu = useTranslations('UserMenu');
+
+  const userName = session?.user?.name ?? session?.user?.email ?? '';
+  const userInitial = userName ? userName.charAt(0).toUpperCase() : '?';
+  const role = session?.user?.role ?? 'user';
+
+  function handleSignOut() {
+    void signOut({ callbackUrl: getI18nPath('/sign-in', locale) });
+  }
 
   return (
     <>
       <div className="flex items-center">
-        <Link href="/dashboard" className="max-sm:hidden">
+        <Link href={getI18nPath('/dashboard', locale)} className="max-sm:hidden">
           <Logo />
         </Link>
 
@@ -44,25 +57,9 @@ export const DashboardHeader = (props: {
           <path d="M17 5 7 19" />
         </svg>
 
-        <OrganizationSwitcher
-          organizationProfileMode="navigation"
-          organizationProfileUrl={getI18nPath(
-            '/dashboard/organization-profile',
-            locale,
-          )}
-          afterCreateOrganizationUrl="/dashboard"
-          hidePersonal
-          skipInvitationScreen
-          appearance={{
-            elements: {
-              organizationSwitcherTrigger: 'max-w-28 sm:max-w-52',
-            },
-          }}
-        />
-
         <nav className="ml-3 max-lg:hidden">
           <ul className="flex flex-row items-center gap-x-3 text-lg font-medium [&_a:hover]:opacity-100 [&_a]:opacity-75">
-            {props.menu.map(item => (
+            {menu.map(item => (
               <li key={item.href}>
                 <ActiveLink href={item.href}>{item.label}</ActiveLink>
               </li>
@@ -80,7 +77,7 @@ export const DashboardHeader = (props: {
                   <ToggleMenuButton />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  {props.menu.map(item => (
+                  {menu.map(item => (
                     <DropdownMenuItem key={item.href} asChild>
                       <Link href={item.href}>{item.label}</Link>
                     </DropdownMenuItem>
@@ -89,8 +86,6 @@ export const DashboardHeader = (props: {
               </DropdownMenu>
             </div>
           </li>
-
-          {/* PRO: Dark mode toggle button */}
 
           <li data-fade>
             <LocaleSwitcher />
@@ -101,15 +96,38 @@ export const DashboardHeader = (props: {
           </li>
 
           <li>
-            <UserButton
-              userProfileMode="navigation"
-              userProfileUrl="/dashboard/user-profile"
-              appearance={{
-                elements: {
-                  rootBox: 'px-2 py-1.5',
-                },
-              }}
-            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex size-9 items-center justify-center rounded-full bg-muted font-semibold uppercase"
+                  aria-label={tUserMenu('account_trigger')}
+                >
+                  {userInitial}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-3 py-2 text-sm">
+                  <p className="font-medium">{userName || tUserMenu('anonymous')}</p>
+                  {session?.user?.email && (
+                    <p className="text-xs text-muted-foreground">
+                      {session.user.email}
+                    </p>
+                  )}
+                  <p className="text-xs capitalize text-muted-foreground">
+                    {tUserMenu(`role_${role}` as const)}
+                  </p>
+                </div>
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    handleSignOut();
+                  }}
+                >
+                  {tUserMenu('sign_out')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </li>
         </ul>
       </div>
