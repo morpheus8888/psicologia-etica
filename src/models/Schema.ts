@@ -57,3 +57,5 @@ export const todoSchema = pgTable('todo', {
     .notNull(),
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
 });
+
+export { accounts, sessions, users, verificationTokens } from './auth';
