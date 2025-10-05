@@ -1,29 +1,19 @@
-import { OrganizationList } from '@clerk/nextjs';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, unstable_setRequestLocale } from 'next-intl/server';
 
-export async function generateMetadata(props: { params: { locale: string } }) {
-  const t = await getTranslations({
-    locale: props.params.locale,
-    namespace: 'Dashboard',
-  });
+export default async function OrganizationSelectionPage({
+  params: { locale },
+}: {
+  params: { locale: string };
+}) {
+  unstable_setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'dashboard.Onboarding' });
 
-  return {
-    title: t('meta_title'),
-    description: t('meta_description'),
-  };
+  return (
+    <div className="container py-8">
+      <h1 className="text-2xl font-semibold">{t('selection_title')}</h1>
+      <p className="text-muted-foreground">{t('selection_description')}</p>
+    </div>
+  );
 }
 
-const OrganizationSelectionPage = () => (
-  <div className="flex min-h-screen items-center justify-center">
-    <OrganizationList
-      afterSelectOrganizationUrl="/dashboard"
-      afterCreateOrganizationUrl="/dashboard"
-      hidePersonal
-      skipInvitationScreen
-    />
-  </div>
-);
-
 export const dynamic = 'force-dynamic';
-
-export default OrganizationSelectionPage;

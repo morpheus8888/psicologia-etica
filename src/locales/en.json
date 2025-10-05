@@ -67,10 +67,6 @@
       "hide_password": "Hide password"
     }
   },
-  "Onboarding": {
-    "selection_title": "Team configuration coming soon",
-    "selection_description": "Organization selection is not available yet."
-  },
   "Dashboard": {
     "meta_title": "Psicologia Etica dashboard",
     "meta_description": "Workspace for managing content, assessments and services."
@@ -114,5 +110,11 @@
   },
   "DataTable": {
     "no_results": "No results."
+  },
+  "dashboard": {
+    "Onboarding": {
+      "selection_title": "Team configuration coming soon",
+      "selection_description": "Organization selection is not available yet."
+    }
   }
 }

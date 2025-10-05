@@ -67,10 +67,6 @@
       "hide_password": "Nascondi password"
     }
   },
-  "Onboarding": {
-    "selection_title": "La configurazione del team sarà disponibile a breve",
-    "selection_description": "La selezione dell'organizzazione non è ancora disponibile."
-  },
   "Dashboard": {
     "meta_title": "Dashboard Psicologia Etica",
     "meta_description": "Spazio di lavoro per gestire contenuti, test e servizi."
@@ -114,5 +110,11 @@
   },
   "DataTable": {
     "no_results": "Nessun risultato."
+  },
+  "dashboard": {
+    "Onboarding": {
+      "selection_title": "La configurazione del team sarà disponibile a breve",
+      "selection_description": "La selezione dell'organizzazione non è ancora disponibile."
+    }
   }
 }
