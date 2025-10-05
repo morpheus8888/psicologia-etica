@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import NextAuth, { type NextAuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 
-import { getDb } from '@/libs/db';
+import { db } from '@/libs/db';
 import { users } from '@/models/auth';
 
 export const authOptions: NextAuthOptions = {
@@ -40,7 +40,6 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
         const email = creds.email.toLowerCase().trim();
-        const db = getDb();
         const [u] = await db.select().from(users).where(eq(users.email, email));
         if (!u?.passwordHash) {
           return null;

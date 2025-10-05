@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { getDb } from '@/libs/db';
+import { db } from '@/libs/db';
 import { users } from '@/models/auth';
 
 const registerSchema = z.object({
@@ -19,8 +19,6 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'INVALID_PAYLOAD' }, { status: 400 });
   }
-
-  const db = getDb();
 
   const email = parsed.data.email.toLowerCase().trim();
   const name = parsed.data.name ?? null;
