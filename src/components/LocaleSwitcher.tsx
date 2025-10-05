@@ -13,7 +13,8 @@ import {
 import { usePathname, useRouter } from '@/libs/i18nNavigation';
 import { AppConfig } from '@/utils/AppConfig';
 
-const LOCALES = ['it', 'en'] as const;
+const SUPPORTED_LOCALES = ['it', 'en'] as const;
+type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export const LocaleSwitcher = () => {
   const router = useRouter();
@@ -21,19 +22,11 @@ export const LocaleSwitcher = () => {
   const locale = useLocale();
 
   const handleChange = (value: string) => {
+    if (!SUPPORTED_LOCALES.includes(value as SupportedLocale)) {
+      return;
+    }
     const currentPath = pathname ?? '/';
-    const segments = currentPath.split('/');
-    const hasLocalePrefix = LOCALES.includes(segments[1] as typeof LOCALES[number]);
-    const withoutLocale = hasLocalePrefix
-      ? `/${segments.slice(2).join('/')}`
-      : currentPath;
-    const normalizedWithoutLocale = withoutLocale === '/' || withoutLocale === '' ? '/' : withoutLocale;
-
-    const targetPath = value === 'it'
-      ? normalizedWithoutLocale
-      : `/en${normalizedWithoutLocale === '/' ? '' : normalizedWithoutLocale}`;
-
-    router.push(targetPath);
+    router.replace(currentPath, { locale: value as SupportedLocale });
     router.refresh();
   };
 
