@@ -24,6 +24,40 @@ export async function POST(request: Request) {
   const name = parsed.data.name ?? null;
   const password = parsed.data.password;
 
+  const connectionFingerprint = process.env.DATABASE_URL
+    ? process.env.DATABASE_URL.slice(-12)
+    : 'missing';
+
+  let diagnostics: Record<string, unknown> = { connectionFingerprint };
+
+  try {
+    const dbInfo = await db.execute(sql`select current_database() as db_name, current_schema() as schema_name`);
+    const tablesResult = await db.execute(sql`
+      select table_name
+      from information_schema.tables
+      where table_schema = current_schema()
+      order by table_name
+    `);
+
+    const dbRows = (dbInfo as unknown as { rows?: Array<Record<string, unknown>> })?.rows ?? [];
+    const tablesRows = (tablesResult as unknown as { rows?: Array<{ table_name: string }> })?.rows ?? [];
+
+    diagnostics = {
+      connectionFingerprint,
+      db: dbRows[0] ?? null,
+      tables: tablesRows.map(row => row.table_name ?? row),
+    };
+  } catch (diagnosticError) {
+    diagnostics = {
+      connectionFingerprint,
+      diagnosticError: diagnosticError instanceof Error
+        ? { name: diagnosticError.name, message: diagnosticError.message, stack: diagnosticError.stack }
+        : diagnosticError,
+    };
+  }
+
+  console.error('[register] diagnostics', diagnostics);
+
   try {
     const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
     if (existing.length > 0) {
