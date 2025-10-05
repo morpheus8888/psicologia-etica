@@ -1,27 +1,53 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { getTranslations, unstable_setRequestLocale } from 'next-intl/server';
 
 import { TitleBar } from '@/features/dashboard/TitleBar';
+import { getVocabularyEntryBySlug } from '@/features/vocabulary/queries';
 import { VocabularyForm } from '@/features/vocabulary/VocabularyForm';
 import { authOptions } from '@/libs/auth/config';
 import { getI18nPath } from '@/utils/Helpers';
 
 type PageProps = {
-  params: { locale: string };
+  params: { locale: string; slug: string };
 };
 
-export default async function AdminVocabularyNewPage({ params }: PageProps) {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const entry = await getVocabularyEntryBySlug(params.slug);
+  if (!entry) {
+    return {};
+  }
+
+  const t = await getTranslations({ locale: params.locale, namespace: 'AdminVocabularyEdit' });
+  return {
+    title: `${entry.term} — ${t('title_bar')}`,
+  };
+}
+
+export default async function AdminVocabularyEditPage({ params }: PageProps) {
   unstable_setRequestLocale(params.locale);
 
-  const [tPage, tEditor, session] = await Promise.all([
-    getTranslations({ locale: params.locale, namespace: 'AdminVocabularyNew' }),
+  const [tPage, tEditor, session, entry] = await Promise.all([
+    getTranslations({ locale: params.locale, namespace: 'AdminVocabularyEdit' }),
     getTranslations({ locale: params.locale, namespace: 'VocabularyEditor' }),
     getServerSession(authOptions),
+    getVocabularyEntryBySlug(params.slug),
   ]);
 
   if (session?.user?.role !== 'admin') {
     redirect(getI18nPath('/dashboard', params.locale));
+  }
+
+  if (!entry) {
+    return (
+      <div className="space-y-8">
+        <TitleBar title={tPage('title_bar')} description={tPage('title_bar_description')} />
+        <div className="rounded-lg border border-dashed bg-background p-6 text-sm text-muted-foreground shadow">
+          {tPage('not_found')}
+        </div>
+      </div>
+    );
   }
 
   const cancelHref = getI18nPath('/vocabulary', params.locale);
@@ -71,16 +97,20 @@ export default async function AdminVocabularyNewPage({ params }: PageProps) {
 
   return (
     <div className="space-y-8">
-      <TitleBar
-        title={tPage('title_bar')}
-        description={tPage('title_bar_description')}
-      />
-
+      <TitleBar title={tPage('title_bar')} description={tPage('title_bar_description')} />
       <div className="rounded-lg border bg-background p-6 shadow">
         <VocabularyForm
           locale={params.locale}
-          mode="create"
+          mode="edit"
           cancelHref={cancelHref}
+          initialData={{
+            id: entry.id,
+            term: entry.term,
+            slug: entry.slug,
+            excerpt: entry.excerpt,
+            content: entry.content,
+            isWordOfDay: entry.isWordOfDay,
+          }}
           fieldLabels={fieldLabels}
           toolbarLabels={toolbarLabels}
           placeholders={{ content: tEditor('placeholders.content') }}

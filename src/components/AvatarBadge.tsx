@@ -1,5 +1,7 @@
 'use client';
 
+import { UserRound } from 'lucide-react';
+
 import { getAvatarOption } from '@/utils/avatars';
 import { cn } from '@/utils/Helpers';
 
@@ -13,27 +15,29 @@ type AvatarBadgeProps = {
 };
 
 const sizeClassNames: Record<AvatarSize, string> = {
-  sm: 'h-8 w-8 text-sm',
-  md: 'h-10 w-10 text-base',
-  lg: 'h-12 w-12 text-lg',
+  sm: 'h-10 w-10 text-base',
+  md: 'h-12 w-12 text-lg',
+  lg: 'h-14 w-14 text-2xl',
 };
 
 export const AvatarBadge = ({ avatar, fallback, size = 'md', className }: AvatarBadgeProps) => {
   const option = getAvatarOption(avatar);
-  const gradient = option?.gradient ?? 'bg-gradient-to-br from-slate-500 to-slate-700';
+  const gradient = option?.gradient ?? 'bg-muted text-muted-foreground border border-border shadow-sm';
   const fallbackLabel = fallback?.trim().slice(0, 2).toUpperCase() ?? '?';
 
   return (
     <span
       className={cn(
-        'inline-flex items-center justify-center rounded-full font-semibold text-white shadow-inner',
+        'inline-flex items-center justify-center rounded-full font-semibold text-white shadow-inner transition-colors duration-150',
         gradient,
         sizeClassNames[size],
         className,
       )}
       aria-hidden="true"
     >
-      {option?.emoji ?? fallbackLabel}
+      {option?.emoji ?? (
+        <UserRound className="size-2/3" aria-hidden="true" focusable="false" strokeWidth={1.75} />
+      ) ?? fallbackLabel}
     </span>
   );
 };

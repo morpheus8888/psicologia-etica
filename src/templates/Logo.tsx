@@ -5,18 +5,26 @@ export const Logo = (props: {
 }) => (
   <div className="flex items-center text-xl font-semibold">
     <svg
-      className="mr-1 size-8 stroke-current stroke-2"
+      className="mr-2 size-10 text-primary"
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
+      viewBox="0 0 32 32"
       fill="none"
+      stroke="currentColor"
+      strokeWidth={1.6}
       strokeLinecap="round"
       strokeLinejoin="round"
+      role="img"
+      aria-hidden="true"
+      focusable="false"
     >
-      <path d="M0 0h24v24H0z" stroke="none" />
-      <rect x="3" y="12" width="6" height="8" rx="1" />
-      <rect x="9" y="8" width="6" height="12" rx="1" />
-      <rect x="15" y="4" width="6" height="16" rx="1" />
-      <path d="M4 20h14" />
+      <circle cx="16" cy="16" r="12.4" opacity={0.35} />
+      <path d="M9.5 8v16" />
+      <path d="M9.5 8h4.1a3.4 3.4 0 0 1 0 6.8H9.5" />
+      <path d="M17.5 8v16" />
+      <path d="M17.5 8h5" />
+      <path d="M17.5 15.4h4.2" />
+      <path d="M17.5 24h5" />
+      <circle cx="16" cy="16" r="4.4" opacity={0.2} fill="currentColor" stroke="none" />
     </svg>
     {!props.isTextHidden && AppConfig.name}
   </div>

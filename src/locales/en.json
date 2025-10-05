@@ -125,6 +125,7 @@
       "phone_placeholder": "+39 333 1234567",
       "avatar": "Choose your avatar",
       "avatar_hint": "Pick the animal that best represents your energy.",
+      "avatar_none": "No avatar",
       "submit": "Save profile",
       "saving": "Saving…",
       "success": "Profile updated successfully.",
@@ -202,7 +203,107 @@
   "AdminVocabularyNew": {
     "title_bar": "Create vocabulary entry",
     "title_bar_description": "Prepare new glossary items for the shared vocabulary.",
-    "placeholder": "Vocabulary editing is coming soon."
+    "actions": {
+      "submit": "Save entry",
+      "saving": "Saving…",
+      "success": "Entry saved successfully.",
+      "error": "We couldn't save the entry.",
+      "cancel": "Cancel"
+    }
+  },
+  "AdminVocabularyEdit": {
+    "title_bar": "Edit vocabulary entry",
+    "title_bar_description": "Update the copy, preview and word of the day status.",
+    "not_found": "This entry is no longer available.",
+    "actions": {
+      "submit": "Update entry",
+      "saving": "Updating…",
+      "success": "Entry updated successfully.",
+      "error": "We couldn't update the entry.",
+      "cancel": "Cancel"
+    }
+  },
+  "Footer": {
+    "designed_by": "Designed by <author></author>.",
+    "terms_of_service": "Terms of service",
+    "privacy_policy": "Privacy policy",
+    "product": "Product",
+    "docs": "Docs",
+    "blog": "Blog",
+    "community": "Community",
+    "company": "Company"
+  },
+  "VocabularyEditor": {
+    "fields": {
+      "title_label": "Term",
+      "slug_label": "Slug",
+      "slug_hint": "Use letters, numbers and dashes for the URL.",
+      "excerpt_label": "Preview",
+      "excerpt_hint": "The preview is displayed in the vocabulary list.",
+      "content_label": "Content",
+      "word_of_day_label": "Set as word of the day",
+      "word_of_day_hint": "When enabled this entry is highlighted until another one is chosen."
+    },
+    "toolbar": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "bullet_list": "Bulleted list",
+      "ordered_list": "Numbered list",
+      "quote": "Quote",
+      "heading": "Heading",
+      "link": "Insert link",
+      "clear": "Clear formatting",
+      "link_prompt": "Enter a URL"
+    },
+    "placeholders": {
+      "content": "Write or paste the content here..."
+    },
+    "errors": {
+      "term_min": "Enter at least 2 characters.",
+      "term_max": "Keep it under 120 characters.",
+      "slug_required": "Provide a slug.",
+      "slug_max": "The slug can be up to 140 characters.",
+      "slug_invalid": "Use only letters, numbers and dashes.",
+      "slug_taken": "Another entry already uses this slug.",
+      "excerpt_min": "The preview must be at least 10 characters.",
+      "excerpt_max": "The preview cannot exceed 320 characters.",
+      "content_required": "Add the entry content.",
+      "invalid": "Please check the highlighted fields.",
+      "missing_id": "Unable to identify the entry to update.",
+      "not_found": "The entry could not be found."
+    }
+  },
+  "Vocabulary": {
+    "intro": {
+      "badge": "Vocabulary",
+      "title": "Words to describe ethical care",
+      "subtitle": "Key concepts explained with clarity to support therapy and outreach."
+    },
+    "search": {
+      "label": "Search the vocabulary",
+      "placeholder": "Search for a keyword…",
+      "clear": "Clear search"
+    },
+    "word_of_day": {
+      "label": "Word of the day",
+      "cta": "Read the definition",
+      "edit": "Edit entry"
+    },
+    "card": {
+      "read_more": "Learn more",
+      "edit": "Edit"
+    },
+    "empty": {
+      "state": "No entries found for this search."
+    }
+  },
+  "VocabularyDetail": {
+    "badge": "Vocabulary",
+    "edit": "Edit entry",
+    "published_on": "Published on {date}",
+    "published_unknown": "Publication date unavailable",
+    "meta_suffix": "Vocabulary"
   },
   "OrganizationProfile": {
     "title_bar": "Organization management",

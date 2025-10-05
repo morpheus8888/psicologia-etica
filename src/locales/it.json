@@ -125,6 +125,7 @@
       "phone_placeholder": "+39 333 1234567",
       "avatar": "Scegli il tuo avatar",
       "avatar_hint": "Seleziona l'animale che rappresenta meglio la tua energia.",
+      "avatar_none": "Nessun avatar",
       "submit": "Salva profilo",
       "saving": "Salvataggio in corso…",
       "success": "Profilo aggiornato con successo.",
@@ -202,7 +203,107 @@
   "AdminVocabularyNew": {
     "title_bar": "Crea voce del vocabolario",
     "title_bar_description": "Aggiungi nuovi termini al glossario condiviso.",
-    "placeholder": "La creazione dei vocaboli sarà disponibile a breve."
+    "actions": {
+      "submit": "Salva vocabolo",
+      "saving": "Salvataggio…",
+      "success": "Voce salvata con successo.",
+      "error": "Impossibile salvare la voce.",
+      "cancel": "Annulla"
+    }
+  },
+  "AdminVocabularyEdit": {
+    "title_bar": "Modifica voce del vocabolario",
+    "title_bar_description": "Aggiorna testo, anteprima e stato della parola del giorno.",
+    "not_found": "Questa voce non è più disponibile.",
+    "actions": {
+      "submit": "Aggiorna vocabolo",
+      "saving": "Aggiornamento…",
+      "success": "Voce aggiornata con successo.",
+      "error": "Impossibile aggiornare la voce.",
+      "cancel": "Annulla"
+    }
+  },
+  "Footer": {
+    "designed_by": "Design a cura di <author></author>.",
+    "terms_of_service": "Termini di servizio",
+    "privacy_policy": "Informativa privacy",
+    "product": "Prodotto",
+    "docs": "Documentazione",
+    "blog": "Blog",
+    "community": "Community",
+    "company": "Azienda"
+  },
+  "VocabularyEditor": {
+    "fields": {
+      "title_label": "Termine",
+      "slug_label": "Slug",
+      "slug_hint": "Usa lettere, numeri e trattini per l'URL.",
+      "excerpt_label": "Anteprima",
+      "excerpt_hint": "L'anteprima viene mostrata nell'elenco del vocabolario.",
+      "content_label": "Contenuto",
+      "word_of_day_label": "Imposta come parola del giorno",
+      "word_of_day_hint": "Se attivo, questa voce sarà evidenziata finché non ne scegli un'altra."
+    },
+    "toolbar": {
+      "bold": "Grassetto",
+      "italic": "Corsivo",
+      "underline": "Sottolineato",
+      "bullet_list": "Elenco puntato",
+      "ordered_list": "Elenco numerato",
+      "quote": "Citazione",
+      "heading": "Titolo",
+      "link": "Inserisci link",
+      "clear": "Pulisci formattazione",
+      "link_prompt": "Inserisci un URL"
+    },
+    "placeholders": {
+      "content": "Scrivi o incolla qui il contenuto..."
+    },
+    "errors": {
+      "term_min": "Inserisci almeno 2 caratteri.",
+      "term_max": "Massimo 120 caratteri.",
+      "slug_required": "Inserisci uno slug.",
+      "slug_max": "Lo slug può avere al massimo 140 caratteri.",
+      "slug_invalid": "Usa solo lettere, numeri e trattini.",
+      "slug_taken": "Esiste già una voce con questo slug.",
+      "excerpt_min": "L'anteprima deve contenere almeno 10 caratteri.",
+      "excerpt_max": "L'anteprima non può superare i 320 caratteri.",
+      "content_required": "Inserisci il contenuto della voce.",
+      "invalid": "Controlla i campi evidenziati.",
+      "missing_id": "Impossibile identificare la voce da aggiornare.",
+      "not_found": "La voce non è stata trovata."
+    }
+  },
+  "Vocabulary": {
+    "intro": {
+      "badge": "Vocabolario",
+      "title": "Parole per raccontare la cura psicologica",
+      "subtitle": "Termini chiave spiegati in modo chiaro, per accompagnare percorsi terapeutici e divulgativi."
+    },
+    "search": {
+      "label": "Cerca nel vocabolario",
+      "placeholder": "Cerca una parola chiave…",
+      "clear": "Azzera ricerca"
+    },
+    "word_of_day": {
+      "label": "Parola del giorno",
+      "cta": "Leggi la definizione",
+      "edit": "Modifica voce"
+    },
+    "card": {
+      "read_more": "Approfondisci",
+      "edit": "Modifica"
+    },
+    "empty": {
+      "state": "Nessuna voce disponibile per questa ricerca."
+    }
+  },
+  "VocabularyDetail": {
+    "badge": "Vocabolario",
+    "edit": "Modifica voce",
+    "published_on": "Pubblicato il {date}",
+    "published_unknown": "Data di pubblicazione non disponibile",
+    "meta_suffix": "Vocabolario"
   },
   "OrganizationProfile": {
     "title_bar": "Gestione organizzazione",

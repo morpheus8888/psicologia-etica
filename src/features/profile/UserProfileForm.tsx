@@ -13,7 +13,7 @@ import { AvatarBadge } from '@/components/AvatarBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { avatarOptions, type AvatarValue, defaultAvatar } from '@/utils/avatars';
+import { avatarOptions, type AvatarValue } from '@/utils/avatars';
 import { cn } from '@/utils/Helpers';
 
 type UserProfileFormProps = {
@@ -33,8 +33,8 @@ export const UserProfileForm = ({ locale, user }: UserProfileFormProps) => {
     updateProfileAction,
     profileInitialState,
   );
-  const [selectedAvatar, setSelectedAvatar] = useState<AvatarValue>(
-    () => (user.avatar as AvatarValue | null) ?? defaultAvatar,
+  const [selectedAvatar, setSelectedAvatar] = useState<AvatarValue | null>(
+    () => (user.avatar as AvatarValue | null) ?? null,
   );
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -144,10 +144,33 @@ export const UserProfileForm = ({ locale, user }: UserProfileFormProps) => {
             <h2 className="text-base font-semibold text-foreground">{t('form.avatar')}</h2>
             <p className="text-sm text-muted-foreground">{t('form.avatar_hint')}</p>
           </div>
-          <AvatarBadge avatar={selectedAvatar} fallback={user.firstName} size="md" />
+          <AvatarBadge
+            avatar={selectedAvatar}
+            fallback={selectedAvatar ? user.firstName : null}
+            size="md"
+          />
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <label
+            className={cn(
+              'flex cursor-pointer items-center gap-3 rounded-xl border bg-background px-4 py-3 transition hover:border-primary/40 hover:shadow-sm',
+              selectedAvatar === null ? 'border-primary ring-2 ring-primary/40' : 'border-border',
+            )}
+          >
+            <input
+              type="radio"
+              name="avatarChoice"
+              value=""
+              checked={selectedAvatar === null}
+              onChange={() => setSelectedAvatar(null)}
+              className="sr-only"
+            />
+            <AvatarBadge avatar={null} size="sm" />
+            <span className="text-sm font-medium text-foreground">
+              {t('form.avatar_none')}
+            </span>
+          </label>
           {avatarOptions.map((option) => {
             const isActive = selectedAvatar === option.value;
             return (
@@ -166,7 +189,7 @@ export const UserProfileForm = ({ locale, user }: UserProfileFormProps) => {
                   onChange={() => setSelectedAvatar(option.value)}
                   className="sr-only"
                 />
-                <AvatarBadge avatar={option.value} size="sm" />
+                <AvatarBadge avatar={option.value} fallback={user.firstName} size="sm" />
                 <span className="text-sm font-medium text-foreground">{avatarLabelMap[option.value]}</span>
               </label>
             );
@@ -174,7 +197,7 @@ export const UserProfileForm = ({ locale, user }: UserProfileFormProps) => {
         </div>
       </section>
 
-      <Input type="hidden" name="avatar" value={selectedAvatar} readOnly />
+      <Input type="hidden" name="avatar" value={selectedAvatar ?? ''} readOnly />
       <Input type="hidden" name="locale" value={locale} readOnly />
 
       {state.status === 'error' && state.message && state.message !== 'email_taken' && (

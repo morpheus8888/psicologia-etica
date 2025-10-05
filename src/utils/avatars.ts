@@ -46,8 +46,8 @@ export const avatarValues = avatarOptions.map(option => option.value);
 
 export function getAvatarOption(value?: string | null) {
   if (!value) {
-    return avatarOptions.find(option => option.value === defaultAvatar);
+    return undefined;
   }
 
-  return avatarOptions.find(option => option.value === value) ?? avatarOptions.find(option => option.value === defaultAvatar);
+  return avatarOptions.find(option => option.value === value) ?? undefined;
 }

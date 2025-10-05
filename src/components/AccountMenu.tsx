@@ -44,6 +44,7 @@ export const AccountMenu = ({
   const userInitial = userName ? userName.charAt(0).toUpperCase() : '?';
   const isAdmin = session?.user?.role === 'admin';
   const avatarValue = session?.user?.avatar ?? null;
+  const avatarFallback = avatarValue ? userInitial : null;
 
   const handleSignOut = () => {
     void signOut({ callbackUrl: signInPath });
@@ -61,7 +62,11 @@ export const AccountMenu = ({
         aria-label={t('login')}
         className="group relative flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
       >
-        <AvatarBadge avatar={null} fallback="?" size="lg" className="bg-gradient-to-br from-primary/10 via-primary/20 to-primary/30 text-primary shadow-sm transition-transform duration-200 group-hover:scale-105" />
+        <AvatarBadge
+          avatar={null}
+          size="lg"
+          className="transition-transform duration-200 group-hover:scale-105"
+        />
       </button>
     );
   }
@@ -74,12 +79,17 @@ export const AccountMenu = ({
           aria-label={t('account_trigger')}
           className="group relative flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
         >
-          <AvatarBadge avatar={avatarValue} fallback={userInitial} size="lg" className="transition-transform duration-200 group-hover:scale-105" />
+          <AvatarBadge
+            avatar={avatarValue}
+            fallback={avatarFallback}
+            size="lg"
+            className="transition-transform duration-200 group-hover:scale-105"
+          />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <div className="flex items-center gap-3 px-3 py-2 text-sm">
-          <AvatarBadge avatar={avatarValue} fallback={userInitial} size="sm" />
+          <AvatarBadge avatar={avatarValue} fallback={avatarFallback} size="sm" />
           <div>
             <p className="font-medium text-foreground">{userName || t('anonymous')}</p>
             {session.user?.email && (

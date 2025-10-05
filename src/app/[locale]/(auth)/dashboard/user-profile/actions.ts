@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { authOptions } from '@/libs/auth/config';
 import { db } from '@/libs/db';
 import { users } from '@/models/auth';
-import { avatarValues, defaultAvatar } from '@/utils/avatars';
+import { avatarValues } from '@/utils/avatars';
 import { getI18nPath } from '@/utils/Helpers';
 
 export type ProfileFormState = {
@@ -18,6 +18,19 @@ export type ProfileFormState = {
 };
 
 const initialState: ProfileFormState = { status: 'idle' };
+
+const avatarSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? undefined : trimmed;
+  },
+  z.enum(avatarValues as [string, ...string[]], {
+    invalid_type_error: 'invalid_avatar',
+  }).optional(),
+);
 
 const profileSchema = z.object({
   firstName: z
@@ -47,11 +60,7 @@ const profileSchema = z.object({
     ])
     .optional()
     .transform(value => (value && value.length > 0 ? value : undefined)),
-  avatar: z
-    .enum(avatarValues as [string, ...string[]], {
-      invalid_type_error: 'invalid_avatar',
-    })
-    .default(defaultAvatar),
+  avatar: avatarSchema,
   locale: z
     .string()
     .trim()
@@ -94,7 +103,7 @@ export async function updateProfileAction(
   const { firstName, lastName, email, phone, avatar, locale } = parsed.data;
   const cleanedPhone = phone?.trim() ? phone.trim() : null;
   const cleanedLastName = lastName?.trim() ? lastName.trim() : null;
-  const chosenAvatar = avatar ?? defaultAvatar;
+  const chosenAvatar = avatar ?? null;
 
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
