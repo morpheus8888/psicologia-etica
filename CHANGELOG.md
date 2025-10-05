@@ -1,3 +1,10 @@
+# 1.0.0 (2025-10-05)
+
+
+### Bug Fixes
+
+* **auth:** adopt next-auth v4 jwt edge pattern ([a70f2a9](https://github.com/morpheus8888/psicologia-etica/commit/a70f2a99668e39f2afc5657ca395a66b5ec3e65b))
+
 ## [1.7.6](https://github.com/ixartz/SaaS-Boilerplate/compare/v1.7.5...v1.7.6) (2025-05-01)
 
 
