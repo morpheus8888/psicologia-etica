@@ -39,8 +39,10 @@ export async function POST(request: Request) {
       order by table_name
     `);
 
-    const dbRows = (dbInfo as unknown as { rows?: Array<Record<string, unknown>> })?.rows ?? [];
-    const tablesRows = (tablesResult as unknown as { rows?: Array<{ table_name: string }> })?.rows ?? [];
+    const dbRows = (dbInfo as unknown as { rows?: Array<Record<string, unknown>>; length?: number })?.rows
+      ?? ((Array.isArray(dbInfo) ? dbInfo : []) as Array<Record<string, unknown>>);
+    const tablesRows = (tablesResult as unknown as { rows?: Array<{ table_name: string }> })?.rows
+      ?? ((Array.isArray(tablesResult) ? tablesResult : []) as Array<{ table_name: string }>);
 
     diagnostics = {
       connectionFingerprint,
