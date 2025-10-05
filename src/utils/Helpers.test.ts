@@ -12,9 +12,13 @@ describe('Helpers', () => {
 
     it('should prepend the locale to the path for non-default language', () => {
       const url = '/random-url';
-      const locale = 'fr';
+      const locale = 'en';
 
-      expect(getI18nPath(url, locale)).toMatch(/^\/fr/);
+      expect(getI18nPath(url, locale)).toBe('/en/random-url');
+    });
+
+    it('should return /en for home path in English', () => {
+      expect(getI18nPath('/', 'en')).toBe('/en');
     });
   });
 });

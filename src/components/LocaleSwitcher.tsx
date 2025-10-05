@@ -13,13 +13,27 @@ import {
 import { usePathname, useRouter } from '@/libs/i18nNavigation';
 import { AppConfig } from '@/utils/AppConfig';
 
+const LOCALES = ['it', 'en'] as const;
+
 export const LocaleSwitcher = () => {
   const router = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
 
   const handleChange = (value: string) => {
-    router.push(pathname, { locale: value });
+    const currentPath = pathname ?? '/';
+    const segments = currentPath.split('/');
+    const hasLocalePrefix = LOCALES.includes(segments[1] as typeof LOCALES[number]);
+    const withoutLocale = hasLocalePrefix
+      ? `/${segments.slice(2).join('/')}`
+      : currentPath;
+    const normalizedWithoutLocale = withoutLocale === '/' || withoutLocale === '' ? '/' : withoutLocale;
+
+    const targetPath = value === 'it'
+      ? normalizedWithoutLocale
+      : `/en${normalizedWithoutLocale === '/' ? '' : normalizedWithoutLocale}`;
+
+    router.push(targetPath);
     router.refresh();
   };
 

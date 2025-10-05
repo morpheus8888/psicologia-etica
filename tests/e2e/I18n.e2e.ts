@@ -2,25 +2,26 @@ import { expect, test } from '@playwright/test';
 
 test.describe('I18n', () => {
   test.describe('Language Switching', () => {
-    test('should switch language from English to French using dropdown and verify text on the homepage', async ({ page }) => {
-      await page.goto('/');
+    test('should switch language from English to Italian using dropdown and verify text on the homepage', async ({ page }) => {
+      await page.goto('/en');
 
-      await expect(page.getByText('The perfect SaaS template to build')).toBeVisible();
+      await expect(page.getByText('Latest posts')).toBeVisible();
 
       await page.getByRole('button', { name: 'lang-switcher' }).click();
-      await page.getByText('Français').click();
+      await page.getByText('Italiano').click();
 
-      await expect(page.getByText('Le parfait SaaS template pour construire')).toBeVisible();
+      await expect(page).toHaveURL('/');
+      await expect(page.getByText('Ultimi articoli')).toBeVisible();
     });
 
-    test('should switch language from English to French using URL and verify text on the sign-in page', async ({ page }) => {
+    test('should expose Italian as default locale and English behind /en', async ({ page }) => {
       await page.goto('/sign-in');
 
+      await expect(page.getByText('Indirizzo email')).toBeVisible();
+
+      await page.goto('/en/sign-in');
+
       await expect(page.getByText('Email address')).toBeVisible();
-
-      await page.goto('/fr/sign-in');
-
-      await expect(page.getByText('Adresse e-mail')).toBeVisible();
     });
   });
 });

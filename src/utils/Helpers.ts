@@ -33,5 +33,9 @@ export const getI18nPath = (url: string, locale: string) => {
     return url;
   }
 
+  if (url === '/' || url === '') {
+    return `/${locale}`;
+  }
+
   return `/${locale}${url}`;
 };

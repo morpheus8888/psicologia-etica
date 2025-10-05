@@ -1,7 +1,9 @@
-import { useTranslations } from 'next-intl';
-import { getTranslations } from 'next-intl/server';
+import { getServerSession } from 'next-auth';
+import { getTranslations, unstable_setRequestLocale } from 'next-intl/server';
 
 import { DashboardHeader } from '@/features/dashboard/DashboardHeader';
+import { authOptions } from '@/libs/auth/config';
+import { getI18nPath } from '@/utils/Helpers';
 
 export async function generateMetadata(props: { params: { locale: string } }) {
   const t = await getTranslations({
@@ -15,30 +17,44 @@ export async function generateMetadata(props: { params: { locale: string } }) {
   };
 }
 
-export default function DashboardLayout(props: { children: React.ReactNode }) {
-  const t = useTranslations('DashboardLayout');
+export default async function DashboardLayout(props: {
+  children: React.ReactNode;
+  params: { locale: string };
+}) {
+  unstable_setRequestLocale(props.params.locale);
+
+  const t = await getTranslations({
+    locale: props.params.locale,
+    namespace: 'DashboardLayout',
+  });
+  const session = await getServerSession(authOptions);
+
+  const menu = [
+    {
+      href: getI18nPath('/dashboard', props.params.locale),
+      label: t('home'),
+    },
+    {
+      href: getI18nPath(
+        '/dashboard/organization-profile/organization-members',
+        props.params.locale,
+      ),
+      label: t('members'),
+    },
+    {
+      href: getI18nPath('/dashboard/organization-profile', props.params.locale),
+      label: t('settings'),
+    },
+  ];
 
   return (
     <>
       <div className="shadow-md">
         <div className="mx-auto flex max-w-screen-xl items-center justify-between px-3 py-4">
           <DashboardHeader
-            menu={[
-              {
-                href: '/dashboard',
-                label: t('home'),
-              },
-              // PRO: Link to the /dashboard/todos page
-              {
-                href: '/dashboard/organization-profile/organization-members',
-                label: t('members'),
-              },
-              {
-                href: '/dashboard/organization-profile',
-                label: t('settings'),
-              },
-              // PRO: Link to the /dashboard/billing page
-            ]}
+            locale={props.params.locale}
+            menu={menu}
+            session={session}
           />
         </div>
       </div>
