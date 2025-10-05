@@ -52,9 +52,25 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
-    console.error('[register] error', error);
-    const message = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-    const code = message.includes('relation "users"') ? 'MIGRATIONS_MISSING' : 'UNKNOWN';
+    const details = error instanceof Error
+      ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          cause: (error as { cause?: unknown }).cause,
+        }
+      : { message: String(error) };
+
+    const message = details.message ?? 'UNKNOWN_ERROR';
+    const isMissingTable = message.includes('relation "users"') || message.includes('users" does not exist');
+    const code = isMissingTable ? 'MIGRATIONS_MISSING' : 'UNKNOWN';
+
+    console.error('[register] error', {
+      email,
+      code,
+      details,
+    });
+
     return NextResponse.json({ error: code, message }, { status: 500 });
   }
 }
