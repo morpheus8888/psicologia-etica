@@ -1,57 +1,75 @@
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { getServerSession } from 'next-auth';
+import { getTranslations } from 'next-intl/server';
 
+import { AccountMenu } from '@/components/AccountMenu';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
-import { buttonVariants } from '@/components/ui/buttonVariants';
-import { CenteredMenu } from '@/features/landing/CenteredMenu';
-import { Section } from '@/features/landing/Section';
+import { authOptions } from '@/libs/auth/config';
+import { AppConfig } from '@/utils/AppConfig';
+import { getI18nPath } from '@/utils/Helpers';
 
 import { Logo } from './Logo';
 
-export const Navbar = () => {
-  const t = useTranslations('Navbar');
+type NavbarProps = {
+  locale: string;
+};
+
+export const Navbar = async ({ locale }: NavbarProps) => {
+  const [tHeader, session] = await Promise.all([
+    getTranslations({ locale, namespace: 'header' }),
+    getServerSession(authOptions),
+  ]);
+
+  const navigationItems = [
+    {
+      href: getI18nPath('/blog', locale),
+      label: tHeader('blog'),
+    },
+    {
+      href: getI18nPath('/vocabulary', locale),
+      label: tHeader('vocabulary'),
+    },
+    {
+      href: getI18nPath('/tests', locale),
+      label: tHeader('tests'),
+    },
+    {
+      href: getI18nPath('/services', locale),
+      label: tHeader('services'),
+    },
+  ];
 
   return (
-    <Section className="px-3 py-6">
-      <CenteredMenu
-        logo={<Logo />}
-        rightMenu={(
-          <>
-            {/* PRO: Dark mode toggle button */}
-            <li data-fade>
-              <LocaleSwitcher />
-            </li>
-            <li className="ml-1 mr-2.5" data-fade>
-              <Link href="/sign-in">{t('sign_in')}</Link>
-            </li>
-            <li>
-              <Link className={buttonVariants()} href="/sign-up">
-                {t('sign_up')}
-              </Link>
-            </li>
-          </>
-        )}
-      >
-        <li>
-          <Link href="/sign-up">{t('product')}</Link>
-        </li>
+    <header className="border-b border-border bg-background">
+      <div className="mx-auto flex max-w-6xl items-center justify-between p-4">
+        <div className="flex items-center gap-8">
+          <Link href={getI18nPath('/', locale)} aria-label={AppConfig.name}>
+            <Logo />
+          </Link>
 
-        <li>
-          <Link href="/sign-up">{t('docs')}</Link>
-        </li>
+          <nav aria-label={tHeader('navigationLabel')}>
+            <ul className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
+              {navigationItems.map(item => (
+                <li key={item.href}>
+                  <Link className="transition-colors hover:text-foreground" href={item.href}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
 
-        <li>
-          <Link href="/sign-up">{t('blog')}</Link>
-        </li>
-
-        <li>
-          <Link href="/sign-up">{t('community')}</Link>
-        </li>
-
-        <li>
-          <Link href="/sign-up">{t('company')}</Link>
-        </li>
-      </CenteredMenu>
-    </Section>
+        <div className="flex items-center gap-3">
+          <LocaleSwitcher />
+          <AccountMenu
+            session={session}
+            signInPath={getI18nPath('/sign-in', locale)}
+            profilePath={getI18nPath('/dashboard/user-profile', locale)}
+            settingsPath={getI18nPath('/dashboard/organization-profile', locale)}
+          />
+        </div>
+      </div>
+    </header>
   );
 };

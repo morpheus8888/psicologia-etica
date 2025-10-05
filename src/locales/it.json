@@ -5,8 +5,15 @@
     "tests": "Test",
     "services": "Servizi",
     "search": "Cerca",
-    "signIn": "Accedi",
-    "account": "Account"
+    "signIn": "Login",
+    "account": "Account",
+    "navigationLabel": "Navigazione principale"
+  },
+  "landing": {
+    "meta_title": "Psicologia Etica",
+    "meta_description": "Risorse per psicologi e professionisti della salute mentale.",
+    "title": "Esplora le risorse di Psicologia Etica",
+    "subtitle": "Articoli, vocaboli, test e servizi per supportare la tua pratica clinica."
   },
   "home": {
     "blog": "Ultimi articoli",
@@ -98,7 +105,10 @@
     "role_user": "Utente",
     "role_professional": "Professionista",
     "role_admin": "Amministratore",
-    "sign_out": "Esci"
+    "sign_out": "Esci",
+    "profile": "Profilo",
+    "settings": "Impostazioni",
+    "login": "Login"
   },
   "OrganizationProfile": {
     "title_bar": "Gestione organizzazione",

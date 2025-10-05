@@ -5,8 +5,15 @@
     "tests": "Tests",
     "services": "Services",
     "search": "Search",
-    "signIn": "Sign in",
-    "account": "Account"
+    "signIn": "Login",
+    "account": "Account",
+    "navigationLabel": "Main navigation"
+  },
+  "landing": {
+    "meta_title": "Psicologia Etica",
+    "meta_description": "Resources for psychologists and mental health professionals.",
+    "title": "Explore resources for psychologists and mental health professionals",
+    "subtitle": "Browse articles, vocabulary entries, assessments and services tailored for clinical practice."
   },
   "home": {
     "blog": "Latest posts",
@@ -98,7 +105,10 @@
     "role_user": "User",
     "role_professional": "Professional",
     "role_admin": "Admin",
-    "sign_out": "Sign out"
+    "sign_out": "Sign out",
+    "profile": "Profile",
+    "settings": "Settings",
+    "login": "Login"
   },
   "OrganizationProfile": {
     "title_bar": "Organization management",
