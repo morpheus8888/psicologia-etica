@@ -39,6 +39,10 @@ export const Navbar = async ({ locale }: NavbarProps) => {
     },
   ];
 
+  const dashboardPath = getI18nPath('/dashboard', locale);
+  const profilePath = getI18nPath('/dashboard/user-profile', locale);
+  const settingsPath = getI18nPath('/dashboard/organization-profile', locale);
+
   return (
     <header className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-6xl items-center justify-between p-4">
@@ -65,8 +69,12 @@ export const Navbar = async ({ locale }: NavbarProps) => {
           <AccountMenu
             session={session}
             signInPath={getI18nPath('/sign-in', locale)}
-            profilePath={getI18nPath('/dashboard/user-profile', locale)}
-            settingsPath={getI18nPath('/dashboard/organization-profile', locale)}
+            dashboardPath={dashboardPath}
+            profilePath={profilePath}
+            settingsPath={settingsPath}
+            adminMembersPath={getI18nPath('/dashboard/admin/members', locale)}
+            adminBlogPath={getI18nPath('/dashboard/admin/blog/new', locale)}
+            adminVocabularyPath={getI18nPath('/dashboard/admin/vocabulary/new', locale)}
           />
         </div>
       </div>

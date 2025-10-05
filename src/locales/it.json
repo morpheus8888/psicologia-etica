@@ -126,9 +126,41 @@
     "role_professional": "Professionista",
     "role_admin": "Amministratore",
     "sign_out": "Esci",
+    "dashboard": "Dashboard",
     "profile": "Profilo",
     "settings": "Impostazioni",
+    "admin_panel": "Area admin",
+    "admin_members": "Gestisci membri",
+    "admin_blog_new": "Crea articolo blog",
+    "admin_vocabulary_new": "Crea vocabolo",
     "login": "Login"
+  },
+  "AdminMembers": {
+    "title_bar": "Membri",
+    "title_bar_description": "Controlla gli account e aggiorna i ruoli di accesso.",
+    "table": {
+      "name": "Nome",
+      "email": "Email",
+      "role": "Ruolo",
+      "registered": "Iscrizione"
+    },
+    "role_label": "Ruolo",
+    "roles": {
+      "user": "Cliente",
+      "professional": "Professionista",
+      "admin": "Amministratore"
+    },
+    "update": "Aggiorna"
+  },
+  "AdminBlogNew": {
+    "title_bar": "Crea articolo blog",
+    "title_bar_description": "Prepara i prossimi contenuti per Psicologia Etica.",
+    "placeholder": "Gli strumenti per creare articoli saranno disponibili a breve."
+  },
+  "AdminVocabularyNew": {
+    "title_bar": "Crea voce del vocabolario",
+    "title_bar_description": "Aggiungi nuovi termini al glossario condiviso.",
+    "placeholder": "La creazione dei vocaboli sarà disponibile a breve."
   },
   "OrganizationProfile": {
     "title_bar": "Gestione organizzazione",

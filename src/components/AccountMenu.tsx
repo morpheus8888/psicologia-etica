@@ -11,6 +11,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -18,16 +19,30 @@ import {
 type AccountMenuProps = {
   session: Session | null;
   signInPath: string;
+  dashboardPath: string;
   profilePath: string;
   settingsPath: string;
+  adminMembersPath: string;
+  adminBlogPath: string;
+  adminVocabularyPath: string;
 };
 
-export const AccountMenu = ({ session, signInPath, profilePath, settingsPath }: AccountMenuProps) => {
+export const AccountMenu = ({
+  session,
+  signInPath,
+  dashboardPath,
+  profilePath,
+  settingsPath,
+  adminMembersPath,
+  adminBlogPath,
+  adminVocabularyPath,
+}: AccountMenuProps) => {
   const router = useRouter();
   const t = useTranslations('UserMenu');
 
   const userName = session?.user?.name ?? session?.user?.email ?? '';
   const userInitial = userName ? userName.charAt(0).toUpperCase() : '?';
+  const isAdmin = session?.user?.role === 'admin';
 
   const handleSignOut = () => {
     void signOut({ callbackUrl: signInPath });
@@ -71,11 +86,29 @@ export const AccountMenu = ({ session, signInPath, profilePath, settingsPath }: 
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
+          <Link href={dashboardPath}>{t('dashboard')}</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link href={profilePath}>{t('profile')}</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href={settingsPath}>{t('settings')}</Link>
         </DropdownMenuItem>
+        {isAdmin && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>{t('admin_panel')}</DropdownMenuLabel>
+            <DropdownMenuItem asChild>
+              <Link href={adminMembersPath}>{t('admin_members')}</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={adminBlogPath}>{t('admin_blog_new')}</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={adminVocabularyPath}>{t('admin_vocabulary_new')}</Link>
+            </DropdownMenuItem>
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={(event) => {

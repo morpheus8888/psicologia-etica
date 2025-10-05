@@ -126,9 +126,41 @@
     "role_professional": "Professional",
     "role_admin": "Admin",
     "sign_out": "Sign out",
+    "dashboard": "Dashboard",
     "profile": "Profile",
     "settings": "Settings",
+    "admin_panel": "Admin panel",
+    "admin_members": "Members",
+    "admin_blog_new": "Create blog article",
+    "admin_vocabulary_new": "Create vocabulary entry",
     "login": "Login"
+  },
+  "AdminMembers": {
+    "title_bar": "Members",
+    "title_bar_description": "Review every account and adjust access levels.",
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "registered": "Signed up"
+    },
+    "role_label": "Role",
+    "roles": {
+      "user": "Client",
+      "professional": "Professional",
+      "admin": "Administrator"
+    },
+    "update": "Update"
+  },
+  "AdminBlogNew": {
+    "title_bar": "Create blog article",
+    "title_bar_description": "Draft and publish upcoming content for Psicologia Etica.",
+    "placeholder": "Blog authoring tools are coming soon."
+  },
+  "AdminVocabularyNew": {
+    "title_bar": "Create vocabulary entry",
+    "title_bar_description": "Prepare new glossary items for the shared vocabulary.",
+    "placeholder": "Vocabulary editing is coming soon."
   },
   "OrganizationProfile": {
     "title_bar": "Organization management",
