@@ -114,10 +114,52 @@
   "UserProfile": {
     "title_bar": "Profilo utente",
     "title_bar_description": "Visualizza e gestisci il tuo profilo",
-    "name_label": "Nome",
-    "email_label": "Email",
-    "role_label": "Ruolo",
-    "unknown_value": "Non specificato"
+    "unknown_value": "Non specificato",
+    "form": {
+      "identity_heading": "Identità",
+      "contact_heading": "Contatti",
+      "first_name": "Nome",
+      "last_name": "Cognome",
+      "email": "Indirizzo email",
+      "phone": "Numero di telefono",
+      "phone_placeholder": "+39 333 1234567",
+      "avatar": "Scegli il tuo avatar",
+      "avatar_hint": "Seleziona l'animale che rappresenta meglio la tua energia.",
+      "submit": "Salva profilo",
+      "saving": "Salvataggio in corso…",
+      "success": "Profilo aggiornato con successo.",
+      "error": "Non è stato possibile salvare il profilo. Riprova.",
+      "email_taken": "Questa email è già in uso.",
+      "errors": {
+        "required": "Campo obbligatorio.",
+        "max_100": "Massimo 100 caratteri.",
+        "max_190": "Massimo 190 caratteri.",
+        "max_32": "Massimo 32 caratteri.",
+        "invalid_email": "Inserisci un indirizzo email valido.",
+        "invalid_phone": "Usa solo numeri, spazi o + nel numero di telefono.",
+        "invalid_avatar": "Seleziona uno degli avatar disponibili.",
+        "invalid_locale": "Lingua non supportata.",
+        "email_taken": "Questa email è già in uso.",
+        "validation_error": "Controlla i campi evidenziati."
+      }
+    },
+    "avatars": {
+      "crimsonFox": "Volpe cremisi",
+      "goldenLion": "Leone dorato",
+      "sunriseGiraffe": "Giraffa dell'alba",
+      "coralFlamingo": "Fenicottero corallo",
+      "rubyCardinal": "Cardinale rubino",
+      "jadeTurtle": "Tartaruga giada",
+      "evergreenFrog": "Rana d'evergreen",
+      "tealPeacock": "Pavone turchese",
+      "oceanDolphin": "Delfino oceanico",
+      "cobaltWhale": "Balena cobalto",
+      "indigoOwl": "Gufo indaco",
+      "violetButterfly": "Farfalla viola",
+      "twilightWolf": "Lupo del crepuscolo",
+      "auroraChameleon": "Camaleonte aurora",
+      "emberDragon": "Drago di brace"
+    }
   },
   "UserMenu": {
     "account_trigger": "Apri il menu account",

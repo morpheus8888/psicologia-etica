@@ -6,6 +6,9 @@ import 'next-auth/jwt';
 declare module 'next-auth' {
   interface User {
     role?: 'user' | 'professional' | 'admin';
+    familyName?: string | null;
+    phoneNumber?: string | null;
+    avatar?: string | null;
   }
 
   interface Session {
@@ -15,6 +18,9 @@ declare module 'next-auth' {
       email?: string | null;
       image?: string | null;
       role?: 'user' | 'professional' | 'admin';
+      familyName?: string | null;
+      phoneNumber?: string | null;
+      avatar?: string | null;
     };
   }
 }
@@ -23,5 +29,10 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id?: string;
     role?: 'user' | 'professional' | 'admin';
+    name?: string | null;
+    email?: string | null;
+    familyName?: string | null;
+    phoneNumber?: string | null;
+    avatar?: string | null;
   }
 }

@@ -1,12 +1,12 @@
 'use client';
 
-import { UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Session } from 'next-auth';
 import { signOut } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 
+import { AvatarBadge } from '@/components/AvatarBadge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +43,7 @@ export const AccountMenu = ({
   const userName = session?.user?.name ?? session?.user?.email ?? '';
   const userInitial = userName ? userName.charAt(0).toUpperCase() : '?';
   const isAdmin = session?.user?.role === 'admin';
+  const avatarValue = session?.user?.avatar ?? null;
 
   const handleSignOut = () => {
     void signOut({ callbackUrl: signInPath });
@@ -58,9 +59,9 @@ export const AccountMenu = ({
         type="button"
         onClick={handleLogin}
         aria-label={t('login')}
-        className="group relative flex size-12 items-center justify-center rounded-full border border-primary/50 bg-gradient-to-br from-primary/10 via-primary/20 to-primary/30 text-primary shadow-sm transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+        className="group relative flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
       >
-        <UserRound className="size-6 text-primary-foreground" aria-hidden="true" />
+        <AvatarBadge avatar={null} fallback="?" size="lg" className="bg-gradient-to-br from-primary/10 via-primary/20 to-primary/30 text-primary shadow-sm transition-transform duration-200 group-hover:scale-105" />
       </button>
     );
   }
@@ -71,18 +72,20 @@ export const AccountMenu = ({
         <button
           type="button"
           aria-label={t('account_trigger')}
-          className="group relative flex size-12 items-center justify-center rounded-full border border-primary/50 bg-gradient-to-br from-primary/20 via-primary/30 to-primary text-lg font-semibold uppercase text-white shadow-sm transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+          className="group relative flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
         >
-          {userInitial}
-          <UserRound className="absolute bottom-1 right-1 size-3 text-primary-foreground/80" aria-hidden="true" />
+          <AvatarBadge avatar={avatarValue} fallback={userInitial} size="lg" className="transition-transform duration-200 group-hover:scale-105" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <div className="px-3 py-2 text-sm">
-          <p className="font-medium text-foreground">{userName || t('anonymous')}</p>
-          {session.user?.email && (
-            <p className="text-xs text-muted-foreground">{session.user.email}</p>
-          )}
+        <div className="flex items-center gap-3 px-3 py-2 text-sm">
+          <AvatarBadge avatar={avatarValue} fallback={userInitial} size="sm" />
+          <div>
+            <p className="font-medium text-foreground">{userName || t('anonymous')}</p>
+            {session.user?.email && (
+              <p className="text-xs text-muted-foreground">{session.user.email}</p>
+            )}
+          </div>
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>

@@ -12,9 +12,12 @@ export const rolesEnum = text('role');
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name'),
+  familyName: text('family_name'),
   email: text('email').notNull().unique(),
   emailVerified: timestamp('email_verified', { withTimezone: true }),
   image: text('image'),
+  avatar: text('avatar'),
+  phoneNumber: text('phone_number'),
   role: rolesEnum.notNull().default('user'),
   passwordHash: text('password_hash'),
   createdAt: timestamp('created_at', { withTimezone: true })

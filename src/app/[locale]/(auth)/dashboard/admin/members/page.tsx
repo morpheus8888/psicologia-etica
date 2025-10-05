@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { getTranslations, unstable_setRequestLocale } from 'next-intl/server';
 
+import { AvatarBadge } from '@/components/AvatarBadge';
 import { TitleBar } from '@/features/dashboard/TitleBar';
 import { authOptions } from '@/libs/auth/config';
 import { db } from '@/libs/db';
@@ -26,9 +27,11 @@ export default async function AdminMembersPage({ params }: PageProps) {
       .select({
         id: users.id,
         name: users.name,
+        familyName: users.familyName,
         email: users.email,
         role: users.role,
         createdAt: users.createdAt,
+        avatar: users.avatar,
       })
       .from(users)
       .orderBy(desc(users.createdAt)),
@@ -92,9 +95,20 @@ export default async function AdminMembersPage({ params }: PageProps) {
                 : 'user';
               const registeredAt = member.createdAt ? formatter.format(new Date(member.createdAt)) : '—';
 
+              const displayName = [member.name, member.familyName].filter(Boolean).join(' ') || '—';
+
               return (
                 <tr key={member.id}>
-                  <td className="px-4 py-3 font-medium text-foreground">{member.name || '—'}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">
+                    <div className="flex items-center gap-3">
+                      <AvatarBadge
+                        avatar={member.avatar}
+                        fallback={displayName}
+                        size="sm"
+                      />
+                      <span>{displayName}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{member.email}</td>
                   <td className="px-4 py-3 capitalize">{t(`roles.${roleKey}`)}</td>
                   <td className="px-4 py-3 text-muted-foreground">{registeredAt}</td>

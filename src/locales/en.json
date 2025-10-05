@@ -114,10 +114,52 @@
   "UserProfile": {
     "title_bar": "User profile",
     "title_bar_description": "View and manage your profile",
-    "name_label": "Name",
-    "email_label": "Email",
-    "role_label": "Role",
-    "unknown_value": "Not provided"
+    "unknown_value": "Not provided",
+    "form": {
+      "identity_heading": "Identity",
+      "contact_heading": "Contact",
+      "first_name": "First name",
+      "last_name": "Last name",
+      "email": "Email address",
+      "phone": "Phone number",
+      "phone_placeholder": "+39 333 1234567",
+      "avatar": "Choose your avatar",
+      "avatar_hint": "Pick the animal that best represents your energy.",
+      "submit": "Save profile",
+      "saving": "Saving…",
+      "success": "Profile updated successfully.",
+      "error": "We couldn't save your profile. Please try again.",
+      "email_taken": "This email is already in use.",
+      "errors": {
+        "required": "This field is required.",
+        "max_100": "Please keep it under 100 characters.",
+        "max_190": "Please keep it under 190 characters.",
+        "max_32": "Please keep it under 32 characters.",
+        "invalid_email": "Enter a valid email address.",
+        "invalid_phone": "Use only digits, spaces or + in the phone number.",
+        "invalid_avatar": "Select one of the available avatars.",
+        "invalid_locale": "Locale not supported.",
+        "email_taken": "This email is already in use.",
+        "validation_error": "Please double-check the highlighted fields."
+      }
+    },
+    "avatars": {
+      "crimsonFox": "Crimson fox",
+      "goldenLion": "Golden lion",
+      "sunriseGiraffe": "Sunrise giraffe",
+      "coralFlamingo": "Coral flamingo",
+      "rubyCardinal": "Ruby cardinal",
+      "jadeTurtle": "Jade turtle",
+      "evergreenFrog": "Evergreen frog",
+      "tealPeacock": "Teal peacock",
+      "oceanDolphin": "Ocean dolphin",
+      "cobaltWhale": "Cobalt whale",
+      "indigoOwl": "Indigo owl",
+      "violetButterfly": "Violet butterfly",
+      "twilightWolf": "Twilight wolf",
+      "auroraChameleon": "Aurora chameleon",
+      "emberDragon": "Ember dragon"
+    }
   },
   "UserMenu": {
     "account_trigger": "Open account menu",
