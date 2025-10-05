@@ -1,0 +1,118 @@
+{
+  "header": {
+    "blog": "Blog",
+    "vocabulary": "Vocabolario",
+    "tests": "Test",
+    "services": "Servizi",
+    "search": "Cerca",
+    "signIn": "Accedi",
+    "account": "Account"
+  },
+  "home": {
+    "blog": "Ultimi articoli",
+    "vocabulary": "Vocabolario",
+    "tests": "Valutazioni",
+    "services": "Servizi",
+    "explore": "Esplora",
+    "comingSoon": "In arrivo",
+    "empty": "Ancora nessun contenuto"
+  },
+  "blog": {
+    "title": "Blog",
+    "description": "Aggiornamenti e riflessioni del team di Psicologia Etica.",
+    "empty": "Nessun articolo disponibile al momento.",
+    "detailPlaceholder": "Questo articolo sarà pubblicato a breve."
+  },
+  "vocabulary": {
+    "title": "Vocabolario",
+    "description": "Esplora i termini chiave utili nella pratica clinica.",
+    "empty": "Il vocabolario è vuoto per ora.",
+    "detailPlaceholder": "Voce in preparazione."
+  },
+  "testsPage": {
+    "title": "Test",
+    "description": "Valutazioni standardizzate con salvataggio e ripresa.",
+    "comingSoon": "La gestione dei test sarà disponibile a breve."
+  },
+  "services": {
+    "title": "Servizi",
+    "description": "Catalogo servizi e strumenti di prenotazione per i professionisti.",
+    "comingSoon": "Il catalogo servizi è in preparazione."
+  },
+  "admin": {
+    "title": "Area admin",
+    "description": "Gestisci utenti, ruoli e impostazioni della piattaforma.",
+    "restricted": "Solo gli amministratori possono accedere a quest'area."
+  },
+  "pro": {
+    "title": "Area professionisti",
+    "description": "Spazio di lavoro per professionisti accreditati.",
+    "restricted": "Professionisti e amministratori possono accedere a quest'area."
+  },
+  "auth": {
+    "SignIn": {
+      "meta_title": "Accedi",
+      "meta_description": "Accedi al tuo account in modo semplice e sicuro.",
+      "title": "Accedi",
+      "subtitle": "Accedi con le tue credenziali.",
+      "email_label": "Indirizzo email",
+      "email_placeholder": "tu@example.com",
+      "password_label": "Password",
+      "password_placeholder": "La tua password",
+      "submit": "Continua",
+      "invalid_credentials": "Email o password non corrette.",
+      "help_text": "Hai bisogno di aiuto?",
+      "forgot_password": "Password dimenticata",
+      "show_password": "Mostra password",
+      "hide_password": "Nascondi password"
+    }
+  },
+  "Onboarding": {
+    "selection_title": "La configurazione del team sarà disponibile a breve",
+    "selection_description": "La selezione dell'organizzazione non è ancora disponibile."
+  },
+  "Dashboard": {
+    "meta_title": "Dashboard Psicologia Etica",
+    "meta_description": "Spazio di lavoro per gestire contenuti, test e servizi."
+  },
+  "DashboardLayout": {
+    "home": "Home",
+    "todos": "Todo",
+    "members": "Membri",
+    "billing": "Fatturazione",
+    "settings": "Impostazioni"
+  },
+  "DashboardIndex": {
+    "title_bar": "Dashboard",
+    "title_bar_description": "Benvenuto nella tua area lavoro",
+    "message_state_title": "Area in costruzione",
+    "message_state_description": "Qui mostreremo indicatori, appunti del diario e scorciatoie operative man mano che le feature saranno disponibili."
+  },
+  "UserProfile": {
+    "title_bar": "Profilo utente",
+    "title_bar_description": "Visualizza e gestisci il tuo profilo",
+    "name_label": "Nome",
+    "email_label": "Email",
+    "role_label": "Ruolo",
+    "unknown_value": "Non specificato"
+  },
+  "UserMenu": {
+    "account_trigger": "Apri il menu account",
+    "anonymous": "Utente sconosciuto",
+    "role_user": "Utente",
+    "role_professional": "Professionista",
+    "role_admin": "Amministratore",
+    "sign_out": "Esci"
+  },
+  "OrganizationProfile": {
+    "title_bar": "Gestione organizzazione",
+    "title_bar_description": "Gestisci la tua organizzazione",
+    "info": "La gestione dell'organizzazione sarà presto disponibile."
+  },
+  "ProtectFallback": {
+    "not_enough_permission": "Non hai i permessi per completare questa azione"
+  },
+  "DataTable": {
+    "no_results": "Nessun risultato."
+  }
+}
