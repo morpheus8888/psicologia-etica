@@ -49,7 +49,7 @@ export default async function VocabularyPage({ params, searchParams }: PageProps
       ));
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 py-10">
+    <div className="flex flex-col gap-10">
       <header className="space-y-3">
         <p className="text-sm uppercase tracking-wide text-primary/70">{t('intro.badge')}</p>
         <h1 className="text-3xl font-semibold text-foreground sm:text-4xl">{t('intro.title')}</h1>

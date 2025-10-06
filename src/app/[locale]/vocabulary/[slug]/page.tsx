@@ -47,7 +47,7 @@ export default async function VocabularyEntryPage({ params }: PageProps) {
     : t('published_unknown');
 
   return (
-    <article className="mx-auto flex w-full max-w-3xl flex-col gap-8 py-12">
+    <article className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       <header className="space-y-4">
         <p className="text-sm uppercase tracking-wide text-primary/70">{t('badge')}</p>
         <h1 className="text-4xl font-semibold text-foreground sm:text-5xl">{entry.term}</h1>

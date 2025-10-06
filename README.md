@@ -145,6 +145,7 @@ SUPPORTED_LOCALES=it,en
 - `/pro` · `/en/pro`
 - `/sign-in` · `/en/sign-in`
 - Regola di routing: non definire `segment/page.tsx` e `segment[[...slug]]/page.tsx` allo stesso livello; se servono sottopagine insieme alla pagina base, usare `segment/[...slug]/page.tsx` annidato.
+- La navbar principale (incluso account/avatar) deve restare visibile e coerente su ogni pagina pubblica: ogni nuova route deve quindi incorporare `Navbar` o adottare un layout che la includa.
 
 ## 🧰 Check di qualità (PR/CI)
 Prima di aprire una PR assicurarsi che tutti i check locali siano verdi:
