@@ -4,15 +4,15 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 
-import {
-  type ProfileFormState,
-  profileInitialState,
-  updateProfileAction,
-} from '@/app/[locale]/(auth)/dashboard/user-profile/actions';
+import { updateProfileAction } from '@/app/[locale]/(auth)/dashboard/user-profile/actions';
 import { AvatarBadge } from '@/components/AvatarBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  type ProfileFormState,
+  profileInitialState,
+} from '@/features/profile/form-state';
 import { avatarOptions, type AvatarValue } from '@/utils/avatars';
 import { cn } from '@/utils/Helpers';
 

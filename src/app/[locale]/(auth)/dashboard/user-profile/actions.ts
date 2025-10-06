@@ -5,19 +5,12 @@ import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 
+import type { ProfileFormState } from '@/features/profile/form-state';
 import { authOptions } from '@/libs/auth/config';
 import { db } from '@/libs/db';
 import { users } from '@/models/auth';
 import { avatarValues } from '@/utils/avatars';
 import { getI18nPath } from '@/utils/Helpers';
-
-export type ProfileFormState = {
-  status: 'idle' | 'success' | 'error';
-  message?: string;
-  fieldErrors?: Record<string, string>;
-};
-
-const initialState: ProfileFormState = { status: 'idle' };
 
 const avatarSchema = z.preprocess(
   (value) => {
@@ -159,5 +152,3 @@ export async function updateProfileAction(
     };
   }
 }
-
-export { initialState as profileInitialState };
