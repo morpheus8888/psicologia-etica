@@ -129,27 +129,35 @@ export async function updateProfileAction(
     };
   }
 
-  await db
-    .update(users)
-    .set({
-      name: firstName.trim(),
-      familyName: cleanedLastName,
-      email: emailLower,
-      phoneNumber: cleanedPhone,
-      avatar: chosenAvatar,
-    })
-    .where(eq(users.id, userId));
+  try {
+    await db
+      .update(users)
+      .set({
+        name: firstName.trim(),
+        familyName: cleanedLastName,
+        email: emailLower,
+        phoneNumber: cleanedPhone,
+        avatar: chosenAvatar,
+      })
+      .where(eq(users.id, userId));
 
-  const profilePath = getI18nPath('/dashboard/user-profile', locale);
-  const dashboardPath = getI18nPath('/dashboard', locale);
+    const profilePath = getI18nPath('/dashboard/user-profile', locale);
+    const dashboardPath = getI18nPath('/dashboard', locale);
 
-  revalidatePath(profilePath);
-  revalidatePath(dashboardPath);
+    revalidatePath(profilePath);
+    revalidatePath(dashboardPath);
 
-  return {
-    status: 'success',
-    message: 'profile_updated',
-  };
+    return {
+      status: 'success',
+      message: 'profile_updated',
+    };
+  } catch (error) {
+    console.error('[profile] update failed', error);
+    return {
+      status: 'error',
+      message: 'unknown_error',
+    };
+  }
 }
 
 export { initialState as profileInitialState };

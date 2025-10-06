@@ -8,21 +8,17 @@ export const Logo = (props: { isTextHidden?: boolean }) => (
       viewBox="0 0 32 32"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.6}
+      strokeWidth={1.5}
       strokeLinecap="round"
       strokeLinejoin="round"
       role="img"
       aria-hidden="true"
       focusable="false"
     >
-      <circle cx="16" cy="16" r="12.4" opacity={0.35} />
-      <path d="M9.5 8v16" />
-      <path d="M9.5 8h4.1a3.4 3.4 0 0 1 0 6.8H9.5" />
-      <path d="M17.5 8v16" />
-      <path d="M17.5 8h5" />
-      <path d="M17.5 15.4h4.2" />
-      <path d="M17.5 24h5" />
-      <circle cx="16" cy="16" r="4.4" opacity={0.2} fill="currentColor" stroke="none" />
+      <circle cx="16" cy="16" r="12.5" opacity={0.25} />
+      <path d="M10 24h12" />
+      <path d="M16 8v16" />
+      <path d="M8 8h4.5c0 6.5 2 10 3.5 10s3.5-3.5 3.5-10H24" />
     </svg>
     {!props.isTextHidden && AppConfig.name}
   </div>

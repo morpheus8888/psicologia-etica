@@ -55,7 +55,11 @@ export const Navbar = async ({ locale }: NavbarProps) => {
             <ul className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
               {navigationItems.map(item => (
                 <li key={item.href}>
-                  <Link className="transition-colors hover:text-foreground" href={item.href}>
+                  <Link
+                    className="transition-colors hover:text-foreground"
+                    href={item.href}
+                    prefetch={false}
+                  >
                     {item.label}
                   </Link>
                 </li>

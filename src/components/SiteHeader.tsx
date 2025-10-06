@@ -37,6 +37,7 @@ export async function SiteHeader(props: { locale: string }) {
             <Link
               key={item.href}
               href={getI18nPath(item.href, props.locale)}
+              prefetch={false}
               className="transition-colors hover:text-foreground"
             >
               {item.label}
