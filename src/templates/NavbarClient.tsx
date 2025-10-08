@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AccountMenu } from '@/components/AccountMenu';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/utils/Helpers';
 
 import { Logo } from './Logo';
@@ -146,6 +147,7 @@ export function NavbarClient(props: NavbarClientProps) {
 
           <div className="flex items-center gap-2">
             <LocaleSwitcher />
+            <ThemeToggle />
             <AccountMenu
               session={props.session}
               signInPath={props.signInPath}

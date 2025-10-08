@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { NextIntlClientProvider, useMessages } from 'next-intl';
 import { unstable_setRequestLocale } from 'next-intl/server';
 
+import { ThemeProvider } from '@/components/ThemeProvider';
 import { VercelSpeedInsights } from '@/components/VercelSpeedInsights';
 import { AllLocales } from '@/utils/AppConfig';
 
@@ -54,13 +55,15 @@ export default function RootLayout(props: {
     <html lang={props.params.locale} suppressHydrationWarning>
       <body className="bg-background text-foreground antialiased" suppressHydrationWarning>
         {/* PRO: Dark mode support for Shadcn UI */}
-        <NextIntlClientProvider
-          locale={props.params.locale}
-          messages={messages}
-        >
-          {props.children}
-          <VercelSpeedInsights />
-        </NextIntlClientProvider>
+        <ThemeProvider>
+          <NextIntlClientProvider
+            locale={props.params.locale}
+            messages={messages}
+          >
+            {props.children}
+            <VercelSpeedInsights />
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

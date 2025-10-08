@@ -8,7 +8,10 @@
     "search": "Cerca",
     "signIn": "Login",
     "account": "Account",
-    "navigationLabel": "Navigazione principale"
+    "navigationLabel": "Navigazione principale",
+    "theme_toggle": "Cambia tema",
+    "theme_toggle_light": "Passa al tema chiaro",
+    "theme_toggle_dark": "Passa al tema scuro"
   },
   "landing": {
     "meta_title": "Psicologia Etica",
