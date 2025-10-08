@@ -93,6 +93,10 @@ export function VocabularySearchBar(props: VocabularySearchBarProps) {
     setValue(props.defaultValue);
   }, [props.defaultValue]);
 
+  const effectivePlaceholder = props.samples.length > 0 && value.length === 0 && !isFocused
+    ? ''
+    : props.placeholder;
+
   return (
     <form
       className="relative mx-auto w-full max-w-3xl overflow-hidden rounded-[2.5rem] border border-primary/25 bg-gradient-to-br from-card/85 via-background to-card/95 p-6 shadow-[0_24px_60px_rgba(15,23,42,0.15)] transition focus-within:border-primary/40 focus-within:shadow-[0_28px_70px_rgba(59,130,246,0.25)] focus-within:ring-2 focus-within:ring-primary/20 focus-within:ring-offset-2 focus-within:ring-offset-background sm:p-8"
@@ -122,7 +126,7 @@ export function VocabularySearchBar(props: VocabularySearchBarProps) {
             onChange={event => setValue(event.target.value)}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            placeholder={props.placeholder}
+            placeholder={effectivePlaceholder}
             className="h-14 w-full rounded-3xl border-0 bg-transparent pl-16 pr-6 text-base focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-16 sm:text-lg"
           />
           {props.samples.length > 0 && value.length === 0 && !isFocused && (
