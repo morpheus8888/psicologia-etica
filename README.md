@@ -137,6 +137,12 @@ SUPPORTED_LOCALES=it,en
 - Il boilerplate originale includeva pagine marketing/pricing: sono state rimosse dal menu principale
 - Il focus del layout resta su Blog, Vocabolario, Test, Servizi e accesso all'area autenticata (Login/Avatar)
 
+## 📱 Responsive UI
+- Ogni modifica deve restare navigabile sia da mobile sia da desktop (layout mobile-first, breakpoint `sm`/`md` coerenti).
+- La navbar superiore usa icone orizzontali (Home, Blog, Test, Servizi): mantiene massimo 4 voci, cambia colore per sezione e scompare mentre si scorre verso il basso, riapparendo al movimento inverso.
+- Lo switch della lingua e l'avatar restano ancorati in alto a destra; assicurati che nuove feature non ne compromettano la fruibilità su schermi stretti.
+- Preferisci componenti riutilizzabili e accessibili (`aria-label`, testi localizzati) ogni volta che aggiungi interazioni client-side.
+
 ## 🧭 Rotte base (i18n-aware)
 - `/` (IT) · `/en` (EN) → Home
 - `/blog`, `/blog/[slug]` · `/en/blog`, `/en/blog/[slug]`
