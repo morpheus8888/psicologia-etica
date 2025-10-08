@@ -283,7 +283,15 @@
     "search": {
       "label": "Search the vocabulary",
       "placeholder": "Search for a keyword…",
-      "clear": "Clear search"
+      "clear": "Clear search",
+      "button": "Search",
+      "samples": [
+        "dialogue",
+        "rhythm",
+        "empathy",
+        "grounded presence",
+        "gentle boundary"
+      ]
     },
     "word_of_day": {
       "label": "Word of the day",

@@ -283,7 +283,15 @@
     "search": {
       "label": "Cerca nel vocabolario",
       "placeholder": "Cerca una parola chiave…",
-      "clear": "Azzera ricerca"
+      "clear": "Azzera ricerca",
+      "button": "Cerca",
+      "samples": [
+        "dialogo",
+        "ritmo",
+        "empatia",
+        "presenza",
+        "confine"
+      ]
     },
     "word_of_day": {
       "label": "Parola del giorno",

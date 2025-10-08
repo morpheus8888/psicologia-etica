@@ -125,6 +125,8 @@ DEFAULT_LOCALE=it
 SUPPORTED_LOCALES=it,en
 ```
 
+- Usa il template `.env.example` come base: copia il file in `.env.local` e compila i valori necessari (crea `.env.production.local` per i deploy).
+
 ## 🗃️ Database & Migrazioni
 - Generazione schema: `npm run db:generate`
 - Applicazione migrazioni: `npm run db:migrate`
@@ -179,8 +181,8 @@ Sequenza suggerita:
 
 ```
 src/
-  app/[locale]/(public)     # rotte pubbliche (blog, vocabulary, tests, services, admin/pro)
-  app/[locale]/(auth)       # rotte autenticate (dashboard)
+  app/[locale]/(unauth)     # rotte pubbliche (blog, vocabulary, tests, services)
+  app/[locale]/(auth)       # rotte autenticate (dashboard, admin, pro)
   components/               # UI condivisa (header, logo, locale switcher, ...)
   features/                 # directory di dominio (blog, diary, vocabulary, tests, services, admin)
   libs/                     # helper per auth, db, i18n, logging
@@ -197,10 +199,10 @@ src/
 
 ## Roadmap
 - Diario con cifratura end-to-end opzionale (client-side)
-- Pubblicazione blog avanzata
-- Ricerca vocabolario e “termine del giorno”
-- Test clinici con autosave ed export
+- Pubblicazione blog avanzata (workflow editoriale e traduzioni)
+- Automazione dei test clinici con autosave ed export
 - Catalogo servizi con booking e hand-off professionale
+- Centro notifiche privacy-first (email e in-app)
 
 ## Licenza
 MIT © 2024–present

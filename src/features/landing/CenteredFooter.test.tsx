@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { NextIntlClientProvider } from 'next-intl';
+import { type AbstractIntlMessages, NextIntlClientProvider } from 'next-intl';
 
 import messages from '@/locales/en.json';
 
@@ -9,7 +9,7 @@ describe('CenteredFooter', () => {
   describe('Render method', () => {
     it('should have copyright information', () => {
       render(
-        <NextIntlClientProvider locale="en" messages={messages}>
+        <NextIntlClientProvider locale="en" messages={messages as unknown as AbstractIntlMessages}>
           <CenteredFooter logo={null} name="" iconList={null} legalLinks={null}>
             Random children
           </CenteredFooter>
