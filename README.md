@@ -139,10 +139,10 @@ SUPPORTED_LOCALES=it,en
 
 ## 📱 Responsive UI
 - Ogni modifica deve restare navigabile sia da mobile sia da desktop (layout mobile-first, breakpoint `sm`/`md` coerenti).
-- La navbar superiore usa icone orizzontali (Home, Blog, Test, Servizi): massimo 4 voci, colore dedicato per sezione; mentre si scorre verso il basso sparisce e torna visibile sullo scroll inverso.
-- Switch lingua, toggle tema (chiaro/scuro) e avatar restano ancorati in alto a destra: qualsiasi novità deve preservarne utilizzo su device stretti.
-- Integra / aggiorna elementi UI rispettando entrambe le modalità (light/dark): usa le variabili Tailwind (`dark:`) e verifica il contrasto.
-- Preferisci componenti riutilizzabili e accessibili (`aria-label`, testi localizzati) ogni volta che aggiungi interazioni client-side.
+- Navbar: massimo 4 voci (Home, Blog, Test, Servizi) rese con icone colorate; la barra sparisce durante lo scroll in giù e riappare quando si risale.
+- In alto a destra devon sempre restare visibili (anche su mobile): selettore lingua, toggle tema (chiaro/scuro), avatar/account.
+- Ogni nuovo componente deve supportare entrambi i temi (`dark:` + test visivo) e mantenere contrasto/leggibilità.
+- Usa testi localizzati (`next-intl`), aria-label descrittivi e interazioni accessibili per qualsiasi feature client.
 
 ## 🧭 Rotte base (i18n-aware)
 - `/` (IT) · `/en` (EN) → Home
