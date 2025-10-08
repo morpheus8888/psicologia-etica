@@ -16,6 +16,25 @@ import {
 import { avatarOptions, type AvatarValue } from '@/utils/avatars';
 import { cn } from '@/utils/Helpers';
 
+const PROFILE_ERROR_KEYS = [
+  'required',
+  'max_100',
+  'max_190',
+  'max_32',
+  'invalid_email',
+  'invalid_phone',
+  'invalid_avatar',
+  'invalid_locale',
+  'email_taken',
+  'validation_error',
+] as const;
+
+type ProfileErrorKey = typeof PROFILE_ERROR_KEYS[number];
+
+function isProfileErrorKey(value: string): value is ProfileErrorKey {
+  return PROFILE_ERROR_KEYS.includes(value as ProfileErrorKey);
+}
+
 type UserProfileFormProps = {
   locale: string;
   user: {
@@ -57,8 +76,15 @@ export const UserProfileForm = ({ locale, user }: UserProfileFormProps) => {
     return undefined;
   }, [state, t]);
 
-  const fieldError = (field: string) =>
-    state.fieldErrors?.[field] ? t(`form.errors.${state.fieldErrors[field]}`) : null;
+  const fieldError = (field: string) => {
+    const errorCode = state.fieldErrors?.[field];
+
+    if (!errorCode || !isProfileErrorKey(errorCode)) {
+      return null;
+    }
+
+    return t(`form.errors.${errorCode}` satisfies `form.errors.${ProfileErrorKey}`);
+  };
 
   return (
     <form action={formAction} className="space-y-8">

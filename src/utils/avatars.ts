@@ -15,14 +15,16 @@ export type AvatarValue =
   | 'aurora-chameleon'
   | 'ember-dragon';
 
+type AvatarLabelKey = `avatars.${keyof IntlMessages['UserProfile']['avatars']}`;
+
 export type AvatarOption = {
   value: AvatarValue;
   emoji: string;
   gradient: string;
-  labelKey: string;
+  labelKey: AvatarLabelKey;
 };
 
-export const avatarOptions: AvatarOption[] = [
+export const avatarOptions = [
   { value: 'crimson-fox', emoji: '🦊', gradient: 'bg-gradient-to-br from-orange-500 to-red-500', labelKey: 'avatars.crimsonFox' },
   { value: 'golden-lion', emoji: '🦁', gradient: 'bg-gradient-to-br from-amber-500 to-yellow-400', labelKey: 'avatars.goldenLion' },
   { value: 'sunrise-giraffe', emoji: '🦒', gradient: 'bg-gradient-to-br from-yellow-400 to-amber-300', labelKey: 'avatars.sunriseGiraffe' },
@@ -38,7 +40,7 @@ export const avatarOptions: AvatarOption[] = [
   { value: 'twilight-wolf', emoji: '🐺', gradient: 'bg-gradient-to-br from-slate-500 to-indigo-500', labelKey: 'avatars.twilightWolf' },
   { value: 'aurora-chameleon', emoji: '🦎', gradient: 'bg-gradient-to-br from-lime-400 to-teal-500', labelKey: 'avatars.auroraChameleon' },
   { value: 'ember-dragon', emoji: '🐉', gradient: 'bg-gradient-to-br from-orange-600 to-red-600', labelKey: 'avatars.emberDragon' },
-];
+] satisfies AvatarOption[];
 
 export const defaultAvatar: AvatarValue = 'crimson-fox';
 
