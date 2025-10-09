@@ -75,16 +75,15 @@ export const cryptoAdapter: CryptoAdapter = {
   async encrypt(plain, key, aad) {
     const subtle = getCrypto();
     const nonce = getRandomValues(12);
+    const params: AesGcmParams = {
+      name: 'AES-GCM',
+      iv: nonce,
+    };
+    if (aad && aad.length > 0) {
+      params.additionalData = aad;
+    }
     const encrypted = await bufferFromPromise(
-      subtle.encrypt(
-        {
-          name: 'AES-GCM',
-          iv: nonce,
-          additionalData: aad ?? undefined,
-        },
-        key,
-        plain,
-      ),
+      subtle.encrypt(params, key, plain),
     );
 
     return {
@@ -99,16 +98,15 @@ export const cryptoAdapter: CryptoAdapter = {
     }
 
     const subtle = getCrypto();
+    const params: AesGcmParams = {
+      name: 'AES-GCM',
+      iv: nonce,
+    };
+    if (aad && aad.length > 0) {
+      params.additionalData = aad;
+    }
     const plain = await bufferFromPromise(
-      subtle.decrypt(
-        {
-          name: 'AES-GCM',
-          iv: nonce,
-          additionalData: aad ?? undefined,
-        },
-        key,
-        ct,
-      ),
+      subtle.decrypt(params, key, ct),
     );
 
     return plain;
