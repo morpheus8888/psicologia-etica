@@ -29,6 +29,20 @@
       "when": 1759706063501,
       "tag": "0003_dark_meteorite",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1759946479977,
+      "tag": "0004_soft_the_fallen",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1759946802508,
+      "tag": "0005_conscious_chronomancer",
+      "breakpoints": true
     }
   ]
 }

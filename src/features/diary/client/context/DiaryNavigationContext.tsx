@@ -1,0 +1,143 @@
+'use client';
+
+/* eslint-disable react-refresh/only-export-components */
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from 'react';
+
+import type { RoutingAdapter } from '@/features/diary/adapters/types';
+
+type DiaryBasePage = { kind: 'goals' | 'overview'; index: number };
+type DiaryDayPage = { kind: 'day'; index: number; dateISO: string };
+
+export type DiaryPage = DiaryBasePage | DiaryDayPage;
+
+type DiaryNavigationContextValue = {
+  pages: DiaryPage[];
+  currentIndex: number;
+  currentDate: string | null;
+  setIndex: (index: number) => void;
+  setDate: (dateISO: string) => void;
+  appendDate: (dateISO: string) => void;
+};
+
+const DiaryNavigationContext = createContext<DiaryNavigationContextValue | null>(null);
+
+const normalizeDate = (dateISO: string) => dateISO.slice(0, 10);
+
+type DiaryNavigationProviderProps = {
+  children: React.ReactNode;
+  initialDateISO: string;
+  routing: RoutingAdapter;
+  initialDates?: string[];
+};
+
+export const DiaryNavigationProvider = ({
+  children,
+  initialDateISO,
+  routing,
+  initialDates,
+}: DiaryNavigationProviderProps) => {
+  const deepLink = routing.readDeepLink();
+  const normalizedInitial = normalizeDate(deepLink?.dateISO ?? initialDateISO);
+  const [datePages, setDatePages] = useState<string[]>(() => {
+    const unique = new Set((initialDates ?? []).map(normalizeDate));
+    unique.add(normalizedInitial);
+    return Array.from(unique);
+  });
+  const [currentIndex, setCurrentIndex] = useState<number>(deepLink?.index ?? 2);
+  const [currentDate, setCurrentDate] = useState<string | null>(
+    deepLink?.index !== undefined && deepLink.index < 2 ? null : normalizedInitial,
+  );
+
+  const pages = useMemo<DiaryPage[]>(() => {
+    const base: DiaryPage[] = [
+      { kind: 'goals', index: 0 },
+      { kind: 'overview', index: 1 },
+    ];
+
+    const dayPages = datePages.map((dateISO, position) => ({
+      kind: 'day' as const,
+      index: position + 2,
+      dateISO,
+    }));
+
+    return [...base, ...dayPages];
+  }, [datePages]);
+
+  const setIndex = useCallback(
+    (index: number) => {
+      setCurrentIndex(index);
+      const page = pages.find(item => item.index === index);
+      if (page?.kind === 'day') {
+        setCurrentDate(page.dateISO);
+        routing.navigateToDiaryDate(page.dateISO);
+      } else {
+        setCurrentDate(null);
+        routing.navigateToDiaryIndex(index);
+      }
+    },
+    [pages, routing],
+  );
+
+  const setDate = useCallback(
+    (dateISO: string) => {
+      const normalized = normalizeDate(dateISO);
+
+      setDatePages((prev) => {
+        if (prev.includes(normalized)) {
+          return prev;
+        }
+        return [normalized, ...prev];
+      });
+
+      const page = pages.find(item => item.kind === 'day' && item.dateISO === normalized);
+      const index = page?.index ?? 2;
+      setCurrentIndex(index);
+      setCurrentDate(normalized);
+      routing.navigateToDiaryDate(normalized);
+    },
+    [pages, routing],
+  );
+
+  const appendDate = useCallback((dateISO: string) => {
+    const normalized = normalizeDate(dateISO);
+    setDatePages((prev) => {
+      if (prev.includes(normalized)) {
+        return prev;
+      }
+      return [...prev, normalized];
+    });
+  }, []);
+
+  const value = useMemo<DiaryNavigationContextValue>(
+    () => ({
+      pages,
+      currentIndex,
+      currentDate,
+      setIndex,
+      setDate,
+      appendDate,
+    }),
+    [appendDate, currentDate, currentIndex, pages, setDate, setIndex],
+  );
+
+  return (
+    <DiaryNavigationContext.Provider value={value}>
+      {children}
+    </DiaryNavigationContext.Provider>
+  );
+};
+
+export const useDiaryNavigation = () => {
+  const context = useContext(DiaryNavigationContext);
+  if (!context) {
+    throw new Error('useDiaryNavigation must be used within DiaryNavigationProvider');
+  }
+  return context;
+};

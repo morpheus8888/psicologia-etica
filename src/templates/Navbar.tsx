@@ -33,6 +33,11 @@ export const Navbar = async ({ locale }: NavbarProps) => {
       label: tHeader('blog'),
     },
     {
+      key: 'vocabulary' as const,
+      href: getI18nPath('/vocabulary', locale),
+      label: tHeader('vocabulary'),
+    },
+    {
       key: 'tests' as const,
       href: getI18nPath('/tests', locale),
       label: tHeader('tests'),
@@ -57,6 +62,8 @@ export const Navbar = async ({ locale }: NavbarProps) => {
       adminMembersPath={getI18nPath('/dashboard/admin/members', locale)}
       adminBlogPath={getI18nPath('/dashboard/admin/blog/new', locale)}
       adminVocabularyPath={getI18nPath('/dashboard/admin/vocabulary/new', locale)}
+      locale={locale}
+      accountMenuId="account-menu"
     />
   );
 };

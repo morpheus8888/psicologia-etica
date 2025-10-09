@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Session } from 'next-auth';
 import { signOut } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 
 import { AvatarBadge } from '@/components/AvatarBadge';
 import {
@@ -15,6 +16,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import type {
+  UserMenuActionContext,
+  UserMenuResolvedItem,
+} from '@/registries/userMenuRegistry';
+import { listUserMenuActions } from '@/registries/userMenuRegistry';
 
 type AccountMenuProps = {
   session: Session | null;
@@ -25,6 +31,8 @@ type AccountMenuProps = {
   adminMembersPath: string;
   adminBlogPath: string;
   adminVocabularyPath: string;
+  locale: string;
+  menuId?: string;
 };
 
 export const AccountMenu = ({
@@ -36,15 +44,27 @@ export const AccountMenu = ({
   adminMembersPath,
   adminBlogPath,
   adminVocabularyPath,
+  locale,
+  menuId = 'account-menu',
 }: AccountMenuProps) => {
   const router = useRouter();
   const t = useTranslations('UserMenu');
+  const [open, setOpen] = useState(false);
 
   const userName = session?.user?.name ?? session?.user?.email ?? '';
   const userInitial = userName ? userName.charAt(0).toUpperCase() : '?';
   const isAdmin = session?.user?.role === 'admin';
   const avatarValue = session?.user?.avatar ?? null;
   const avatarFallback = avatarValue ? userInitial : null;
+
+  const userMenuContext: UserMenuActionContext = {
+    session,
+    locale,
+  };
+
+  const resolvedDynamicItems: UserMenuResolvedItem[] = listUserMenuActions(menuId)
+    .map(entry => entry.resolve(userMenuContext))
+    .filter((item): item is UserMenuResolvedItem => Boolean(item));
 
   const handleSignOut = () => {
     void signOut({ callbackUrl: signInPath });
@@ -72,7 +92,7 @@ export const AccountMenu = ({
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -107,6 +127,37 @@ export const AccountMenu = ({
         <DropdownMenuItem asChild>
           <Link href={settingsPath}>{t('settings')}</Link>
         </DropdownMenuItem>
+        {resolvedDynamicItems.length > 0 && <DropdownMenuSeparator />}
+        {resolvedDynamicItems.map((item) => {
+          if (item.href) {
+            return (
+              <DropdownMenuItem asChild key={item.id} disabled={item.disabled}>
+                <Link href={item.href}>{item.label}</Link>
+              </DropdownMenuItem>
+            );
+          }
+
+          return (
+            <DropdownMenuItem
+              key={item.id}
+              disabled={item.disabled}
+              onSelect={(event) => {
+                if (!item.onSelect) {
+                  return;
+                }
+
+                event.preventDefault();
+                setOpen(false);
+                void item.onSelect({
+                  ...userMenuContext,
+                  closeMenu: () => setOpen(false),
+                });
+              }}
+            >
+              {item.label}
+            </DropdownMenuItem>
+          );
+        })}
         {isAdmin && (
           <>
             <DropdownMenuSeparator />
@@ -126,6 +177,7 @@ export const AccountMenu = ({
         <DropdownMenuItem
           onSelect={(event) => {
             event.preventDefault();
+            setOpen(false);
             handleSignOut();
           }}
         >

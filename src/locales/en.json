@@ -109,6 +109,122 @@
     "billing": "Billing",
     "settings": "Settings"
   },
+  "diary": {
+    "header": {
+      "title": "Private diary",
+      "subtitle": "Today is {date}"
+    },
+    "nav": {
+      "goals": "Goals",
+      "overview": "Overview"
+    },
+    "goals": {
+      "title": "Goals & priorities",
+      "empty": "No goals yet",
+      "deadline": "Due {date}",
+      "linker": {
+        "title": "Link to a goal",
+        "subtitle": "Keep your progress connected to the objectives you set.",
+        "close": "Done",
+        "empty": "No goals available yet.",
+        "deadline": "Due {date}",
+        "pending": "Saving…",
+        "link": "Link goal",
+        "unlink": "Unlink goal"
+      }
+    },
+    "overview": {
+      "calendarTitle": "Calendar",
+      "heatmapTitle": "Writing streak"
+    },
+    "entry": {
+      "editable": "Editable today",
+      "readonly": "Read-only",
+      "moodPlaceholder": "Mood",
+      "moodPositive": "Positive",
+      "moodNeutral": "Neutral",
+      "moodNegative": "Challenging",
+      "placeholder": "Write your thoughts for today...",
+      "save": "Save entry",
+      "deadlineTodayTitle": "Goal deadline today",
+      "deadlineTodaySubtitle": "Link this page to the goal to keep your progress aligned.",
+      "share": "Share",
+      "deadlineCta": "Link today's page",
+      "linkGoal": "Link goal"
+    },
+    "unlock": {
+      "setupTitle": "Set your diary password",
+      "setupSubtitle": "Protect your journal with end-to-end encryption.",
+      "unlockTitle": "Unlock your diary",
+      "unlockSubtitle": "Enter your diary password to continue.",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter password",
+      "setupCta": "Create password",
+      "unlockCta": "Unlock diary",
+      "warning": "If you lose the password we cannot recover your diary entries.",
+      "pending": "Decrypting...",
+      "setup_failed": "We could not save your password. Try again.",
+      "invalid_password": "Password not recognised"
+    },
+    "lock": {
+      "label": "Lock diary"
+    },
+    "share": {
+      "title": "Share with a professional",
+      "subtitle": "Grant read-only access to this page. You can revoke it at any time.",
+      "close": "Close",
+      "empty": "No connected professionals. Ask your professional to accept your invitation.",
+      "share": "Share access",
+      "revoke": "Revoke access",
+      "pending": "Saving…",
+      "toastShared": "Shared with {name}",
+      "toastRevoked": "Access revoked for {name}",
+      "toastErrorTitle": "Unable to update sharing",
+      "toastErrorDescription": "Please try again later."
+    },
+    "coach": {
+      "open": "Need inspiration?",
+      "close": "Close",
+      "bottomSheetTitle": "Daily prompt",
+      "inserted": "Prompt inserted into your page",
+      "actions": {
+        "insert": "Insert prompt",
+        "another": "Another idea",
+        "dismiss": "Dismiss"
+      },
+      "tags": {
+        "weight": "Weight {value}"
+      }
+    },
+    "settings": {
+      "intro": "Your diary stays encrypted with a password you set. Use the actions below to manage access and prompts.",
+      "pointPrivacy": "Keep your password secure: if it is lost we cannot restore your diary.",
+      "pointSharing": "Open any diary page and use the share panel to grant or revoke professional access.",
+      "pointCoach": "The coach prompt dock can be toggled from the diary; administrators curate prompts in the admin area."
+    },
+    "admin": {
+      "coachPrompts": {
+        "title": "Coach prompts",
+        "description": "Review and curate the suggestions shown in the coach dock.",
+        "empty": "No prompts configured yet.",
+        "headers": {
+          "locale": "Locale",
+          "scope": "Scope",
+          "text": "Prompt",
+          "tags": "Tags",
+          "weight": "Weight",
+          "status": "Status",
+          "window": "Availability window"
+        },
+        "statusActive": "Active",
+        "statusInactive": "Inactive",
+        "actionsHint": "Use the server actions or upcoming admin tools to create, edit or pause prompts."
+      }
+    },
+    "menu": {
+      "label": "Diary"
+    }
+  },
   "DashboardIndex": {
     "title_bar": "Dashboard",
     "title_bar_description": "Welcome to your dashboard",

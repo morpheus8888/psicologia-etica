@@ -137,6 +137,13 @@ SUPPORTED_LOCALES=it,en
 - Il boilerplate originale includeva pagine marketing/pricing: sono state rimosse dal menu principale
 - Il focus del layout resta su Blog, Vocabolario, Test, Servizi e accesso all'area autenticata (Login/Avatar)
 
+## 📓 Stato integrazione Diario (WIP)
+- ✅ Struttura base completata: unlock E2EE, panoramica/heatmap, pagina giornaliera con controlli di modifica legati al fuso orario.
+- ✅ UI avanzata in corso: highlight scadenze degli obiettivi, pannelli share/goal-link, coach dock (data + layout pronti, refine in corso).
+- ⏳ Da finalizzare: wiring completo delle azioni di condivisione (envelope E2EE + revoke audit), integrazione registries (menu/settings/admin) con componenti definitivi.
+- ⏳ Da aggiungere: batteria di test automatizzati (unlock/lock, editabilità, scadenza goal, share/revoke, prompt weighting) e verifica lint/type/build.
+- ⏳ Da coordinare: ordinamento import/esport, refattorizzazione tipi adapters e cleanup lint residuali prima del merge.
+
 ## 📱 Responsive UI
 - Ogni modifica deve restare navigabile sia da mobile sia da desktop (layout mobile-first, breakpoint `sm`/`md` coerenti).
 - Navbar: massimo 4 voci (Home, Blog, Test, Servizi) rese con icone colorate; la barra sparisce durante lo scroll in giù e riappare quando si risale.

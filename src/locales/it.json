@@ -109,6 +109,122 @@
     "billing": "Fatturazione",
     "settings": "Impostazioni"
   },
+  "diary": {
+    "header": {
+      "title": "Diario privato",
+      "subtitle": "Oggi è {date}"
+    },
+    "nav": {
+      "goals": "Obiettivi",
+      "overview": "Panoramica"
+    },
+    "goals": {
+      "title": "Obiettivi e priorità",
+      "empty": "Nessun obiettivo al momento",
+      "deadline": "Scadenza {date}",
+      "linker": {
+        "title": "Collega a un obiettivo",
+        "subtitle": "Mantieni allineati i tuoi progressi con gli obiettivi definiti.",
+        "close": "Fatto",
+        "empty": "Non ci sono ancora obiettivi.",
+        "deadline": "Scadenza {date}",
+        "pending": "Salvataggio…",
+        "link": "Collega obiettivo",
+        "unlink": "Scollega obiettivo"
+      }
+    },
+    "overview": {
+      "calendarTitle": "Calendario",
+      "heatmapTitle": "Continuità di scrittura"
+    },
+    "entry": {
+      "editable": "Modificabile oggi",
+      "readonly": "Sola lettura",
+      "moodPlaceholder": "Umore",
+      "moodPositive": "Positivo",
+      "moodNeutral": "Neutro",
+      "moodNegative": "Difficile",
+      "placeholder": "Scrivi qui i pensieri della giornata...",
+      "save": "Salva la pagina",
+      "deadlineTodayTitle": "Scadenza obiettivo oggi",
+      "deadlineTodaySubtitle": "Collega questa pagina all'obiettivo per restare sul pezzo.",
+      "share": "Condividi",
+      "deadlineCta": "Collega questa pagina",
+      "linkGoal": "Collega obiettivo"
+    },
+    "unlock": {
+      "setupTitle": "Imposta la password del diario",
+      "setupSubtitle": "Proteggi il diario con la cifratura end-to-end.",
+      "unlockTitle": "Sblocca il diario",
+      "unlockSubtitle": "Inserisci la password del diario per continuare.",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Inserisci la password",
+      "setupCta": "Crea password",
+      "unlockCta": "Sblocca diario",
+      "warning": "Se perdi la password non potremo recuperare il contenuto del diario.",
+      "pending": "Sto decriptando...",
+      "setup_failed": "Non siamo riusciti a salvare la password. Riprova.",
+      "invalid_password": "Password non riconosciuta"
+    },
+    "lock": {
+      "label": "Blocca diario"
+    },
+    "share": {
+      "title": "Condividi con un professionista",
+      "subtitle": "Concedi l'accesso in sola lettura a questa pagina. Puoi revocarlo in qualsiasi momento.",
+      "close": "Chiudi",
+      "empty": "Non ci sono professionisti collegati. Invita il tuo professionista ad accettare la richiesta.",
+      "share": "Condividi accesso",
+      "revoke": "Revoca accesso",
+      "pending": "Salvataggio…",
+      "toastShared": "Condiviso con {name}",
+      "toastRevoked": "Accesso revocato per {name}",
+      "toastErrorTitle": "Impossibile aggiornare la condivisione",
+      "toastErrorDescription": "Riprova tra qualche istante."
+    },
+    "coach": {
+      "open": "Serve ispirazione?",
+      "close": "Chiudi",
+      "bottomSheetTitle": "Suggerimento del giorno",
+      "inserted": "Prompt inserito nella pagina",
+      "actions": {
+        "insert": "Inserisci prompt",
+        "another": "Un altro spunto",
+        "dismiss": "Nascondi"
+      },
+      "tags": {
+        "weight": "Peso {value}"
+      }
+    },
+    "settings": {
+      "intro": "Il diario resta cifrato con la password che imposti tu. Qui trovi alcune indicazioni per gestire accessi e suggerimenti.",
+      "pointPrivacy": "Conserva con cura la password: se la perdi non possiamo ripristinare il diario.",
+      "pointSharing": "Apri una pagina del diario e usa il pannello di condivisione per concedere o revocare l'accesso ai professionisti.",
+      "pointCoach": "Il coach può essere gestito dal diario; gli amministratori curano i prompt dall'area admin."
+    },
+    "admin": {
+      "coachPrompts": {
+        "title": "Prompt del coach",
+        "description": "Consulta e cura i suggerimenti mostrati nel coach.",
+        "empty": "Nessun prompt configurato al momento.",
+        "headers": {
+          "locale": "Lingua",
+          "scope": "Ambito",
+          "text": "Prompt",
+          "tags": "Tag",
+          "weight": "Peso",
+          "status": "Stato",
+          "window": "Finestra di disponibilità"
+        },
+        "statusActive": "Attivo",
+        "statusInactive": "Non attivo",
+        "actionsHint": "Usa le azioni server o i prossimi strumenti admin per creare, modificare o sospendere i prompt."
+      }
+    },
+    "menu": {
+      "label": "Diario"
+    }
+  },
   "DashboardIndex": {
     "title_bar": "Dashboard",
     "title_bar_description": "Benvenuto nella tua area lavoro",

@@ -59,4 +59,13 @@ export const todoSchema = pgTable('todo', {
 });
 
 export { accounts, sessions, users, verificationTokens } from './auth';
+export {
+  diaryCoachPrompts,
+  diaryEntries,
+  diaryGoalEntries,
+  diaryGoals,
+  diaryKeyrings,
+  diaryShares,
+} from './diary';
+export { professionalPublicKeys, userProfessionalLinks } from './professional';
 export { vocabularyEntries } from './vocabulary';
