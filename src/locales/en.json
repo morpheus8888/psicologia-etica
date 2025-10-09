@@ -292,6 +292,8 @@
     "dashboard": "Dashboard",
     "profile": "Profile",
     "settings": "Settings",
+    "change_password": "Change password",
+    "diary": "Diary",
     "admin_panel": "Admin panel",
     "admin_members": "Members",
     "admin_blog_new": "Create blog article",

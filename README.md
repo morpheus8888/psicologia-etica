@@ -139,10 +139,14 @@ SUPPORTED_LOCALES=it,en
 
 ## 📓 Stato integrazione Diario (WIP)
 - ✅ Struttura base completata: unlock E2EE, panoramica/heatmap, pagina giornaliera con controlli di modifica legati al fuso orario.
-- ✅ UI avanzata in corso: highlight scadenze degli obiettivi, pannelli share/goal-link, coach dock (data + layout pronti, refine in corso).
-- ⏳ Da finalizzare: wiring completo delle azioni di condivisione (envelope E2EE + revoke audit), integrazione registries (menu/settings/admin) con componenti definitivi.
-- ⏳ Da aggiungere: batteria di test automatizzati (unlock/lock, editabilità, scadenza goal, share/revoke, prompt weighting) e verifica lint/type/build.
-- ⏳ Da coordinare: ordinamento import/esport, refattorizzazione tipi adapters e cleanup lint residuali prima del merge.
+- ✅ UI avanzata in corso: highlight scadenze degli obiettivi, pannelli share/goal-link e coach dock sono presenti ma non ancora wired al 100% (dati + layout pronti).
+- 🔧 Da completare (Milestone 2):
+  - Share E2EE: creare envelope per il professionista via `DiaryStoreAdapter.shareEntry`, gestire revoke e aggiornare metadata/audit.
+  - Goal deadline: decidere dove persistere la scadenza (schema + store) e rifinire l'highlight della pagina.
+  - Registries: collegare menu/settings/admin alla feature (es. usare `DiaryCoachPromptsAdmin`).
+  - Coach dock: completare stati ask/sleep, inattività, filtri runtime.
+- 📋 Milestone 3: batteria di test automatizzati (unlock/lock, editabilità, scadenza goal, share/revoke, prompt weighting) + `npm run lint format:check typecheck test build`.
+- ℹ️ Lint e typecheck ora passano (`npm run lint`, `npm run check-types`).
 
 ## 📱 Responsive UI
 - Ogni modifica deve restare navigabile sia da mobile sia da desktop (layout mobile-first, breakpoint `sm`/`md` coerenti).

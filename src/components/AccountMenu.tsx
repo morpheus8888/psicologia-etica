@@ -16,11 +16,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type {
-  UserMenuActionContext,
-  UserMenuResolvedItem,
-} from '@/registries/userMenuRegistry';
+import type { UserMenuActionContext, UserMenuResolvedItem } from '@/registries/userMenuRegistry';
 import { listUserMenuActions } from '@/registries/userMenuRegistry';
+import { getI18nPath } from '@/utils/Helpers';
 
 type AccountMenuProps = {
   session: Session | null;
@@ -65,6 +63,8 @@ export const AccountMenu = ({
   const resolvedDynamicItems: UserMenuResolvedItem[] = listUserMenuActions(menuId)
     .map(entry => entry.resolve(userMenuContext))
     .filter((item): item is UserMenuResolvedItem => Boolean(item));
+  const diaryPath = getI18nPath('/dashboard/diary', locale);
+  const changePasswordPath = getI18nPath('/dashboard/change-password', locale);
 
   const handleSignOut = () => {
     void signOut({ callbackUrl: signInPath });
@@ -126,6 +126,12 @@ export const AccountMenu = ({
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href={settingsPath}>{t('settings')}</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={changePasswordPath}>{t('change_password')}</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={diaryPath}>{t('diary')}</Link>
         </DropdownMenuItem>
         {resolvedDynamicItems.length > 0 && <DropdownMenuSeparator />}
         {resolvedDynamicItems.map((item) => {
