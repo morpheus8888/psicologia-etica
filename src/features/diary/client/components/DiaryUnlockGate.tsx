@@ -75,6 +75,14 @@ export const DiaryUnlockGate = ({ t, children }: DiaryUnlockGateProps) => {
           )
         : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <input
+                type="text"
+                name="username"
+                autoComplete="username"
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
+              />
               <label className="text-left text-sm font-medium text-foreground" htmlFor="diary-password">
                 {t.getNamespace('unlock').t('passwordLabel')}
               </label>

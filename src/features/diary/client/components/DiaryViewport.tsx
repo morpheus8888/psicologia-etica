@@ -21,9 +21,9 @@ import { DiarySharePanel } from './DiarySharePanel';
 
 const FlipBook = HTMLFlipBook as unknown as ComponentType<any>;
 
-const BASE_PAGE_COUNT = 4;
-const GOALS_PAGE_INDEX = 0;
-const CALENDAR_PAGE_INDEX = 2;
+const GOALS_LEFT_INDEX = 2;
+const CALENDAR_LEFT_INDEX = 4;
+const BASE_PAGE_COUNT = 6;
 
 const normalizeDate = (dateISO: string) => dateISO.slice(0, 10);
 
@@ -283,7 +283,7 @@ export const DiaryViewport = ({
   const handleGoToday = useCallback(() => {
     setCalendarSelection(todayISO);
     setCalendarMonth(new Date(`${todayISO}T00:00:00`));
-    goToIndex(CALENDAR_PAGE_INDEX);
+    goToIndex(CALENDAR_LEFT_INDEX);
   }, [goToIndex, todayISO]);
 
   useEffect(() => {
@@ -307,10 +307,48 @@ export const DiaryViewport = ({
     );
   }
 
-  const pageClassName = 'page flex h-full flex-col bg-muted/20 p-8';
+  const basePageClass = 'page diary-page flex h-full flex-col p-8';
+
+  const coverLeftPage = (
+    <article key="cover-left" className={`${basePageClass} diary-page--cover-left`}>
+      <div className="flex h-full flex-col justify-end gap-6">
+        <div className="space-y-3 text-left text-muted-foreground/90">
+          <p className="text-sm uppercase tracking-[0.4em] text-muted-foreground">
+            Psicologia Etica
+          </p>
+          <h1 className="text-4xl font-semibold text-foreground">Diario Riservato</h1>
+          <p className="max-w-xs text-sm leading-relaxed">
+            Un luogo sicuro per annotare giornate, progressi e obiettivi condivisi con il tuo
+            professionista di fiducia.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-border/40 bg-background/70 px-5 py-4 text-xs uppercase tracking-widest text-muted-foreground">
+          {t.getNamespace('header').t('subtitle', { date: formatDateLabel(todayISO, locale) })}
+        </div>
+      </div>
+    </article>
+  );
+
+  const coverRightPage = (
+    <article key="cover-right" className={`${basePageClass} diary-page--cover-right`}>
+      <div className="flex h-full flex-col items-center justify-center text-center text-primary-foreground/90">
+        <p className="text-sm uppercase tracking-[0.35em]">Psicologia Etica</p>
+        <h2 className="mt-4 text-4xl font-bold">Private Journal</h2>
+        <p className="mt-6 max-w-xs text-sm leading-relaxed">
+          Protezione end-to-end, controllo totale dell&apos;accesso, strumenti pensati per il percorso
+          terapeutico.
+        </p>
+        <div className="mt-8 flex items-center gap-2 text-xs uppercase tracking-widest">
+          <span>{locale.toUpperCase()}</span>
+          <span className="h-3 w-px bg-primary-foreground/40" />
+          <span>{todayISO}</span>
+        </div>
+      </div>
+    </article>
+  );
 
   const goalsLeftPage = (
-    <article key="goals-left" className={pageClassName}>
+    <article key="goals-left" className={`${basePageClass} diary-page--goals`}>
       <div className="flex h-full flex-col justify-between">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
@@ -349,7 +387,7 @@ export const DiaryViewport = ({
   );
 
   const goalsRightPage = (
-    <article key="goals-right" className={pageClassName}>
+    <article key="goals-right" className={`${basePageClass} diary-page--goals`}>
       <div className="flex h-full flex-col gap-4">
         <h3 className="text-lg font-semibold text-foreground">
           {t.getNamespace('goals').t('title')}
@@ -392,7 +430,7 @@ export const DiaryViewport = ({
   );
 
   const calendarLeftPage = (
-    <article key="calendar-left" className={pageClassName}>
+    <article key="calendar-left" className={`${basePageClass} diary-page--calendar`}>
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -452,7 +490,7 @@ export const DiaryViewport = ({
   );
 
   const calendarRightPage = (
-    <article key="calendar-right" className={pageClassName}>
+    <article key="calendar-right" className={`${basePageClass} diary-page--calendar`}>
       <div className="flex h-full flex-col gap-4">
         <header className="space-y-1">
           <h3 className="text-lg font-semibold text-foreground">
@@ -512,7 +550,7 @@ export const DiaryViewport = ({
     const disableGoalLink = !navigation.currentDate || (!currentEntryId && !editable);
 
     return (
-      <article key={page.dateISO} className={pageClassName}>
+      <article key={page.dateISO} className={`${basePageClass} diary-page--entry`}>
         <div className="flex h-full flex-col gap-4">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -633,7 +671,7 @@ export const DiaryViewport = ({
           <textarea
             value={navigation.currentDate === page.dateISO ? currentBody : ''}
             onChange={event => setCurrentBody(event.target.value)}
-            className="h-72 w-full resize-none rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-sm leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            className="h-72 w-full resize-none rounded-2xl border border-border/70 bg-transparent px-4 py-3 text-sm leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             placeholder={t.getNamespace('entry').t('placeholder')}
             disabled={!editable}
           />
@@ -656,6 +694,8 @@ export const DiaryViewport = ({
   });
 
   const flipPages = [
+    coverLeftPage,
+    coverRightPage,
     goalsLeftPage,
     goalsRightPage,
     calendarLeftPage,
@@ -678,7 +718,7 @@ export const DiaryViewport = ({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => goToIndex(GOALS_PAGE_INDEX)}
+              onClick={() => goToIndex(GOALS_LEFT_INDEX)}
               className={`rounded-full px-3 py-1 text-sm font-medium transition ${
                 navigation.currentIndex <= 1
                   ? 'bg-primary text-primary-foreground'
@@ -689,7 +729,7 @@ export const DiaryViewport = ({
             </button>
             <button
               type="button"
-              onClick={() => goToIndex(CALENDAR_PAGE_INDEX)}
+              onClick={() => goToIndex(CALENDAR_LEFT_INDEX)}
               className={`rounded-full px-3 py-1 text-sm font-medium transition ${
                 navigation.currentIndex === 2 || navigation.currentIndex === 3
                   ? 'bg-primary text-primary-foreground'
@@ -739,9 +779,14 @@ export const DiaryViewport = ({
             maxWidth={640}
             minHeight={560}
             maxHeight={820}
+            startPage={navigation.currentIndex}
             showCover={false}
             drawShadow={false}
             onFlip={handleFlip}
+            disableFlipByClick
+            showPageCorners
+            clickEventForward={false}
+            mobileScrollSupport={false}
             className="w-full"
           >
             {flipPages}

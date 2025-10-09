@@ -138,7 +138,7 @@ SUPPORTED_LOCALES=it,en
 - Il focus del layout resta su Blog, Vocabolario, Test, Servizi e accesso all'area autenticata (Login/Avatar)
 
 ## 📓 Stato integrazione Diario (WIP)
-- ✅ Modalità desktop con flip-book (react-pageflip): pagine 0-1 dedicate agli obiettivi, pagine 2-3 al calendario mensile, dalla pagina 4 in poi le entry giornaliere. I pulsanti "Obiettivi", "Calendario" e "Oggi" portano rapidamente ai rispettivi spread.
+- ✅ Modalità desktop con flip-book (react-pageflip): copertina (pagine 0-1) in stile notebook, pagine 2-3 dedicate agli obiettivi, pagine 4-5 al calendario mensile, dalla pagina 6 in poi le entry giornaliere. I pulsanti "Obiettivi", "Calendario" e "Oggi" portano rapidamente ai rispettivi spread.
 - ✅ Condivisione E2EE con professionisti: envelope cifrato, audit trail (`diary_share_audits`) e meta sincronizzati lato client.
 - ✅ Pagina impostazioni con cambio password (voce spostata nel menu Impostazioni).
 - ✅ Coach dock con stati ask/sleep e highlight delle scadenze goal direttamente nelle pagine giornaliere.

@@ -27,6 +27,49 @@ const asString = (value: unknown, fallback: string) => {
   return typeof value === 'string' && value.length > 0 ? value : fallback;
 };
 
+const normalizeBytes = (value: unknown): Uint8Array => {
+  if (value instanceof Uint8Array) {
+    return value;
+  }
+
+  if (value instanceof ArrayBuffer) {
+    return new Uint8Array(value);
+  }
+
+  if (Array.isArray(value)) {
+    return new Uint8Array(value);
+  }
+
+  if (value && typeof value === 'object') {
+    const bufferObj = value as Record<string, unknown>;
+
+    if (bufferObj.type === 'Buffer' && Array.isArray(bufferObj.data)) {
+      return new Uint8Array(bufferObj.data as number[]);
+    }
+
+    if (bufferObj.buffer instanceof ArrayBuffer) {
+      const view = bufferObj as { buffer: ArrayBuffer; byteOffset?: number; byteLength?: number };
+      const offset = typeof view.byteOffset === 'number' ? view.byteOffset : 0;
+      const length = typeof view.byteLength === 'number'
+        ? view.byteLength
+        : view.buffer.byteLength - offset;
+      return new Uint8Array(view.buffer.slice(offset, offset + length));
+    }
+
+    const numericKeys = Object.keys(bufferObj)
+      .filter(key => Number.isFinite(Number(key)))
+      .sort((a, b) => Number(a) - Number(b));
+
+    if (numericKeys.length > 0) {
+      return new Uint8Array(
+        numericKeys.map(key => Number(bufferObj[key as keyof typeof bufferObj] ?? 0)),
+      );
+    }
+  }
+
+  throw new TypeError('UNSUPPORTED_BYTE_FORMAT');
+};
+
 const deriveAesKey = async (
   password: string,
   salt: Uint8Array,
@@ -69,7 +112,7 @@ const bufferFromPromise = async (promise: Promise<ArrayBuffer>) => {
 
 export const cryptoAdapter: CryptoAdapter = {
   async deriveKey(password, salt, params) {
-    return deriveAesKey(password, salt, params);
+    return deriveAesKey(password, normalizeBytes(salt), params);
   },
 
   async encrypt(plain, key, aad) {
@@ -100,13 +143,13 @@ export const cryptoAdapter: CryptoAdapter = {
     const subtle = getCrypto();
     const params: AesGcmParams = {
       name: 'AES-GCM',
-      iv: nonce,
+      iv: normalizeBytes(nonce),
     };
     if (aad && aad.length > 0) {
-      params.additionalData = aad;
+      params.additionalData = normalizeBytes(aad);
     }
     const plain = await bufferFromPromise(
-      subtle.decrypt(params, key, ct),
+      subtle.decrypt(params, key, normalizeBytes(ct)),
     );
 
     return plain;

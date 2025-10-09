@@ -13,6 +13,8 @@ import {
 import type { RoutingAdapter } from '@/features/diary/adapters/types';
 
 type DiaryStaticPage =
+  | { kind: 'cover-left'; index: number }
+  | { kind: 'cover-right'; index: number }
   | { kind: 'goals'; side: 'left' | 'right'; index: number }
   | { kind: 'calendar'; side: 'left' | 'right'; index: number };
 type DiaryDayPage = { kind: 'day'; index: number; dateISO: string };
@@ -52,7 +54,7 @@ export const DiaryNavigationProvider = ({
     unique.add(normalizedInitial);
     return Array.from(unique);
   });
-  const basePageCount = 4;
+  const basePageCount = 6;
   const [currentIndex, setCurrentIndex] = useState<number>(
     deepLink?.index ?? basePageCount,
   );
@@ -61,11 +63,13 @@ export const DiaryNavigationProvider = ({
   );
 
   const pages = useMemo<DiaryPage[]>(() => {
-    const base: DiaryPage[] = [
-      { kind: 'goals', side: 'left', index: 0 },
-      { kind: 'goals', side: 'right', index: 1 },
-      { kind: 'calendar', side: 'left', index: 2 },
-      { kind: 'calendar', side: 'right', index: 3 },
+    const staticPages: DiaryPage[] = [
+      { kind: 'cover-left', index: 0 },
+      { kind: 'cover-right', index: 1 },
+      { kind: 'goals', side: 'left', index: 2 },
+      { kind: 'goals', side: 'right', index: 3 },
+      { kind: 'calendar', side: 'left', index: 4 },
+      { kind: 'calendar', side: 'right', index: 5 },
     ];
 
     const dayPages = datePages.map((dateISO, position) => ({
@@ -74,8 +78,8 @@ export const DiaryNavigationProvider = ({
       dateISO,
     }));
 
-    return [...base, ...dayPages];
-  }, [datePages]);
+    return [...staticPages, ...dayPages];
+  }, [basePageCount, datePages]);
 
   const setIndex = useCallback(
     (index: number) => {
