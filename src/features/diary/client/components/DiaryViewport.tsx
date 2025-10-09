@@ -347,6 +347,34 @@ export const DiaryViewport = ({
     </article>
   );
 
+  const closingLeftPage = (
+    <article key="closing-left" className={`${basePageClass} diary-page--cover-back-left`}>
+      <div className="flex h-full flex-col justify-between text-sm text-muted-foreground/80">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em]">Note</p>
+          <p className="mt-2 max-w-72 leading-relaxed">
+            Continua a custodire qui i tuoi pensieri quotidiani. Ricorda che puoi condividere solo
+            quello che desideri con il tuo professionista.
+          </p>
+        </div>
+        <p className="text-right text-xs uppercase tracking-[0.35em] text-muted-foreground/70">
+          Psicologia Etica · Riservato
+        </p>
+      </div>
+    </article>
+  );
+
+  const closingRightPage = (
+    <article key="closing-right" className={`${basePageClass} diary-page--cover-back-right`}>
+      <div className="flex h-full flex-col items-center justify-end gap-6 text-center text-primary-foreground/85">
+        <p className="text-xs uppercase tracking-[0.35em]">Grazie per aver scritto oggi</p>
+        <div className="rounded-full border border-primary/30 bg-primary/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.4em]">
+          {t.getNamespace('nav').t('today')}
+        </div>
+      </div>
+    </article>
+  );
+
   const goalsLeftPage = (
     <article key="goals-left" className={`${basePageClass} diary-page--goals`}>
       <div className="flex h-full flex-col justify-between">
@@ -701,12 +729,14 @@ export const DiaryViewport = ({
     calendarLeftPage,
     calendarRightPage,
     ...dayPagesNodes,
+    closingLeftPage,
+    closingRightPage,
   ];
 
   return (
     <>
       <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold text-foreground">
               {t.getNamespace('header').t('title')}
@@ -715,37 +745,39 @@ export const DiaryViewport = ({
               {t.getNamespace('header').t('subtitle', { date: formatDateLabel(todayISO, locale) })}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => goToIndex(GOALS_LEFT_INDEX)}
-              className={`rounded-full px-3 py-1 text-sm font-medium transition ${
-                navigation.currentIndex <= 1
-                  ? 'bg-primary text-primary-foreground'
-                  : 'border border-border/60 text-muted-foreground hover:bg-muted/60'
-              }`}
-            >
-              {t.getNamespace('nav').t('goals')}
-            </button>
-            <button
-              type="button"
-              onClick={() => goToIndex(CALENDAR_LEFT_INDEX)}
-              className={`rounded-full px-3 py-1 text-sm font-medium transition ${
-                navigation.currentIndex === 2 || navigation.currentIndex === 3
-                  ? 'bg-primary text-primary-foreground'
-                  : 'border border-border/60 text-muted-foreground hover:bg-muted/60'
-              }`}
-            >
-              {t.getNamespace('nav').t('calendar')}
-            </button>
-            <button
-              type="button"
-              onClick={handleGoToday}
-              className="rounded-full border border-border/60 px-3 py-1 text-sm font-medium text-foreground transition hover:bg-muted/60"
-            >
-              {t.getNamespace('nav').t('today')}
-            </button>
-            <div className="flex items-center gap-2 overflow-x-auto rounded-full border border-border/70 bg-background px-2 py-1 text-sm">
+          <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => goToIndex(GOALS_LEFT_INDEX)}
+                className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
+                  navigation.currentIndex === GOALS_LEFT_INDEX || navigation.currentIndex === GOALS_LEFT_INDEX + 1
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border/60 text-muted-foreground hover:bg-muted/60'
+                }`}
+              >
+                {t.getNamespace('nav').t('goals')}
+              </button>
+              <button
+                type="button"
+                onClick={() => goToIndex(CALENDAR_LEFT_INDEX)}
+                className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
+                  navigation.currentIndex === CALENDAR_LEFT_INDEX || navigation.currentIndex === CALENDAR_LEFT_INDEX + 1
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border/60 text-muted-foreground hover:bg-muted/60'
+                }`}
+              >
+                {t.getNamespace('nav').t('calendar')}
+              </button>
+              <button
+                type="button"
+                onClick={handleGoToday}
+                className="rounded-full border border-border/60 px-3 py-1 text-sm font-medium text-foreground transition hover:bg-muted/60"
+              >
+                {t.getNamespace('nav').t('today')}
+              </button>
+            </div>
+            <div className="flex max-w-full items-center gap-2 overflow-x-auto rounded-full border border-border/70 bg-background px-2 py-1 text-sm">
               {dayPages.map(page => (
                 <button
                   key={page.dateISO}
