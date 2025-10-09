@@ -1,3 +1,5 @@
+import '@/features/diary/feature/registerHost';
+
 import { getTranslations, unstable_setRequestLocale } from 'next-intl/server';
 
 import { Navbar } from '@/templates/Navbar';

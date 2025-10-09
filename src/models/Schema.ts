@@ -65,6 +65,7 @@ export {
   diaryGoalEntries,
   diaryGoals,
   diaryKeyrings,
+  diaryShareAudits,
   diaryShares,
 } from './diary';
 export { professionalPublicKeys, userProfessionalLinks } from './professional';

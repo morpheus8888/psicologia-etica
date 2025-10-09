@@ -138,7 +138,7 @@ type ShareEntryPayload = {
 export const diaryShareEntry = async (payload: ShareEntryPayload) => {
   const { adapters } = getDiaryServerState();
   const userId = await requireUserId();
-  await adapters.diaryStore.shareEntry(
+  return adapters.diaryStore.shareEntry(
     userId,
     payload.entryId,
     payload.professionalId,

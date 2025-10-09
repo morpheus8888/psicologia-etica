@@ -1,0 +1,1 @@
+ALTER TABLE "diary_goals" ADD COLUMN "deadline_date" date;

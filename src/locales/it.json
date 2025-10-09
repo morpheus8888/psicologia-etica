@@ -161,6 +161,7 @@
       "passwordPlaceholder": "Inserisci la password",
       "setupCta": "Crea password",
       "unlockCta": "Sblocca diario",
+      "info": "Le pagine del diario vengono cifrate end-to-end direttamente nel tuo browser. La chiave resta solo con te, quindi nessuno all'infuori tuo — nemmeno il team di Psicologia Etica o i professionisti collegati — può leggerle a meno che tu non condivida esplicitamente una pagina.",
       "warning": "Se perdi la password non potremo recuperare il contenuto del diario.",
       "pending": "Sto decriptando...",
       "setup_failed": "Non siamo riusciti a salvare la password. Riprova.",

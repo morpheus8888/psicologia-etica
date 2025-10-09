@@ -30,6 +30,7 @@ import {
   diaryEntries,
   diaryGoalEntries,
   diaryGoals,
+  diaryShareAudits,
   diaryShares,
 } from '@/models/diary';
 import { userProfessionalLinks } from '@/models/professional';
@@ -57,6 +58,7 @@ const mapGoalRow = (row: any): DiaryGoalRecord => ({
   aad: row.aad ?? undefined,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
+  deadlineISO: row.deadlineDate ?? null,
 });
 
 const mapPromptRow = (row: any) => ({
@@ -127,7 +129,7 @@ const listSharesForEntries = async (entryIds: string[], ownerUserId: string) => 
     .select({
       entryId: diaryShares.entryId,
       professionalId: diaryShares.professionalUserId,
-      sharedAt: diaryShares.createdAt,
+      sharedAt: diaryShares.updatedAt,
     })
     .from(diaryShares)
     .where(
@@ -136,7 +138,7 @@ const listSharesForEntries = async (entryIds: string[], ownerUserId: string) => 
         inArray(diaryShares.entryId, entryIds),
       ),
     )
-    .orderBy(diaryShares.createdAt);
+    .orderBy(diaryShares.updatedAt);
 
   const shareMap = new Map<string, DiaryEntryShareMeta[]>();
 
@@ -353,6 +355,7 @@ export const diaryStoreAdapter: DiaryStoreAdapter = {
         aad: diaryGoals.aad,
         createdAt: diaryGoals.createdAt,
         updatedAt: diaryGoals.updatedAt,
+        deadlineDate: diaryGoals.deadlineDate,
       })
       .from(diaryGoals)
       .where(eq(diaryGoals.userId, userId))
@@ -377,6 +380,7 @@ export const diaryStoreAdapter: DiaryStoreAdapter = {
           ciphertext: payload.ciphertext,
           nonce: payload.nonce,
           aad: payload.aad ?? null,
+          deadlineDate: payload.deadlineISO ?? null,
           updatedAt: now,
         })
         .where(and(eq(diaryGoals.id, payload.id), eq(diaryGoals.userId, userId)))
@@ -387,6 +391,7 @@ export const diaryStoreAdapter: DiaryStoreAdapter = {
           aad: diaryGoals.aad,
           createdAt: diaryGoals.createdAt,
           updatedAt: diaryGoals.updatedAt,
+          deadlineDate: diaryGoals.deadlineDate,
         });
 
       if (!updated) {
@@ -403,6 +408,7 @@ export const diaryStoreAdapter: DiaryStoreAdapter = {
         ciphertext: payload.ciphertext,
         nonce: payload.nonce,
         aad: payload.aad ?? null,
+        deadlineDate: payload.deadlineISO ?? null,
         createdAt: now,
         updatedAt: now,
       })
@@ -413,6 +419,7 @@ export const diaryStoreAdapter: DiaryStoreAdapter = {
         aad: diaryGoals.aad,
         createdAt: diaryGoals.createdAt,
         updatedAt: diaryGoals.updatedAt,
+        deadlineDate: diaryGoals.deadlineDate,
       });
 
     return mapGoalRow(created);
@@ -434,7 +441,7 @@ export const diaryStoreAdapter: DiaryStoreAdapter = {
     const rows = await db
       .select({
         professionalId: diaryShares.professionalUserId,
-        sharedAt: diaryShares.createdAt,
+        sharedAt: diaryShares.updatedAt,
       })
       .from(diaryShares)
       .where(
@@ -443,7 +450,7 @@ export const diaryStoreAdapter: DiaryStoreAdapter = {
           eq(diaryShares.entryId, entryId),
         ),
       )
-      .orderBy(diaryShares.createdAt);
+      .orderBy(diaryShares.updatedAt);
 
     return rows.map(row => ({
       professionalId: row.professionalId,
@@ -466,7 +473,7 @@ export const diaryStoreAdapter: DiaryStoreAdapter = {
 
     const now = new Date();
 
-    await db
+    const [row] = await db
       .insert(diaryShares)
       .values({
         entryId,
@@ -486,7 +493,28 @@ export const diaryStoreAdapter: DiaryStoreAdapter = {
           envelope,
           updatedAt: now,
         },
+      })
+      .returning({
+        professionalId: diaryShares.professionalUserId,
+        updatedAt: diaryShares.updatedAt,
       });
+
+    await db.insert(diaryShareAudits).values({
+      entryId,
+      ownerUserId: userId,
+      professionalUserId: professionalId,
+      action: 'shared',
+      eventAt: now,
+    });
+
+    if (!row) {
+      throw new Error('SHARE_NOT_CREATED');
+    }
+
+    return {
+      professionalId: row.professionalId,
+      sharedAt: row.updatedAt.toISOString(),
+    };
   },
 
   async revokeShare(userId: string, entryId: string, professionalId: string) {
@@ -496,7 +524,9 @@ export const diaryStoreAdapter: DiaryStoreAdapter = {
       throw new Error('ENTRY_NOT_FOUND');
     }
 
-    await db
+    const now = new Date();
+
+    const [deleted] = await db
       .delete(diaryShares)
       .where(
         and(
@@ -504,7 +534,18 @@ export const diaryStoreAdapter: DiaryStoreAdapter = {
           eq(diaryShares.entryId, entryId),
           eq(diaryShares.professionalUserId, professionalId),
         ),
-      );
+      )
+      .returning({ id: diaryShares.id });
+
+    if (deleted) {
+      await db.insert(diaryShareAudits).values({
+        entryId,
+        ownerUserId: userId,
+        professionalUserId: professionalId,
+        action: 'revoked',
+        eventAt: now,
+      });
+    }
   },
 
   async listCoachPrompts(filter: DiaryCoachPromptFilter) {

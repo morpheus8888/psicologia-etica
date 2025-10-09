@@ -62,6 +62,9 @@ export const DiaryUnlockGate = ({ t, children }: DiaryUnlockGateProps) => {
             ? t.getNamespace('unlock').t('setupSubtitle')
             : t.getNamespace('unlock').t('unlockSubtitle')}
         </p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {t.getNamespace('unlock').t('info')}
+        </p>
       </div>
 
       {encryption.status === 'pending'

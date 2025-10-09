@@ -228,11 +228,16 @@ export const DiaryDataProvider = ({
 
           setEntryMeta((prev) => {
             const next = new Map(prev);
+            const previous = next.get(dateISO);
             next.set(dateISO, {
               dateISO,
               wordCount: record.wordCount ?? undefined,
               mood: record.mood ?? undefined,
               tzAtEntry: record.tzAtEntry ?? undefined,
+              sharedProfessionalIds:
+                record.sharedWith?.map(share => share.professionalId)
+                ?? previous?.sharedProfessionalIds,
+              goalIds: previous?.goalIds,
             });
             return next;
           });
@@ -278,11 +283,14 @@ export const DiaryDataProvider = ({
 
           setEntryMeta((prev) => {
             const next = new Map(prev);
+            const meta = next.get(dateISO);
             next.set(dateISO, {
               dateISO,
               wordCount: payload.wordCount ?? undefined,
               mood: payload.mood ?? undefined,
               tzAtEntry: payload.tzAtEntry ?? undefined,
+              sharedProfessionalIds: meta?.sharedProfessionalIds,
+              goalIds: meta?.goalIds,
             });
             return next;
           });
@@ -348,6 +356,7 @@ export const DiaryDataProvider = ({
             ciphertext,
             nonce,
             aad: null,
+            deadlineISO: content.deadlineISO ?? null,
           } satisfies DiaryGoalWrite;
 
           const record = await diaryUpsertGoal(payload);
@@ -430,7 +439,7 @@ export const DiaryDataProvider = ({
           envelope.set(nonce, 0);
           envelope.set(ct, nonce.length);
 
-          await diaryShareEntry({ entryId, professionalId, envelope });
+          const shareMeta = await diaryShareEntry({ entryId, professionalId, envelope });
 
           setEntryMeta((prev) => {
             const next = new Map(prev);
@@ -443,7 +452,7 @@ export const DiaryDataProvider = ({
               return next;
             }
             const shared = new Set(meta.sharedProfessionalIds ?? []);
-            shared.add(professionalId);
+            shared.add(shareMeta.professionalId);
             next.set(dateISO, {
               ...meta,
               sharedProfessionalIds: Array.from(shared),
@@ -457,15 +466,17 @@ export const DiaryDataProvider = ({
             if (!entry) {
               return next;
             }
-            const sharedList = entry.record.sharedWith ?? [];
+            const sharedList = (entry.record.sharedWith ?? []).filter(
+              share => share.professionalId !== shareMeta.professionalId,
+            );
             const updated = {
               record: {
                 ...entry.record,
                 sharedWith: [
                   ...sharedList,
                   {
-                    professionalId,
-                    sharedAt: new Date().toISOString(),
+                    professionalId: shareMeta.professionalId,
+                    sharedAt: shareMeta.sharedAt,
                   },
                 ],
               },

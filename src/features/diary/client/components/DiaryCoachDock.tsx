@@ -18,6 +18,9 @@ type DiaryCoachDockProps = {
 };
 
 const ANIMATION_INTERVAL = 30_000;
+const ASK_TIMEOUT_MS = 45_000;
+const SLEEP_TIMEOUT_MS = 90_000;
+const WAKE_TIMEOUT_MS = 180_000;
 
 export const DiaryCoachDock = ({
   locale,
@@ -29,6 +32,15 @@ export const DiaryCoachDock = ({
   ui,
 }: DiaryCoachDockProps) => {
   const coach = useDiaryCoach();
+  const {
+    state: coachState,
+    prompt: coachPrompt,
+    load: loadPrompts,
+    pickNext,
+    setState: setCoachState,
+    lastInteractionAt,
+    recordActivity,
+  } = coach;
   const data = useDiaryData();
   const [open, setOpen] = useState(false);
   const isDesktop = ui.isDesktop();
@@ -39,34 +51,60 @@ export const DiaryCoachDock = ({
   }, [locale, promptLocaleFallback]);
 
   useEffect(() => {
-    void coach.load({
+    void loadPrompts({
       locale: localeFilter,
       scope,
       tags,
     });
-  }, [coach, localeFilter, scope, tags]);
+  }, [loadPrompts, localeFilter, scope, tags]);
 
   useEffect(() => {
     if (!open) {
       const timer = window.setTimeout(() => {
-        coach.setState('ask');
+        setCoachState('ask');
+        recordActivity();
       }, ANIMATION_INTERVAL);
       return () => window.clearTimeout(timer);
     }
     return undefined;
-  }, [coach, open]);
+  }, [open, recordActivity, setCoachState]);
 
   useEffect(() => {
-    if (!open && coach.state === 'ask') {
+    if (open) {
+      recordActivity();
+    }
+  }, [open, recordActivity]);
+
+  useEffect(() => {
+    if (open) {
+      return undefined;
+    }
+
+    if (coachState === 'ask') {
       const timer = window.setTimeout(() => {
-        coach.setState('sleep');
-      }, ANIMATION_INTERVAL);
+        if (!open) {
+          setCoachState('sleep');
+        }
+      }, SLEEP_TIMEOUT_MS);
       return () => window.clearTimeout(timer);
     }
-    return undefined;
-  }, [coach, open]);
 
-  const prompt = coach.prompt ?? coach.pickNext();
+    const now = Date.now();
+    const lastInteraction = lastInteractionAt ?? now;
+    const baseDelay = coachState === 'sleep' ? WAKE_TIMEOUT_MS : ASK_TIMEOUT_MS;
+    const elapsed = now - lastInteraction;
+    const delay = Math.max(baseDelay - elapsed, 0);
+
+    const timer = window.setTimeout(() => {
+      if (!open) {
+        setCoachState('ask');
+      }
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [coachState, lastInteractionAt, open, setCoachState]);
+
+  const prompt = coachPrompt ?? pickNext();
 
   if (!avatar || !prompt) {
     return null;
@@ -96,8 +134,9 @@ export const DiaryCoachDock = ({
         <button
           type="button"
           onClick={() => {
-            coach.setState('insert');
+            setCoachState('insert');
             onInsertPrompt(prompt.text);
+            recordActivity();
             ui.toast({
               title: t.t('inserted'),
               variant: 'success',
@@ -111,8 +150,9 @@ export const DiaryCoachDock = ({
         <button
           type="button"
           onClick={() => {
-            coach.pickNext();
-            coach.setState('cheer');
+            pickNext();
+            setCoachState('cheer');
+            recordActivity();
           }}
           className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted/80"
         >
@@ -121,7 +161,8 @@ export const DiaryCoachDock = ({
         <button
           type="button"
           onClick={() => {
-            coach.setState('sleep');
+            setCoachState('sleep');
+            recordActivity();
             setOpen(false);
           }}
           className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted/60"

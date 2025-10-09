@@ -161,6 +161,7 @@
       "passwordPlaceholder": "Enter password",
       "setupCta": "Create password",
       "unlockCta": "Unlock diary",
+      "info": "Diary pages are end-to-end encrypted directly in your browser. The master key stays with you, so nobody else — not even the Psicologia Etica team or linked professionals — can read them unless you explicitly share a page.",
       "warning": "If you lose the password we cannot recover your diary entries.",
       "pending": "Decrypting...",
       "setup_failed": "We could not save your password. Try again.",

@@ -152,6 +152,14 @@ export const DiaryViewport = ({
   const sharedProfessionalIds = currentMeta?.sharedProfessionalIds ?? [];
   const linkedGoalIds = currentMeta?.goalIds ?? [];
 
+  useEffect(() => {
+    goals.forEach((goal) => {
+      if (goal.content.deadlineISO) {
+        navigation.appendDate(goal.content.deadlineISO);
+      }
+    });
+  }, [goals, navigation]);
+
   return (
     <>
       <div className="space-y-6">

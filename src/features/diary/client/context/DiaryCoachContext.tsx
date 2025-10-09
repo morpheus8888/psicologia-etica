@@ -25,6 +25,8 @@ type DiaryCoachContextValue = {
   pickNext: () => DiaryCoachPromptRecord | null;
   setState: (next: CoachState) => void;
   lastPromptAt: number | null;
+  lastInteractionAt: number | null;
+  recordActivity: () => void;
 };
 
 const DiaryCoachContext = createContext<DiaryCoachContextValue | null>(null);
@@ -39,6 +41,7 @@ export const DiaryCoachProvider = ({ children, random = Math.random }: DiaryCoac
   const [prompt, setPrompt] = useState<DiaryCoachPromptRecord | null>(null);
   const [prompts, setPrompts] = useState<DiaryCoachPromptRecord[]>([]);
   const lastPromptAtRef = useRef<number | null>(null);
+  const lastInteractionAtRef = useRef<number | null>(null);
 
   const load = useCallback(async (filter: DiaryCoachPromptFilter) => {
     const list = await diaryListCoachPrompts(filter);
@@ -58,8 +61,18 @@ export const DiaryCoachProvider = ({ children, random = Math.random }: DiaryCoac
 
     setPrompt(selected);
     lastPromptAtRef.current = Date.now();
+    lastInteractionAtRef.current = Date.now();
     return selected;
   }, [prompts, random]);
+
+  const updateState = useCallback((nextState: CoachState) => {
+    setState(nextState);
+    lastInteractionAtRef.current = Date.now();
+  }, []);
+
+  const recordActivity = useCallback(() => {
+    lastInteractionAtRef.current = Date.now();
+  }, []);
 
   const value = useMemo<DiaryCoachContextValue>(
     () => ({
@@ -67,10 +80,12 @@ export const DiaryCoachProvider = ({ children, random = Math.random }: DiaryCoac
       prompt,
       load,
       pickNext,
-      setState,
+      setState: updateState,
       lastPromptAt: lastPromptAtRef.current,
+      lastInteractionAt: lastInteractionAtRef.current,
+      recordActivity,
     }),
-    [load, pickNext, prompt, state],
+    [load, pickNext, prompt, recordActivity, state, updateState],
   );
 
   return <DiaryCoachContext.Provider value={value}>{children}</DiaryCoachContext.Provider>;

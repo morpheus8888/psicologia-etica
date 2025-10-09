@@ -56,10 +56,12 @@ export type DiaryGoalRecord = CipherBundle & {
   id: string;
   createdAt: string;
   updatedAt: string;
+  deadlineISO?: string | null;
 };
 
 export type DiaryGoalWrite = CipherBundle & {
   id?: string;
+  deadlineISO?: string | null;
 };
 
 export type DiaryGoalLink = {
@@ -180,7 +182,7 @@ export type DiaryStoreAdapter = {
     entryId: string,
     professionalId: string,
     envelope: DiaryShareEnvelope,
-  ): Promise<void>;
+  ): Promise<DiaryEntryShareMeta>;
   revokeShare: (userId: string, entryId: string, professionalId: string) => Promise<void>;
   listCoachPrompts: (filter: DiaryCoachPromptFilter) => Promise<DiaryCoachPromptRecord[]>;
   createCoachPrompt: (input: DiaryCoachPromptInput) => Promise<DiaryCoachPromptRecord>;

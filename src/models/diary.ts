@@ -90,6 +90,7 @@ export const diaryGoals = pgTable('diary_goals', {
   ciphertext: bytea('ciphertext').notNull(),
   nonce: bytea('nonce').notNull(),
   aad: bytea('aad'),
+  deadlineDate: date('deadline_date', { mode: 'string' }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -149,6 +150,28 @@ export const diaryShares = pgTable(
     ).on(table.ownerUserId, table.entryId, table.professionalUserId),
   }),
 );
+
+export const diaryShareAudits = pgTable('diary_share_audits', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  entryId: uuid('entry_id')
+    .notNull()
+    .references(() => diaryEntries.id, { onDelete: 'cascade' }),
+  ownerUserId: uuid('owner_user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  professionalUserId: uuid('professional_user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  action: text('action')
+    .$type<'shared' | 'revoked'>()
+    .notNull(),
+  eventAt: timestamp('event_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
 
 export const diaryCoachPrompts = pgTable('diary_coach_prompts', {
   id: uuid('id').defaultRandom().primaryKey(),

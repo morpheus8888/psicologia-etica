@@ -1,73 +1,28 @@
 import { unstable_setRequestLocale } from 'next-intl/server';
 
-import { DiaryApp } from '@/features/diary/client/components/DiaryApp';
-import { authAdapter, diaryStoreAdapter, keyringStoreAdapter, profileAdapter } from '@/features/diary/server';
-import { getI18nPath } from '@/utils/Helpers';
+import { ensureDiaryFeatureRegistered } from '@/features/diary/feature/registerHost';
+import { getDiaryRouteMount } from '@/registries/diaryRouteRegistry';
 
 export const dynamic = 'force-dynamic';
 
-export default async function DiaryPage(props: { params: { locale: string } }) {
-  const { locale } = props.params;
-  unstable_setRequestLocale(locale);
+type DiaryPageProps = {
+  params: { locale: string };
+  searchParams?: Record<string, string | string[] | undefined>;
+};
 
-  const { id: userId } = await authAdapter.requireAuth();
-  const profile = await profileAdapter.getUserProfile(userId);
-  const keyring = await keyringStoreAdapter.getEncMasterKey(userId);
+export default async function DiaryPage(props: DiaryPageProps) {
+  unstable_setRequestLocale(props.params.locale);
+  ensureDiaryFeatureRegistered();
 
-  const now = new Date();
-  const timezone = profile?.timezone ?? 'UTC';
+  const mount = getDiaryRouteMount('dashboard-diary');
 
-  const toISODate = (date: Date) => {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    const parts = formatter.formatToParts(date);
-    const year = parts.find(part => part.type === 'year')?.value ?? '0000';
-    const month = parts.find(part => part.type === 'month')?.value ?? '01';
-    const day = parts.find(part => part.type === 'day')?.value ?? '01';
-    return `${year}-${month}-${day}`;
-  };
+  if (!mount) {
+    throw new Error('DIARY_ROUTE_NOT_REGISTERED');
+  }
 
-  const addDays = (date: Date, diff: number) => {
-    const copy = new Date(date);
-    copy.setDate(copy.getDate() + diff);
-    return copy;
-  };
-
-  const todayISO = toISODate(now);
-  const fromISO = toISODate(addDays(now, -30));
-  const toISO = toISODate(addDays(now, 1));
-
-  const [initialEntryRecord, initialGoals, initialMeta] = await Promise.all([
-    diaryStoreAdapter.getEntryByDate(userId, todayISO),
-    diaryStoreAdapter.listGoals(userId),
-    diaryStoreAdapter.listEntriesMeta(userId, {
-      from: fromISO,
-      to: toISO,
-    }),
-  ]);
-
-  return (
-    <DiaryApp
-      locale={locale}
-      todayISO={todayISO}
-      nowISO={now.toISOString()}
-      basePath={getI18nPath('/dashboard/diary', locale)}
-      dateQueryParam="date"
-      indexQueryParam="index"
-      diaryGraceMinutes={null}
-      runtimePromptLocaleFallback="it"
-      runtimeCoachScope={undefined}
-      runtimeCoachTags={undefined}
-      coachEnabled
-      initialKeyring={keyring}
-      initialProfile={profile}
-      initialEntryRecord={initialEntryRecord}
-      initialGoals={initialGoals}
-      initialMeta={initialMeta}
-    />
-  );
+  return mount({
+    locale: props.params.locale,
+    params: props.params,
+    searchParams: props.searchParams ?? {},
+  });
 }
