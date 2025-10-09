@@ -12,10 +12,12 @@ import {
 
 import type { RoutingAdapter } from '@/features/diary/adapters/types';
 
-type DiaryBasePage = { kind: 'goals' | 'overview'; index: number };
+type DiaryStaticPage =
+  | { kind: 'goals'; side: 'left' | 'right'; index: number }
+  | { kind: 'calendar'; side: 'left' | 'right'; index: number };
 type DiaryDayPage = { kind: 'day'; index: number; dateISO: string };
 
-export type DiaryPage = DiaryBasePage | DiaryDayPage;
+export type DiaryPage = DiaryStaticPage | DiaryDayPage;
 
 type DiaryNavigationContextValue = {
   pages: DiaryPage[];
@@ -50,20 +52,25 @@ export const DiaryNavigationProvider = ({
     unique.add(normalizedInitial);
     return Array.from(unique);
   });
-  const [currentIndex, setCurrentIndex] = useState<number>(deepLink?.index ?? 2);
+  const basePageCount = 4;
+  const [currentIndex, setCurrentIndex] = useState<number>(
+    deepLink?.index ?? basePageCount,
+  );
   const [currentDate, setCurrentDate] = useState<string | null>(
-    deepLink?.index !== undefined && deepLink.index < 2 ? null : normalizedInitial,
+    deepLink?.index !== undefined && deepLink.index < basePageCount ? null : normalizedInitial,
   );
 
   const pages = useMemo<DiaryPage[]>(() => {
     const base: DiaryPage[] = [
-      { kind: 'goals', index: 0 },
-      { kind: 'overview', index: 1 },
+      { kind: 'goals', side: 'left', index: 0 },
+      { kind: 'goals', side: 'right', index: 1 },
+      { kind: 'calendar', side: 'left', index: 2 },
+      { kind: 'calendar', side: 'right', index: 3 },
     ];
 
     const dayPages = datePages.map((dateISO, position) => ({
       kind: 'day' as const,
-      index: position + 2,
+      index: position + basePageCount,
       dateISO,
     }));
 
@@ -97,7 +104,7 @@ export const DiaryNavigationProvider = ({
       });
 
       const page = pages.find(item => item.kind === 'day' && item.dateISO === normalized);
-      const index = page?.index ?? 2;
+      const index = page?.index ?? basePageCount;
       setCurrentIndex(index);
       setCurrentDate(normalized);
       routing.navigateToDiaryDate(normalized);

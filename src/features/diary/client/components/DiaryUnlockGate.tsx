@@ -84,6 +84,10 @@ export const DiaryUnlockGate = ({ t, children }: DiaryUnlockGateProps) => {
                 value={password}
                 onChange={event => setPassword(event.target.value)}
                 placeholder={t.getNamespace('unlock').t('passwordPlaceholder')}
+                autoComplete={
+                  encryption.status === 'needs-password' ? 'new-password' : 'current-password'
+                }
+                required
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
               />
               {encryption.status === 'needs-password' && (

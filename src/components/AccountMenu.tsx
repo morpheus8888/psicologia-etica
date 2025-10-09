@@ -64,7 +64,6 @@ export const AccountMenu = ({
     .map(entry => entry.resolve(userMenuContext))
     .filter((item): item is UserMenuResolvedItem => Boolean(item));
   const diaryPath = getI18nPath('/dashboard/diary', locale);
-  const changePasswordPath = getI18nPath('/dashboard/change-password', locale);
 
   const handleSignOut = () => {
     void signOut({ callbackUrl: signInPath });
@@ -126,9 +125,6 @@ export const AccountMenu = ({
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href={settingsPath}>{t('settings')}</Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href={changePasswordPath}>{t('change_password')}</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href={diaryPath}>{t('diary')}</Link>

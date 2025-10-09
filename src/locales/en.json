@@ -116,7 +116,9 @@
     },
     "nav": {
       "goals": "Goals",
-      "overview": "Overview"
+      "calendar": "Calendar",
+      "today": "Today",
+      "desktopOnly": "The flip-book experience is currently available on desktop. Switch to a larger screen to explore your diary."
     },
     "goals": {
       "title": "Goals & priorities",
@@ -281,6 +283,37 @@
       "twilightWolf": "Twilight wolf",
       "auroraChameleon": "Aurora chameleon",
       "emberDragon": "Ember dragon"
+    }
+  },
+  "SettingsPage": {
+    "title": "Settings",
+    "description": "Manage your account security and preferences.",
+    "security": {
+      "heading": "Account security",
+      "description": "Change your password to keep your account protected.",
+      "fields": {
+        "current": "Current password",
+        "new": "New password",
+        "confirm": "Confirm new password"
+      },
+      "actions": {
+        "save": "Update password",
+        "saving": "Updating..."
+      },
+      "messages": {
+        "success": "Password updated successfully.",
+        "validation": "Please check the highlighted fields.",
+        "no_password": "Your account does not have a password yet. Contact support to enable password access.",
+        "unauthenticated": "You need to be signed in to update your password.",
+        "error": "We couldn't update your password. Try again later."
+      },
+      "errors": {
+        "required": "Enter a value for this field.",
+        "min_length": "Use at least 8 characters.",
+        "invalid_current": "The current password is incorrect.",
+        "mismatch": "Passwords do not match.",
+        "same_password": "Choose a password different from the current one."
+      }
     }
   },
   "UserMenu": {

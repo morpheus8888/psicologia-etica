@@ -138,15 +138,13 @@ SUPPORTED_LOCALES=it,en
 - Il focus del layout resta su Blog, Vocabolario, Test, Servizi e accesso all'area autenticata (Login/Avatar)
 
 ## 📓 Stato integrazione Diario (WIP)
-- ✅ Struttura base completata: unlock E2EE, panoramica/heatmap, pagina giornaliera con controlli di modifica legati al fuso orario.
-- ✅ UI avanzata in corso: highlight scadenze degli obiettivi, pannelli share/goal-link e coach dock sono presenti ma non ancora wired al 100% (dati + layout pronti).
-- 🔧 Da completare (Milestone 2):
-  - Share E2EE: creare envelope per il professionista via `DiaryStoreAdapter.shareEntry`, gestire revoke e aggiornare metadata/audit.
-  - Goal deadline: decidere dove persistere la scadenza (schema + store) e rifinire l'highlight della pagina.
-  - Registries: collegare menu/settings/admin alla feature (es. usare `DiaryCoachPromptsAdmin`).
-  - Coach dock: completare stati ask/sleep, inattività, filtri runtime.
-- 📋 Milestone 3: batteria di test automatizzati (unlock/lock, editabilità, scadenza goal, share/revoke, prompt weighting) + `npm run lint format:check typecheck test build`.
-- ℹ️ Lint e typecheck ora passano (`npm run lint`, `npm run check-types`).
+- ✅ Modalità desktop con flip-book (react-pageflip): pagine 0-1 dedicate agli obiettivi, pagine 2-3 al calendario mensile, dalla pagina 4 in poi le entry giornaliere. I pulsanti "Obiettivi", "Calendario" e "Oggi" portano rapidamente ai rispettivi spread.
+- ✅ Condivisione E2EE con professionisti: envelope cifrato, audit trail (`diary_share_audits`) e meta sincronizzati lato client.
+- ✅ Pagina impostazioni con cambio password (voce spostata nel menu Impostazioni).
+- ✅ Coach dock con stati ask/sleep e highlight delle scadenze goal direttamente nelle pagine giornaliere.
+- ⚠️ Modalità mobile: al momento mostra un messaggio informativo; la UI flip verrà ottimizzata in una milestone dedicata.
+- 📋 Milestone 3: batteria di test automatizzati (unlock/lock, editabilità, scadenze goal, share/revoke, prompt weighting) + `npm run lint format:check typecheck test build`.
+- ℹ️ Lint e typecheck passano (`npm run lint`, `npm run check-types`).
 
 ## 📱 Responsive UI
 - Ogni modifica deve restare navigabile sia da mobile sia da desktop (layout mobile-first, breakpoint `sm`/`md` coerenti).

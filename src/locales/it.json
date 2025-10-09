@@ -116,7 +116,9 @@
     },
     "nav": {
       "goals": "Obiettivi",
-      "overview": "Panoramica"
+      "calendar": "Calendario",
+      "today": "Oggi",
+      "desktopOnly": "L'esperienza a sfoglio è disponibile solo da desktop. Passa a uno schermo più grande per esplorare il diario."
     },
     "goals": {
       "title": "Obiettivi e priorità",
@@ -281,6 +283,37 @@
       "twilightWolf": "Lupo del crepuscolo",
       "auroraChameleon": "Camaleonte aurora",
       "emberDragon": "Drago di brace"
+    }
+  },
+  "SettingsPage": {
+    "title": "Impostazioni",
+    "description": "Gestisci la sicurezza dell'account e le preferenze.",
+    "security": {
+      "heading": "Sicurezza dell'account",
+      "description": "Modifica la password per proteggere l'accesso.",
+      "fields": {
+        "current": "Password attuale",
+        "new": "Nuova password",
+        "confirm": "Conferma nuova password"
+      },
+      "actions": {
+        "save": "Aggiorna password",
+        "saving": "Aggiornamento in corso..."
+      },
+      "messages": {
+        "success": "Password aggiornata con successo.",
+        "validation": "Controlla i campi evidenziati.",
+        "no_password": "Il tuo account non ha ancora una password. Contatta il supporto per abilitarla.",
+        "unauthenticated": "Devi essere autenticato per aggiornare la password.",
+        "error": "Non siamo riusciti ad aggiornare la password. Riprova più tardi."
+      },
+      "errors": {
+        "required": "Compila questo campo.",
+        "min_length": "Usa almeno 8 caratteri.",
+        "invalid_current": "La password attuale non è corretta.",
+        "mismatch": "Le password non coincidono.",
+        "same_password": "Scegli una password diversa da quella attuale."
+      }
     }
   },
   "UserMenu": {
