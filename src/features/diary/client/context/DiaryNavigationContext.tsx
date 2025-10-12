@@ -35,6 +35,27 @@ const DiaryNavigationContext = createContext<DiaryNavigationContextValue | null>
 
 const normalizeDate = (dateISO: string) => dateISO.slice(0, 10);
 
+const buildMonthDays = (anchorISO: string) => {
+  const normalized = normalizeDate(anchorISO);
+  const [y, m] = normalized.split('-');
+  const year = Number.parseInt(y ?? '0', 10) || 0;
+  const month = Number.parseInt(m ?? '1', 10) || 1;
+  const start = new Date(Date.UTC(year, month - 1, 1));
+  const end = new Date(Date.UTC(year, month, 0));
+
+  const days: string[] = [];
+  for (
+    let cursor = new Date(start);
+    cursor.getTime() <= end.getTime();
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
+  ) {
+    const iso = `${cursor.getUTCFullYear()}-${`${cursor.getUTCMonth() + 1}`.padStart(2, '0')}-${`${cursor.getUTCDate()}`.padStart(2, '0')}`;
+    days.push(iso);
+  }
+
+  return days;
+};
+
 type DiaryNavigationProviderProps = {
   children: React.ReactNode;
   initialDateISO: string;
@@ -55,9 +76,11 @@ export const DiaryNavigationProvider = ({
   const basePageCount = 6;
 
   const initialDatePages = useMemo(() => {
-    const unique = new Set((initialDates ?? []).map(normalizeDate));
-    unique.add(initialActiveDate);
-    return Array.from(unique);
+    const monthDays = buildMonthDays(initialActiveDate);
+    const extraDates = (initialDates ?? [])
+      .map(normalizeDate)
+      .filter(dateISO => !monthDays.includes(dateISO));
+    return [...monthDays, ...extraDates];
   }, [initialActiveDate, initialDates]);
 
   const initialIndex = useMemo(() => {
@@ -150,21 +173,7 @@ export const DiaryNavigationProvider = ({
   const setMonth = useCallback(
     (dateISO: string) => {
       const normalized = normalizeDate(dateISO);
-      const [y, m] = normalized.split('-');
-      const year = Number.parseInt(y ?? '0', 10) || 0;
-      const month = Number.parseInt(m ?? '1', 10) || 1;
-      const start = new Date(Date.UTC(year, month - 1, 1));
-      const end = new Date(Date.UTC(year, month, 0));
-
-      const monthDays: string[] = [];
-      for (
-        let cursor = new Date(start);
-        cursor.getTime() <= end.getTime();
-        cursor.setUTCDate(cursor.getUTCDate() + 1)
-      ) {
-        const iso = `${cursor.getUTCFullYear()}-${`${cursor.getUTCMonth() + 1}`.padStart(2, '0')}-${`${cursor.getUTCDate()}`.padStart(2, '0')}`;
-        monthDays.push(iso);
-      }
+      const monthDays = buildMonthDays(normalized);
 
       setDatePages((prev) => {
         const extra = prev.filter(d => !monthDays.includes(d));

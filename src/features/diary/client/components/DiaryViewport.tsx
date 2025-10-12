@@ -812,9 +812,26 @@ export const DiaryViewport = ({
     const hasDeadlineForPage = goals.some(goal => goal.content.deadlineISO === page.dateISO);
     const disableShare = !navigation.currentDate || (!currentEntryId && !editable);
     const disableGoalLink = !navigation.currentDate || (!currentEntryId && !editable);
+    const pageTextareaId = `diary-entry-${page.dateISO}`;
+
+    const ensurePageActive = () => {
+      if (navigation.currentDate !== page.dateISO) {
+        navigation.setDate(page.dateISO);
+        return;
+      }
+      if (navigation.currentIndex !== page.index) {
+        navigation.setIndex(page.index);
+      }
+    };
 
     return (
-      <article key={page.dateISO} className={`${basePageClass} diary-page--entry`}>
+      <article
+        key={page.dateISO}
+        className={`${basePageClass} diary-page--entry`}
+        onPointerDownCapture={() => {
+          ensurePageActive();
+        }}
+      >
         <div className="flex h-full flex-col gap-4">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -936,10 +953,13 @@ export const DiaryViewport = ({
             value={navigation.currentDate === page.dateISO ? currentBody : ''}
             onChange={event => setCurrentBody(event.target.value)}
             onFocus={() => {
-              if (navigation.currentDate !== page.dateISO) {
-                navigation.setDate(page.dateISO);
-              }
+              ensurePageActive();
+              window.requestAnimationFrame(() => {
+                const node = document.getElementById(pageTextareaId) as HTMLTextAreaElement | null;
+                node?.focus();
+              });
             }}
+            id={pageTextareaId}
             className="h-72 w-full resize-none rounded-2xl border border-border/70 bg-transparent px-4 py-3 text-sm leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             placeholder={t.getNamespace('entry').t('placeholder')}
             disabled={!editable}
