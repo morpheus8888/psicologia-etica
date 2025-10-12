@@ -121,12 +121,22 @@ export function NavbarClient(props: NavbarClientProps) {
       <div className="border-b border-border/60 bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 lg:gap-4">
           <div className="flex items-center justify-between gap-3">
-            <Link href={homeHref} aria-label={props.brandLabel} className="flex items-center gap-2">
-              <Logo isTextHidden />
-              <span className="hidden text-sm font-semibold text-foreground sm:inline">
-                {props.brandLabel}
-              </span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href={homeHref}
+                aria-label={props.brandLabel}
+                className="hidden items-center gap-2 sm:flex"
+              >
+                <Logo />
+              </Link>
+              <Link
+                href={homeHref}
+                aria-label={props.brandLabel}
+                className="flex items-center justify-center rounded-lg border border-transparent p-2 text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:hidden"
+              >
+                <HomeIcon className="size-5" aria-hidden />
+              </Link>
+            </div>
 
             <nav aria-label={props.navLabel} className="hidden flex-1 justify-center lg:flex">
               <ul className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/80 px-2 py-1 shadow-sm backdrop-blur">

@@ -32,7 +32,8 @@
     "title": "Blog",
     "description": "Aggiornamenti e riflessioni del team di Psicologia Etica.",
     "empty": "Nessun articolo disponibile al momento.",
-    "detailPlaceholder": "Questo articolo sarà pubblicato a breve."
+    "detailPlaceholder": "Questo articolo sarà pubblicato a breve.",
+    "underConstruction": "Questa sezione è in costruzione."
   },
   "vocabulary": {
     "title": "Vocabolario",
@@ -43,12 +44,14 @@
   "testsPage": {
     "title": "Test",
     "description": "Valutazioni standardizzate con salvataggio e ripresa.",
-    "comingSoon": "La gestione dei test sarà disponibile a breve."
+    "comingSoon": "La gestione dei test sarà disponibile a breve.",
+    "underConstruction": "Questa sezione è in costruzione."
   },
   "services": {
     "title": "Servizi",
     "description": "Catalogo servizi e strumenti di prenotazione per i professionisti.",
-    "comingSoon": "Il catalogo servizi è in preparazione."
+    "comingSoon": "Il catalogo servizi è in preparazione.",
+    "underConstruction": "Questa sezione è in costruzione."
   },
   "admin": {
     "title": "Area admin",

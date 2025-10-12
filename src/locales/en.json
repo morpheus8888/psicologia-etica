@@ -32,7 +32,8 @@
     "title": "Blog",
     "description": "Updates and reflections from the Psicologia Etica team.",
     "empty": "No articles are available yet.",
-    "detailPlaceholder": "This article will be published soon."
+    "detailPlaceholder": "This article will be published soon.",
+    "underConstruction": "This section is under construction."
   },
   "vocabulary": {
     "title": "Vocabulary",
@@ -43,12 +44,14 @@
   "testsPage": {
     "title": "Tests",
     "description": "Standardised assessments with save-and-resume workflows.",
-    "comingSoon": "Test scheduling and scoring will be available soon."
+    "comingSoon": "Test scheduling and scoring will be available soon.",
+    "underConstruction": "This section is under construction."
   },
   "services": {
     "title": "Services",
     "description": "Service catalogue and booking tools for professionals.",
-    "comingSoon": "Service management is under construction."
+    "comingSoon": "Service management is under construction.",
+    "underConstruction": "This section is under construction."
   },
   "admin": {
     "title": "Admin",

@@ -143,12 +143,12 @@ SUPPORTED_LOCALES=it,en
 - ✅ Pagina impostazioni con cambio password (voce spostata nel menu Impostazioni).
 - ✅ Coach dock con stati ask/sleep e highlight delle scadenze goal direttamente nelle pagine giornaliere.
 - ⚠️ Modalità mobile: al momento mostra un messaggio informativo; la UI flip verrà ottimizzata in una milestone dedicata.
-- 📋 Milestone 3: batteria di test automatizzati (unlock/lock, editabilità, scadenze goal, share/revoke, prompt weighting) + `npm run lint format:check typecheck test build`.
-- ℹ️ Lint e typecheck passano (`npm run lint`, `npm run check-types`).
+- 📋 Milestone 3: batteria di test automatizzati (unlock/lock, editabilità, scadenze goal, share/revoke, prompt weighting) + `npm run lint && npm run format:check && npm run typecheck && npm test && npm run build`.
+- ℹ️ Lint e typecheck passano (`npm run lint`, `npm run typecheck`).
 
 ## 📱 Responsive UI
 - Ogni modifica deve restare navigabile sia da mobile sia da desktop (layout mobile-first, breakpoint `sm`/`md` coerenti).
-- Navbar: massimo 4 voci (Home, Blog, Test, Servizi) rese con icone colorate; la barra sparisce durante lo scroll in giù e riappare quando si risale.
+- Navbar: 5 voci (Home, Blog, Vocabulary, Test, Servizi) rese con icone colorate; in desktop la voce Home coincide con logo + nome del sito, mentre su mobile il brand lascia spazio solo all'icona Home; la barra sparisce durante lo scroll in giù e riappare quando si risale.
 - In alto a destra devon sempre restare visibili (anche su mobile): selettore lingua, toggle tema (chiaro/scuro), avatar/account.
 - Ogni nuovo componente deve supportare entrambi i temi (`dark:` + test visivo) e mantenere contrasto/leggibilità.
 - Usa testi localizzati (`next-intl`), aria-label descrittivi e interazioni accessibili per qualsiasi feature client.
@@ -170,7 +170,8 @@ Prima di aprire una PR assicurarsi che tutti i check locali siano verdi:
 
 ```bash
 npm run lint
-npm run check-types
+npm run format:check
+npm run typecheck
 npm test
 npm run build
 ```
