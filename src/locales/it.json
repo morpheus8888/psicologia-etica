@@ -162,8 +162,8 @@
       "setupSubtitle": "Proteggi il diario con la cifratura end-to-end.",
       "unlockTitle": "Sblocca il diario",
       "unlockSubtitle": "Inserisci la password del diario per continuare.",
-      "passwordLabel": "Password",
-      "passwordPlaceholder": "Inserisci la password",
+      "passwordLabel": "Password diario",
+      "passwordPlaceholder": "Inserisci la password del diario",
       "setupCta": "Crea password",
       "unlockCta": "Sblocca diario",
       "info": "Le pagine del diario vengono cifrate end-to-end direttamente nel tuo browser. La chiave resta solo con te, quindi nessuno all'infuori tuo — nemmeno il team di Psicologia Etica o i professionisti collegati — può leggerle a meno che tu non condivida esplicitamente una pagina.",
@@ -292,8 +292,8 @@
     "title": "Impostazioni",
     "description": "Gestisci la sicurezza dell'account e le preferenze.",
     "security": {
-      "heading": "Sicurezza dell'account",
-      "description": "Modifica la password per proteggere l'accesso.",
+      "heading": "Password dell'account",
+      "description": "Aggiorna la password che usi con l'email per accedere.",
       "fields": {
         "current": "Password attuale",
         "new": "Nuova password",

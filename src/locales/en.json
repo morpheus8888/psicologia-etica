@@ -162,8 +162,8 @@
       "setupSubtitle": "Protect your journal with end-to-end encryption.",
       "unlockTitle": "Unlock your diary",
       "unlockSubtitle": "Enter your diary password to continue.",
-      "passwordLabel": "Password",
-      "passwordPlaceholder": "Enter password",
+      "passwordLabel": "Diary password",
+      "passwordPlaceholder": "Enter the diary password",
       "setupCta": "Create password",
       "unlockCta": "Unlock diary",
       "info": "Diary pages are end-to-end encrypted directly in your browser. The master key stays with you, so nobody else — not even the Psicologia Etica team or linked professionals — can read them unless you explicitly share a page.",
@@ -292,8 +292,8 @@
     "title": "Settings",
     "description": "Manage your account security and preferences.",
     "security": {
-      "heading": "Account security",
-      "description": "Change your password to keep your account protected.",
+      "heading": "Account password",
+      "description": "Update the password you use with your email to sign in.",
       "fields": {
         "current": "Current password",
         "new": "New password",
