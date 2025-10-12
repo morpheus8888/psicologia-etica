@@ -240,25 +240,48 @@ export const DiaryViewport = ({
   const [goalLinkOpen, setGoalLinkOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(`${todayISO}T00:00:00`));
   const [calendarSelection, setCalendarSelection] = useState(() => navigation.currentDate ?? todayISO);
+  const isDirtyRef = useRef(false);
 
   const isDesktop = ui.isDesktop();
   const encryption = useDiaryEncryption();
 
   useEffect(() => {
-    if (!navigation.currentDate) {
+    const targetDate = navigation.currentDate;
+
+    if (!targetDate) {
+      isDirtyRef.current = false;
+      setCurrentBody('');
+      setCurrentEntryId(null);
       return;
     }
 
-    void data.loadEntry(navigation.currentDate).then((entry) => {
+    isDirtyRef.current = false;
+    setCurrentBody('');
+    setCurrentEntryId(null);
+
+    let cancelled = false;
+
+    void data.loadEntry(targetDate).then((entry) => {
+      if (cancelled || navigation.currentDate !== targetDate) {
+        return;
+      }
+
       if (!entry) {
-        setCurrentBody('');
+        if (!isDirtyRef.current) {
+          setCurrentBody('');
+        }
         setCurrentEntryId(null);
         return;
       }
 
+      isDirtyRef.current = false;
       setCurrentBody(entry.content.body);
       setCurrentEntryId(entry.record.id);
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [data, navigation.currentDate]);
 
   useEffect(() => {
@@ -342,6 +365,7 @@ export const DiaryViewport = ({
     });
 
     setCurrentEntryId(saved.record.id);
+    isDirtyRef.current = false;
     return saved;
   }, [currentBody, data, navigation.currentDate]);
 
@@ -813,6 +837,7 @@ export const DiaryViewport = ({
     const hasPersistedEntry = entryMetaMap.has(page.dateISO);
     const showReadonlyLabel = !editable && hasPersistedEntry;
     const textareaPlaceholder = editable ? t.getNamespace('entry').t('placeholder') : undefined;
+    const showEmptyReadOnlyState = !editable && !hasPersistedEntry;
 
     const ensurePageActive = () => {
       if (!isActivePage) {
@@ -931,36 +956,51 @@ export const DiaryViewport = ({
             </div>
           )}
 
-          <textarea
-            value={isActivePage ? currentBody : ''}
-            onChange={event => setCurrentBody(event.target.value)}
-            onFocus={() => {
-              ensurePageActive();
-              if (editable) {
-                window.requestAnimationFrame(() => {
-                  const node = document.getElementById(pageTextareaId) as HTMLTextAreaElement | null;
-                  node?.focus();
-                });
-              }
-            }}
-            id={pageTextareaId}
-            className="h-72 w-full resize-none rounded-2xl border border-border/70 bg-transparent px-4 py-3 text-sm leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-            placeholder={textareaPlaceholder}
-            readOnly={!editable}
-          />
+          {showEmptyReadOnlyState
+            ? (
+                <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+                  {t.getNamespace('entry').t('emptyReadonly')}
+                </div>
+              )
+            : (
+                <>
+                  <textarea
+                    value={isActivePage ? currentBody : ''}
+                    onChange={(event) => {
+                      setCurrentBody(event.target.value);
+                      isDirtyRef.current = true;
+                    }}
+                    onFocus={() => {
+                      ensurePageActive();
+                      if (editable) {
+                        window.requestAnimationFrame(() => {
+                          const node = document.getElementById(pageTextareaId) as HTMLTextAreaElement | null;
+                          node?.focus();
+                        });
+                      }
+                    }}
+                    id={pageTextareaId}
+                    className="h-72 w-full resize-none rounded-2xl border border-border/70 bg-transparent px-4 py-3 text-sm leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                    placeholder={textareaPlaceholder}
+                    readOnly={!editable}
+                  />
 
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                void handleSaveEntry();
-              }}
-              className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-              disabled={!editable}
-            >
-              {t.getNamespace('entry').t('save')}
-            </button>
-          </div>
+                  {editable && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleSaveEntry();
+                        }}
+                        className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                      >
+                        {t.getNamespace('entry').t('save')}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
         </div>
       </article>
     );

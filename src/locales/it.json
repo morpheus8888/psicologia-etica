@@ -168,6 +168,7 @@
       "moodNeutral": "Neutro",
       "moodNegative": "Difficile",
       "placeholder": "Scrivi qui i pensieri della giornata...",
+      "emptyReadonly": "Nessuna pagina salvata per questo giorno.",
       "save": "Salva la pagina",
       "deadlineTodayTitle": "Scadenza obiettivo oggi",
       "deadlineTodaySubtitle": "Collega questa pagina all'obiettivo per restare sul pezzo.",

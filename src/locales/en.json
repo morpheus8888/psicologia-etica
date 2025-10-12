@@ -168,6 +168,7 @@
       "moodNeutral": "Neutral",
       "moodNegative": "Challenging",
       "placeholder": "Write your thoughts for today...",
+      "emptyReadonly": "No entry saved for this day.",
       "save": "Save entry",
       "deadlineTodayTitle": "Goal deadline today",
       "deadlineTodaySubtitle": "Link this page to the goal to keep your progress aligned.",
