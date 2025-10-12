@@ -30,20 +30,9 @@ export const DiaryUnlockGate = ({ t, children }: DiaryUnlockGateProps) => {
     setPassword('');
   };
 
-  const handleLock = () => {
-    encryption.lock();
-  };
-
   if (encryption.status === 'ready') {
     return (
-      <div className="relative">
-        <button
-          type="button"
-          onClick={handleLock}
-          className="absolute bottom-4 left-4 rounded-full border border-border/80 bg-background px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm transition hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-        >
-          {t.getNamespace('lock').t('label')}
-        </button>
+      <div>
         {children}
       </div>
     );

@@ -28,6 +28,7 @@ type DiaryNavigationContextValue = {
   setIndex: (index: number) => void;
   setDate: (dateISO: string) => void;
   appendDate: (dateISO: string) => void;
+  setMonth: (dateISO: string) => void;
 };
 
 const DiaryNavigationContext = createContext<DiaryNavigationContextValue | null>(null);
@@ -126,6 +127,39 @@ export const DiaryNavigationProvider = ({
     });
   }, []);
 
+  const setMonth = useCallback(
+    (dateISO: string) => {
+      const normalized = normalizeDate(dateISO);
+      const [y, m] = normalized.split('-');
+      const year = Number.parseInt(y ?? '0', 10) || 0;
+      const month = Number.parseInt(m ?? '1', 10) || 1;
+      const start = new Date(Date.UTC(year, month - 1, 1));
+      const end = new Date(Date.UTC(year, month, 0));
+
+      const monthDays: string[] = [];
+      for (
+        let cursor = new Date(start);
+        cursor.getTime() <= end.getTime();
+        cursor.setUTCDate(cursor.getUTCDate() + 1)
+      ) {
+        const iso = `${cursor.getUTCFullYear()}-${`${cursor.getUTCMonth() + 1}`.padStart(2, '0')}-${`${cursor.getUTCDate()}`.padStart(2, '0')}`;
+        monthDays.push(iso);
+      }
+
+      setDatePages((prev) => {
+        const extra = prev.filter(d => !monthDays.includes(d));
+        return [...monthDays, ...extra];
+      });
+
+      const selectedIndex = monthDays.indexOf(normalized);
+      const index = basePageCount + (selectedIndex >= 0 ? selectedIndex : 0);
+      setCurrentIndex(index);
+      setCurrentDate(normalized);
+      routing.navigateToDiaryDate(normalized);
+    },
+    [routing],
+  );
+
   const value = useMemo<DiaryNavigationContextValue>(
     () => ({
       pages,
@@ -134,8 +168,9 @@ export const DiaryNavigationProvider = ({
       setIndex,
       setDate,
       appendDate,
+      setMonth,
     }),
-    [appendDate, currentDate, currentIndex, pages, setDate, setIndex],
+    [appendDate, currentDate, currentIndex, pages, setDate, setIndex, setMonth],
   );
 
   return (

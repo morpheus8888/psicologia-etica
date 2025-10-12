@@ -1,0 +1,212 @@
+2025-10-12T20:11:52.832Z lint-staged:bin Running `lint-staged@15.2.10` on Node.js v22.18.0 (linux)
+2025-10-12T20:11:52.834Z lint-staged:bin Options parsed from command-line: { allowEmpty: false, concurrent: false, configPath: undefined, cwd: undefined, debug: true, diff: undefined, diffFilter: undefined, maxArgLength: undefined, quiet: false, relative: false, shell: false, stash: true, hidePartiallyStaged: true, verbose: false }
+2025-10-12T20:11:52.835Z lint-staged:execGit Running git command [ 'version', '--build-options' ]
+2025-10-12T20:11:52.856Z lint-staged git version 2.48.1
+cpu: x86_64
+no commit associated with this build
+sizeof-long: 8
+sizeof-size_t: 8
+shell-path: /bin/sh
+libcurl: 8.12.1
+zlib: 1.3.1
+2025-10-12T20:11:52.856Z lint-staged:validateOptions Validating options...
+2025-10-12T20:11:52.856Z lint-staged:validateOptions Validated options: { allowEmpty: false, concurrent: false, configObject: undefined, configPath: undefined, cwd: undefined, debug: true, diff: undefined, diffFilter: undefined, maxArgLength: 65536, quiet: false, relative: false, shell: false, stash: true, hidePartiallyStaged: true, verbose: false }
+2025-10-12T20:11:52.857Z lint-staged Unset GIT_LITERAL_PATHSPECS (was `undefined`)
+2025-10-12T20:11:52.857Z lint-staged:runAll Running all linter scripts...
+2025-10-12T20:11:52.858Z lint-staged:runAll Using working directory `/home/guido/Sito/Psicologia Etica/psicologia-etica`
+2025-10-12T20:11:52.858Z lint-staged:resolveGitRepo Resolving git repo from `/home/guido/Sito/Psicologia Etica/psicologia-etica`
+2025-10-12T20:11:52.858Z lint-staged:resolveGitRepo Unset GIT_DIR (was `undefined`)
+2025-10-12T20:11:52.859Z lint-staged:resolveGitRepo Unset GIT_WORK_TREE (was `undefined`)
+2025-10-12T20:11:52.859Z lint-staged:execGit Running git command [ 'rev-parse', '--show-cdup' ]
+2025-10-12T20:11:52.866Z lint-staged:resolveGitRepo Resolved git repository top-level directory to be `/home/guido/Sito/Psicologia Etica/psicologia-etica`
+2025-10-12T20:11:52.866Z lint-staged:execGit Running git command [ 'rev-parse', '--show-toplevel' ]
+2025-10-12T20:11:52.871Z lint-staged:execGit Running git command [ 'rev-parse', '--absolute-git-dir' ]
+2025-10-12T20:11:52.884Z lint-staged:resolveGitRepo Resolved git config directory to be `/home/guido/Sito/Psicologia Etica/psicologia-etica/.git`
+2025-10-12T20:11:52.884Z lint-staged:execGit Running git command [ 'log', '-1' ]
+2025-10-12T20:11:52.892Z lint-staged:execGit Running git command [ 'diff', '--name-only', '-z', '--diff-filter=ACMR', '--staged' ]
+2025-10-12T20:11:52.900Z lint-staged:runAll Loaded list of staged files in git:
+[
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/lint-staged.config.js',
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/app/[locale]/flipbook/page.tsx',
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/components/FlipBook.tsx',
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/components/LocaleSwitcher.tsx',
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/features/diary/client/components/DiaryUnlockGate.tsx',
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/features/diary/client/components/DiaryViewport.tsx',
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/features/diary/client/context/DiaryNavigationContext.tsx',
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/features/settings/change-password/ChangePasswordForm.tsx',
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/locales/en.json',
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/locales/it.json'
+]
+2025-10-12T20:11:52.900Z lint-staged:searchConfigs Searching for configuration files...
+2025-10-12T20:11:52.900Z lint-staged:execGit Running git command [ 'ls-files', '-z', '--full-name', '-t' ]
+2025-10-12T20:11:52.904Z lint-staged:execGit Running git command [
+  'ls-files',
+  '-z',
+  '--full-name',
+  '-t',
+  '--others',
+  '--exclude-standard'
+]
+2025-10-12T20:11:52.914Z lint-staged:searchConfigs Found possible config files: [
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/lint-staged.config.js',
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/package.json'
+]
+2025-10-12T20:11:52.914Z lint-staged:loadConfig Loading configuration from `/home/guido/Sito/Psicologia Etica/psicologia-etica/lint-staged.config.js`...
+2025-10-12T20:11:52.915Z lint-staged:loadConfig Loading configuration from `/home/guido/Sito/Psicologia Etica/psicologia-etica/package.json`...
+2025-10-12T20:11:52.917Z lint-staged:loadConfig Successfully loaded config from `/home/guido/Sito/Psicologia Etica/psicologia-etica/lint-staged.config.js`:
+{
+  '*': [ 'eslint --fix --no-warn-ignored' ],
+  '**/*.ts?(x)': [Function: **/*.ts?(x)]
+}
+2025-10-12T20:11:52.917Z lint-staged:validateConfig Validating config from `/home/guido/Sito/Psicologia Etica/psicologia-etica/lint-staged.config.js`...
+2025-10-12T20:11:52.918Z lint-staged:validateConfig Validated config from `/home/guido/Sito/Psicologia Etica/psicologia-etica/lint-staged.config.js`:
+2025-10-12T20:11:52.918Z lint-staged:validateConfig {
+  '*': [
+    'eslint --fix --no-warn-ignored'
+  ],
+  '**/*.ts?(x)': [Function: **/*.ts?(x)]
+}
+2025-10-12T20:11:52.919Z lint-staged:loadConfig Successfully loaded config from `/home/guido/Sito/Psicologia Etica/psicologia-etica/package.json`:
+null
+2025-10-12T20:11:52.919Z lint-staged:searchConfigs Found 1 config files
+2025-10-12T20:11:52.920Z lint-staged:groupFilesByConfig Grouping 10 files by 1 configurations
+2025-10-12T20:11:52.920Z lint-staged:chunkFiles Resolved an argument string length of 902 characters from 10 files
+2025-10-12T20:11:52.921Z lint-staged:chunkFiles Creating 1 chunks for maxArgLength of 65536
+2025-10-12T20:11:52.921Z lint-staged:generateTasks Generating linter tasks
+2025-10-12T20:11:52.925Z lint-staged:generateTasks Generated task: 
+{
+  pattern: '*',
+  commands: [ 'eslint --fix --no-warn-ignored' ],
+  fileList: [
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/lint-staged.config.js',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/app/[locale]/flipbook/page.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/components/FlipBook.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/components/LocaleSwitcher.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/features/diary/client/components/DiaryUnlockGate.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/features/diary/client/components/DiaryViewport.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/features/diary/client/context/DiaryNavigationContext.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/features/settings/change-password/ChangePasswordForm.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/locales/en.json',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/locales/it.json'
+  ]
+}
+2025-10-12T20:11:52.929Z lint-staged:generateTasks Generated task: 
+{
+  pattern: '**/*.ts?(x)',
+  commands: [Function: **/*.ts?(x)],
+  fileList: [
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/app/[locale]/flipbook/page.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/components/FlipBook.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/components/LocaleSwitcher.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/features/diary/client/components/DiaryUnlockGate.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/features/diary/client/components/DiaryViewport.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/features/diary/client/context/DiaryNavigationContext.tsx',
+    '/home/guido/Sito/Psicologia Etica/psicologia-etica/src/features/settings/change-password/ChangePasswordForm.tsx'
+  ]
+}
+2025-10-12T20:11:52.929Z lint-staged:makeCmdTasks Creating listr tasks for commands [ 'eslint --fix --no-warn-ignored' ]
+2025-10-12T20:11:52.930Z lint-staged:resolveTaskFn cmd: eslint
+2025-10-12T20:11:52.930Z lint-staged:resolveTaskFn args: [ '--fix', '--no-warn-ignored' ]
+2025-10-12T20:11:52.930Z lint-staged:resolveTaskFn execaOptions: {
+  cwd: '/home/guido/Sito/Psicologia Etica/psicologia-etica',
+  preferLocal: true,
+  reject: false,
+  shell: false,
+  stdin: 'ignore'
+}
+2025-10-12T20:11:52.930Z lint-staged:makeCmdTasks Creating listr tasks for commands [Function: **/*.ts?(x)]
+2025-10-12T20:11:52.931Z lint-staged:resolveTaskFn cmd: sh
+2025-10-12T20:11:52.931Z lint-staged:resolveTaskFn args: [ '-c', 'npm run check-types', '--' ]
+2025-10-12T20:11:52.931Z lint-staged:resolveTaskFn execaOptions: {
+  cwd: '/home/guido/Sito/Psicologia Etica/psicologia-etica',
+  preferLocal: true,
+  reject: false,
+  shell: false,
+  stdin: 'ignore'
+}
+2025-10-12T20:11:52.932Z lint-staged:chunkFiles Resolved an argument string length of 902 characters from 10 files
+2025-10-12T20:11:52.932Z lint-staged:chunkFiles Creating 1 chunks for maxArgLength of 65536
+2025-10-12T20:11:52.933Z lint-staged:runAll Set max event listeners to the number of tasks: 2
+[STARTED] Preparing lint-staged...
+2025-10-12T20:11:52.937Z lint-staged:GitWorkflow Backing up original state...
+2025-10-12T20:11:52.937Z lint-staged:GitWorkflow Getting partially staged files...
+2025-10-12T20:11:52.937Z lint-staged:execGit Running git command [ 'status', '-z' ]
+2025-10-12T20:11:52.960Z lint-staged:GitWorkflow Found partially staged files: [ 'src/features/diary/client/components/DiaryViewport.tsx' ]
+2025-10-12T20:11:52.961Z lint-staged:execGit Running git command [
+  'diff',
+  '--binary',
+  '--unified=0',
+  '--no-color',
+  '--no-ext-diff',
+  '--src-prefix=a/',
+  '--dst-prefix=b/',
+  '--patch',
+  '--submodule=short',
+  '--output',
+  '/home/guido/Sito/Psicologia Etica/psicologia-etica/.git/lint-staged_unstaged.patch',
+  '--',
+  'src/features/diary/client/components/DiaryViewport.tsx'
+]
+2025-10-12T20:11:52.968Z lint-staged:GitWorkflow Backing up merge state...
+2025-10-12T20:11:52.969Z lint-staged:file Reading file `/home/guido/Sito/Psicologia Etica/psicologia-etica/.git/MERGE_HEAD`
+2025-10-12T20:11:52.969Z lint-staged:file Reading file `/home/guido/Sito/Psicologia Etica/psicologia-etica/.git/MERGE_MODE`
+2025-10-12T20:11:52.969Z lint-staged:file Reading file `/home/guido/Sito/Psicologia Etica/psicologia-etica/.git/MERGE_MSG`
+2025-10-12T20:11:52.969Z lint-staged:file File `/home/guido/Sito/Psicologia Etica/psicologia-etica/.git/MERGE_HEAD` doesn't exist, ignoring...
+2025-10-12T20:11:52.970Z lint-staged:file File `/home/guido/Sito/Psicologia Etica/psicologia-etica/.git/MERGE_MODE` doesn't exist, ignoring...
+2025-10-12T20:11:52.970Z lint-staged:file File `/home/guido/Sito/Psicologia Etica/psicologia-etica/.git/MERGE_MSG` doesn't exist, ignoring...
+2025-10-12T20:11:52.970Z lint-staged:GitWorkflow Done backing up merge state!
+2025-10-12T20:11:52.970Z lint-staged:GitWorkflow Getting deleted files...
+2025-10-12T20:11:52.971Z lint-staged:execGit Running git command [ 'ls-files', '--deleted' ]
+2025-10-12T20:11:52.978Z lint-staged:GitWorkflow Found deleted files: []
+2025-10-12T20:11:52.978Z lint-staged:execGit Running git command [ 'stash', 'create' ]
+2025-10-12T20:11:52.998Z lint-staged:execGit Running git command [
+  'stash',
+  'store',
+  '--quiet',
+  '--message',
+  'lint-staged automatic backup',
+  'ad5e9c95580cc6c3c5aeed8f742db5954156b79d'
+]
+2025-10-12T20:11:53.008Z lint-staged:GitWorkflow Done backing up original state!
+[COMPLETED] Preparing lint-staged...
+[STARTED] Hiding unstaged changes to partially staged files...
+2025-10-12T20:11:53.009Z lint-staged:execGit Running git command [
+  'checkout',
+  '--force',
+  '--',
+  'src/features/diary/client/components/DiaryViewport.tsx'
+]
+[COMPLETED] Hiding unstaged changes to partially staged files...
+[STARTED] Running tasks for staged files...
+[STARTED] lint-staged.config.js — 10 files
+[STARTED] * — 10 files
+[STARTED] eslint --fix --no-warn-ignored
+[COMPLETED] eslint --fix --no-warn-ignored
+[COMPLETED] * — 10 files
+[STARTED] **/*.ts?(x) — 7 files
+[STARTED] sh -c "npm run check-types" --
+[FAILED] sh -c "npm run check-types" -- [FAILED]
+[FAILED] sh -c "npm run check-types" -- [FAILED]
+[COMPLETED] Running tasks for staged files...
+[STARTED] Applying modifications from tasks...
+[SKIPPED] Skipped because of errors from tasks.
+[STARTED] Restoring unstaged changes to partially staged files...
+[SKIPPED] Skipped because of errors from tasks.
+[STARTED] Reverting to original state because of errors...
+2025-10-12T20:12:16.205Z lint-staged:GitWorkflow Restoring original state...
+2025-10-12T20:12:16.205Z lint-staged:execGit Running git command [ 'reset', '--hard', 'HEAD' ]
+2025-10-12T20:12:16.230Z lint-staged:execGit Running git command [ 'stash', 'list' ]
+2025-10-12T20:12:16.244Z lint-staged:execGit Running git command [ 'stash', 'apply', '--quiet', '--index', '0' ]
+2025-10-12T20:12:16.299Z lint-staged:GitWorkflow Restoring merge state...
+2025-10-12T20:12:16.300Z lint-staged:GitWorkflow Done restoring merge state!
+2025-10-12T20:12:16.300Z lint-staged:file Removing file `/home/guido/Sito/Psicologia Etica/psicologia-etica/.git/lint-staged_unstaged.patch`
+2025-10-12T20:12:16.302Z lint-staged:GitWorkflow Done restoring original state!
+[COMPLETED] Reverting to original state because of errors...
+[STARTED] Cleaning up temporary files...
+2025-10-12T20:12:16.303Z lint-staged:GitWorkflow Dropping backup stash...
+2025-10-12T20:12:16.303Z lint-staged:execGit Running git command [ 'stash', 'list' ]
+2025-10-12T20:12:16.315Z lint-staged:execGit Running git command [ 'stash', 'drop', '--quiet', '0' ]
+2025-10-12T20:12:16.325Z lint-staged:GitWorkflow Done dropping backup stash!
+[COMPLETED] Cleaning up temporary files...
+
+✖ sh -c "npm run check-types" -- failed without output (FAILED).

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 
 import { changePasswordAction } from '@/app/[locale]/(auth)/dashboard/settings/actions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -106,42 +107,43 @@ export const ChangePasswordForm = ({ locale }: ChangePasswordFormProps) => {
   return (
     <form ref={formRef} action={formAction} className="space-y-6">
       <input type="hidden" name="locale" value={locale} />
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="currentPassword">{t('fields.current')}</Label>
-          <Input
-            id="currentPassword"
-            name="currentPassword"
-            type="password"
-            autoComplete="current-password"
-            required
-            aria-describedby={fieldError('currentPassword') ? 'current-password-error' : undefined}
-          />
-          {fieldError('currentPassword') && (
-            <p className="text-xs text-destructive" id="current-password-error">
-              {fieldError('currentPassword')}
-            </p>
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="newPassword">{t('fields.new')}</Label>
-          <Input
-            id="newPassword"
-            name="newPassword"
-            type="password"
-            autoComplete="new-password"
-            minLength={8}
-            required
-            aria-describedby={fieldError('newPassword') ? 'new-password-error' : undefined}
-          />
-          {fieldError('newPassword') && (
-            <p className="text-xs text-destructive" id="new-password-error">
-              {fieldError('newPassword')}
-            </p>
-          )}
-        </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="currentPassword">{t('fields.current')}</Label>
+        <Input
+          id="currentPassword"
+          name="currentPassword"
+          type="password"
+          autoComplete="current-password"
+          required
+          aria-describedby={fieldError('currentPassword') ? 'current-password-error' : undefined}
+        />
+        {fieldError('currentPassword') && (
+          <p className="text-xs text-destructive" id="current-password-error">
+            {fieldError('currentPassword')}
+          </p>
+        )}
       </div>
-      <div className="space-y-2 md:w-1/2">
+
+      <div className="space-y-2">
+        <Label htmlFor="newPassword">{t('fields.new')}</Label>
+        <Input
+          id="newPassword"
+          name="newPassword"
+          type="password"
+          autoComplete="new-password"
+          minLength={8}
+          required
+          aria-describedby={fieldError('newPassword') ? 'new-password-error' : undefined}
+        />
+        {fieldError('newPassword') && (
+          <p className="text-xs text-destructive" id="new-password-error">
+            {fieldError('newPassword')}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="confirmPassword">{t('fields.confirm')}</Label>
         <Input
           id="confirmPassword"
@@ -159,17 +161,21 @@ export const ChangePasswordForm = ({ locale }: ChangePasswordFormProps) => {
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-4">
+      <div>
         <SubmitButton />
-        {successVisible && (
-          <p className="text-sm font-medium text-emerald-600">{t('messages.success')}</p>
-        )}
       </div>
 
+      {state.status === 'success' && successVisible && (
+        <Alert className="border-emerald-300 text-emerald-700 dark:border-emerald-500/50 dark:text-emerald-400">
+          <AlertTitle>{t('messages.success')}</AlertTitle>
+        </Alert>
+      )}
+
       {generalMessage && state.status === 'error' && (
-        <p className="text-sm text-destructive">
-          {generalMessage}
-        </p>
+        <Alert variant="destructive">
+          <AlertTitle>{t('messages.validation')}</AlertTitle>
+          <AlertDescription>{generalMessage}</AlertDescription>
+        </Alert>
       )}
     </form>
   );

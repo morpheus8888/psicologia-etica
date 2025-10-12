@@ -26,7 +26,8 @@ export const LocaleSwitcher = () => {
       return;
     }
     const currentPath = pathname ?? '/';
-    router.replace(currentPath, { locale: value as SupportedLocale });
+    const search = typeof window !== 'undefined' ? window.location.search : '';
+    router.replace(`${currentPath}${search}`, { locale: value as SupportedLocale });
     router.refresh();
   };
 

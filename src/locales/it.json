@@ -203,6 +203,8 @@
       }
     },
     "settings": {
+      "title": "Diario",
+      "description": "Cifratura end-to-end e condivisione del diario.",
       "intro": "Il diario resta cifrato con la password che imposti tu. Qui trovi alcune indicazioni per gestire accessi e suggerimenti.",
       "pointPrivacy": "Conserva con cura la password: se la perdi non possiamo ripristinare il diario.",
       "pointSharing": "Apri una pagina del diario e usa il pannello di condivisione per concedere o revocare l'accesso ai professionisti.",

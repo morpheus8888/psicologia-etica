@@ -203,6 +203,8 @@
       }
     },
     "settings": {
+      "title": "Diary",
+      "description": "End-to-end encryption and sharing details.",
       "intro": "Your diary stays encrypted with a password you set. Use the actions below to manage access and prompts.",
       "pointPrivacy": "Keep your password secure: if it is lost we cannot restore your diary.",
       "pointSharing": "Open any diary page and use the share panel to grant or revoke professional access.",

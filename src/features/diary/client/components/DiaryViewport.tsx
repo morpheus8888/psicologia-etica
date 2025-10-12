@@ -13,6 +13,7 @@ import HTMLFlipBook from 'react-pageflip';
 
 import type { TranslationAdapter, UIAdapter } from '@/features/diary/adapters/types';
 import { useDiaryData } from '@/features/diary/client/context/DiaryDataContext';
+import { useDiaryEncryption } from '@/features/diary/client/context/DiaryEncryptionContext';
 import { useDiaryNavigation } from '@/features/diary/client/context/DiaryNavigationContext';
 
 import { DiaryCoachDock } from './DiaryCoachDock';
@@ -23,7 +24,6 @@ const FlipBook = HTMLFlipBook as unknown as ComponentType<any>;
 
 const GOALS_LEFT_INDEX = 2;
 const CALENDAR_LEFT_INDEX = 4;
-const BASE_PAGE_COUNT = 6;
 
 const normalizeDate = (dateISO: string) => dateISO.slice(0, 10);
 
@@ -139,6 +139,7 @@ export const DiaryViewport = ({
   const [calendarSelection, setCalendarSelection] = useState(() => navigation.currentDate ?? todayISO);
 
   const isDesktop = ui.isDesktop();
+  const encryption = useDiaryEncryption();
 
   useEffect(() => {
     if (!navigation.currentDate) {
@@ -246,6 +247,39 @@ export const DiaryViewport = ({
     return buildCalendarGrid(calendarMonth, entryDatesSet, todayISO);
   }, [calendarMonth, entryDatesSet, todayISO]);
 
+  const entryMonthsByYear = useMemo(() => {
+    const byYear = new Map<number, Set<number>>();
+    entryMetaMap.forEach((meta) => {
+      const [yStr, mStr] = meta.dateISO.split('-');
+      const y = Number.parseInt(yStr ?? '0', 10) || 0;
+      const m = (Number.parseInt(mStr ?? '1', 10) || 1) - 1; // zero-based
+      const set = byYear.get(y) ?? new Set<number>();
+      set.add(m);
+      byYear.set(y, set);
+    });
+    return byYear;
+  }, [entryMetaMap]);
+
+  const calendarYear = calendarMonth.getFullYear();
+  const calendarMonthIndex = calendarMonth.getMonth();
+
+  const availableYears = useMemo(() => Array.from(entryMonthsByYear.keys()).sort((a, b) => a - b), [entryMonthsByYear]);
+
+  const hasOtherYears = useMemo(
+    () => availableYears.some(yearValue => yearValue !== calendarYear),
+    [availableYears, calendarYear],
+  );
+
+  const monthsInSelectedYear = useMemo(
+    () => Array.from(entryMonthsByYear.get(calendarYear) ?? new Set<number>()).sort((a, b) => a - b),
+    [entryMonthsByYear, calendarYear],
+  );
+
+  const monthLabelFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { month: 'short' }),
+    [locale],
+  );
+
   const dayPages = useMemo(
     () => navigation.pages.filter(page => page.kind === 'day'),
     [navigation.pages],
@@ -271,20 +305,43 @@ export const DiaryViewport = ({
   const handleCalendarSelect = useCallback(
     (dateISO: string) => {
       const normalized = normalizeDate(dateISO);
-      const targetPage = dayPages.find(page => page.dateISO === normalized);
       setCalendarSelection(normalized);
       setCalendarMonth(new Date(`${normalized}T00:00:00`));
-      navigation.setDate(normalized);
-      goToIndex(targetPage?.index ?? BASE_PAGE_COUNT);
+      navigation.setMonth(normalized);
     },
-    [dayPages, goToIndex, navigation],
+    [navigation],
+  );
+
+  const handleSelectYear = useCallback(
+    (yearValue: number) => {
+      const monthsForYear = Array.from(entryMonthsByYear.get(yearValue) ?? new Set<number>()).sort((a, b) => a - b);
+      const firstMonth = monthsForYear[0];
+      if (firstMonth === undefined) {
+        return;
+      }
+      const iso = `${yearValue}-${String(firstMonth + 1).padStart(2, '0')}-01`;
+      setCalendarSelection(iso);
+      setCalendarMonth(new Date(`${iso}T00:00:00`));
+      navigation.setMonth(iso);
+    },
+    [entryMonthsByYear, navigation],
+  );
+
+  const handleSelectMonth = useCallback(
+    (monthValue: number) => {
+      const iso = `${calendarYear}-${String(monthValue + 1).padStart(2, '0')}-01`;
+      setCalendarSelection(iso);
+      setCalendarMonth(new Date(`${iso}T00:00:00`));
+      navigation.setMonth(iso);
+    },
+    [calendarYear, navigation],
   );
 
   const handleGoToday = useCallback(() => {
     setCalendarSelection(todayISO);
     setCalendarMonth(new Date(`${todayISO}T00:00:00`));
-    goToIndex(CALENDAR_LEFT_INDEX);
-  }, [goToIndex, todayISO]);
+    navigation.setDate(todayISO);
+  }, [navigation, todayISO]);
 
   useEffect(() => {
     goals.forEach((goal) => {
@@ -528,6 +585,47 @@ export const DiaryViewport = ({
             {t.getNamespace('overview').t('calendarTitle')}
           </p>
         </header>
+
+        {hasOtherYears && (
+          <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-border/60 bg-background/80 p-2 text-sm">
+            {availableYears.map(yearValue => (
+              <button
+                key={yearValue}
+                type="button"
+                onClick={() => handleSelectYear(yearValue)}
+                className={`rounded-full px-3 py-1 font-semibold transition ${
+                  yearValue === calendarYear
+                    ? 'bg-primary text-primary-foreground shadow'
+                    : 'text-muted-foreground hover:bg-muted/60'
+                }`}
+              >
+                {yearValue}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {monthsInSelectedYear.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-background/80 p-2 text-xs uppercase tracking-wide">
+            {monthsInSelectedYear.map(monthValue => (
+              <button
+                key={monthValue}
+                type="button"
+                onClick={() => handleSelectMonth(monthValue)}
+                className={`rounded-full px-3 py-1 font-semibold transition ${
+                  monthValue === calendarMonthIndex
+                    ? 'bg-primary text-primary-foreground shadow'
+                    : 'text-muted-foreground hover:bg-muted/60'
+                }`}
+              >
+                {monthLabelFormatter
+                  .format(new Date(Date.UTC(calendarYear, monthValue, 1)))
+                  .toUpperCase()}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="rounded-xl border border-border/60 bg-background/80 p-4 text-sm">
           <p className="font-semibold text-foreground">
             {t.getNamespace('entry').t('editable')}
@@ -536,6 +634,7 @@ export const DiaryViewport = ({
             {t.getNamespace('share').t('toastErrorDescription')}
           </p>
         </div>
+
         <div className="space-y-3">
           <h4 className="text-sm font-semibold text-foreground">
             {t.getNamespace('goals').t('title')}
@@ -737,10 +836,21 @@ export const DiaryViewport = ({
     <>
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
-              {t.getNamespace('header').t('title')}
-            </h2>
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-foreground">
+                {t.getNamespace('header').t('title')}
+              </h2>
+              {encryption.status === 'ready' && (
+                <button
+                  type="button"
+                  onClick={() => encryption.lock()}
+                  className="rounded-full border border-border/80 bg-background px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm transition hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                >
+                  {t.getNamespace('lock').t('label')}
+                </button>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">
               {t.getNamespace('header').t('subtitle', { date: formatDateLabel(todayISO, locale) })}
             </p>
@@ -777,26 +887,13 @@ export const DiaryViewport = ({
                 {t.getNamespace('nav').t('today')}
               </button>
             </div>
-            <div className="flex max-w-full items-center gap-2 overflow-x-auto rounded-full border border-border/70 bg-background px-2 py-1 text-sm">
-              {dayPages.map(page => (
-                <button
-                  key={page.dateISO}
-                  type="button"
-                  onClick={() => {
-                    setCalendarSelection(page.dateISO);
-                    setCalendarMonth(new Date(`${page.dateISO}T00:00:00`));
-                    navigation.setIndex(page.index);
-                    goToIndex(page.index);
-                  }}
-                  className={`rounded-full px-3 py-1 font-medium transition ${
-                    page.index === navigation.currentIndex
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-muted/60'
-                  }`}
-                >
-                  {formatDateLabel(page.dateISO, locale)}
-                </button>
-              ))}
+            <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-1 text-sm font-semibold">
+              <span className="text-muted-foreground">
+                {t.getNamespace('nav').t('today')}
+              </span>
+              <span className="rounded-full bg-primary px-2 py-0.5 text-primary-foreground">
+                {formatDateLabel(todayISO, locale)}
+              </span>
             </div>
           </div>
         </div>
