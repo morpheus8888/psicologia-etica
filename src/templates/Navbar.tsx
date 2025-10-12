@@ -19,7 +19,7 @@ export const Navbar = async ({ locale }: NavbarProps) => {
 
   const dashboardPath = getI18nPath('/dashboard', locale);
   const profilePath = getI18nPath('/dashboard/user-profile', locale);
-  const settingsPath = getI18nPath('/dashboard/organization-profile', locale);
+  const settingsPath = getI18nPath('/dashboard/settings', locale);
 
   const navItems = [
     {
