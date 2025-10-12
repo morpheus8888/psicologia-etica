@@ -49,19 +49,39 @@ export const DiaryNavigationProvider = ({
   initialDates,
 }: DiaryNavigationProviderProps) => {
   const deepLink = routing.readDeepLink();
-  const normalizedInitial = normalizeDate(deepLink?.dateISO ?? initialDateISO);
-  const [datePages, setDatePages] = useState<string[]>(() => {
-    const unique = new Set((initialDates ?? []).map(normalizeDate));
-    unique.add(normalizedInitial);
-    return Array.from(unique);
-  });
+  const normalizedInitial = normalizeDate(initialDateISO);
+  const deepLinkDate = deepLink?.dateISO ? normalizeDate(deepLink.dateISO) : null;
+  const initialActiveDate = deepLinkDate ?? normalizedInitial;
   const basePageCount = 6;
-  const [currentIndex, setCurrentIndex] = useState<number>(
-    deepLink?.index ?? basePageCount,
-  );
-  const [currentDate, setCurrentDate] = useState<string | null>(
-    deepLink?.index !== undefined && deepLink.index < basePageCount ? null : normalizedInitial,
-  );
+
+  const initialDatePages = useMemo(() => {
+    const unique = new Set((initialDates ?? []).map(normalizeDate));
+    unique.add(initialActiveDate);
+    return Array.from(unique);
+  }, [initialActiveDate, initialDates]);
+
+  const initialIndex = useMemo(() => {
+    if (deepLink?.index !== undefined) {
+      return deepLink.index;
+    }
+    const position = initialDatePages.indexOf(initialActiveDate);
+    return position >= 0 ? basePageCount + position : basePageCount;
+  }, [basePageCount, deepLink?.index, initialActiveDate, initialDatePages]);
+
+  const initialCurrentDate = useMemo(() => {
+    if (deepLink?.index !== undefined) {
+      if (deepLink.index < basePageCount) {
+        return null;
+      }
+      const position = deepLink.index - basePageCount;
+      return initialDatePages[position] ?? initialActiveDate;
+    }
+    return initialActiveDate;
+  }, [basePageCount, deepLink?.index, initialActiveDate, initialDatePages]);
+
+  const [datePages, setDatePages] = useState<string[]>(initialDatePages);
+  const [currentIndex, setCurrentIndex] = useState<number>(initialIndex);
+  const [currentDate, setCurrentDate] = useState<string | null>(initialCurrentDate);
 
   const pages = useMemo<DiaryPage[]>(() => {
     const staticPages: DiaryPage[] = [
@@ -114,7 +134,7 @@ export const DiaryNavigationProvider = ({
       setCurrentDate(normalized);
       routing.navigateToDiaryDate(normalized);
     },
-    [pages, routing],
+    [basePageCount, pages, routing],
   );
 
   const appendDate = useCallback((dateISO: string) => {
@@ -157,7 +177,7 @@ export const DiaryNavigationProvider = ({
       setCurrentDate(normalized);
       routing.navigateToDiaryDate(normalized);
     },
-    [routing],
+    [basePageCount, routing],
   );
 
   const value = useMemo<DiaryNavigationContextValue>(

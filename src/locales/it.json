@@ -117,6 +117,19 @@
       "title": "Diario privato",
       "subtitle": "Oggi è {date}"
     },
+    "cover": {
+      "brand": "Psicologia Etica",
+      "leftTitle": "Diario Riservato",
+      "leftDescription": "Un luogo sicuro per annotare giornate, progressi e obiettivi condivisi con il tuo professionista di fiducia.",
+      "rightTitle": "Private Journal",
+      "rightDescription": "Protezione end-to-end, controllo totale dell'accesso, strumenti pensati per il percorso terapeutico."
+    },
+    "closing": {
+      "noteLabel": "Note",
+      "noteDescription": "Continua a custodire qui i tuoi pensieri quotidiani. Ricorda che puoi condividere solo quello che desideri con il tuo professionista.",
+      "signature": "{brand} · Riservato",
+      "gratitude": "Grazie per aver scritto oggi"
+    },
     "nav": {
       "goals": "Obiettivi",
       "calendar": "Calendario",
@@ -140,7 +153,12 @@
     },
     "overview": {
       "calendarTitle": "Calendario",
-      "heatmapTitle": "Continuità di scrittura"
+      "heatmapTitle": "Stato scrittura",
+      "progressTitle": "Stato del diario",
+      "progressSubtitle": "Monitora l'abitudine di scrittura e i ricordi salvati.",
+      "progressStreak": "Sei al {count, plural, one {# giorno consecutivo} other {# giorni consecutivi}}",
+      "progressTotal": "Hai scritto finora {count, plural, one {# ricordo} other {# ricordi}}.",
+      "progressMonthLabel": "{month}: {count, plural, one {# giorno registrato} other {# giorni registrati}}"
     },
     "entry": {
       "editable": "Modificabile oggi",

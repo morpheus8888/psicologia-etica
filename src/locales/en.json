@@ -117,6 +117,19 @@
       "title": "Private diary",
       "subtitle": "Today is {date}"
     },
+    "cover": {
+      "brand": "Psicologia Etica",
+      "leftTitle": "Confidential Journal",
+      "leftDescription": "A secure space to capture your days, progress, and goals shared with the professional you trust.",
+      "rightTitle": "Private Journal",
+      "rightDescription": "End-to-end protection, complete control over access, tools designed for your therapeutic journey."
+    },
+    "closing": {
+      "noteLabel": "Notes",
+      "noteDescription": "Keep nurturing your daily reflections here. Remember you decide what to share with your professional.",
+      "signature": "{brand} · Confidential",
+      "gratitude": "Thank you for writing today"
+    },
     "nav": {
       "goals": "Goals",
       "calendar": "Calendar",
@@ -140,7 +153,12 @@
     },
     "overview": {
       "calendarTitle": "Calendar",
-      "heatmapTitle": "Writing streak"
+      "heatmapTitle": "Writing streak",
+      "progressTitle": "Journal progress",
+      "progressSubtitle": "Keep track of your writing habit and entries.",
+      "progressStreak": "You're on a {count, plural, one {# day} other {# days}} streak",
+      "progressTotal": "So far you've written {count, plural, one {# entry} other {# entries}}.",
+      "progressMonthLabel": "{month}: {count, plural, one {# day recorded} other {# days recorded}}"
     },
     "entry": {
       "editable": "Editable today",

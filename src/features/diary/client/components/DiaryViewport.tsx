@@ -22,9 +22,6 @@ import { DiarySharePanel } from './DiarySharePanel';
 
 const FlipBook = HTMLFlipBook as unknown as ComponentType<any>;
 
-const GOALS_LEFT_INDEX = 2;
-const CALENDAR_LEFT_INDEX = 4;
-
 const normalizeDate = (dateISO: string) => dateISO.slice(0, 10);
 
 const toISODate = (value: Date) => {
@@ -103,6 +100,22 @@ const isEntryEditable = (
   return diffMinutes <= graceMinutes;
 };
 
+const computeConsecutiveStreak = (todayISO: string, entryDates: Set<string>) => {
+  let streak = 0;
+  const cursor = new Date(`${todayISO}T00:00:00`);
+
+  while (true) {
+    const iso = toISODate(cursor);
+    if (!entryDates.has(iso)) {
+      break;
+    }
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
+};
+
 type DiaryViewportProps = {
   locale: string;
   todayISO: string;
@@ -113,6 +126,94 @@ type DiaryViewportProps = {
   promptLocaleFallback: string;
   coachScope?: string;
   coachTags?: string[];
+};
+
+type ProgressSectionProps = {
+  t: TranslationAdapter;
+  locale: string;
+  todayISO: string;
+  calendarMonth: Date;
+  entryDatesSet: Set<string>;
+};
+
+const ProgressSection = ({
+  t,
+  locale,
+  todayISO,
+  calendarMonth,
+  entryDatesSet,
+}: ProgressSectionProps) => {
+  const streak = useMemo(
+    () => computeConsecutiveStreak(todayISO, entryDatesSet),
+    [todayISO, entryDatesSet],
+  );
+
+  const totalEntries = entryDatesSet.size;
+  const calendarYear = calendarMonth.getFullYear();
+  const calendarMonthIndex = calendarMonth.getMonth();
+  const daysInMonth = new Date(calendarYear, calendarMonthIndex + 1, 0).getDate();
+
+  const monthEntriesCount = useMemo(() => {
+    return Array.from(entryDatesSet).filter((dateISO) => {
+      const [yStr, mStr] = dateISO.split('-');
+      const yearValue = Number.parseInt(yStr ?? '0', 10);
+      const monthValue = (Number.parseInt(mStr ?? '1', 10) || 1) - 1;
+      return yearValue === calendarYear && monthValue === calendarMonthIndex;
+    }).length;
+  }, [entryDatesSet, calendarMonthIndex, calendarYear]);
+
+  const monthLabel = useMemo(
+    () => calendarMonth.toLocaleDateString(locale, { month: 'long' }),
+    [calendarMonth, locale],
+  );
+
+  const monthProgress
+    = daysInMonth > 0 ? Math.min((monthEntriesCount / daysInMonth) * 100, 100) : 0;
+
+  return (
+    <section className="space-y-3 rounded-xl border border-border/60 bg-background/80 p-4 text-sm shadow-sm">
+      <header className="space-y-1">
+        <h3 className="text-lg font-semibold text-foreground">
+          {t.getNamespace('overview').t('progressTitle')}
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          {t.getNamespace('overview').t('progressSubtitle')}
+        </p>
+      </header>
+
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-foreground">
+          {t.getNamespace('overview').t('progressStreak', { count: streak })}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {t.getNamespace('overview').t('progressTotal', { count: totalEntries })}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>
+            {t.getNamespace('overview').t('progressMonthLabel', {
+              month: monthLabel,
+              count: monthEntriesCount,
+            })}
+          </span>
+          <span className="font-medium text-foreground">
+            {monthEntriesCount}
+            {' '}
+            /
+            {daysInMonth}
+          </span>
+        </div>
+        <div className="h-2 w-full rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary transition-[width]"
+            style={{ width: `${monthProgress}%` }}
+          />
+        </div>
+      </div>
+    </section>
+  );
 };
 
 export const DiaryViewport = ({
@@ -126,6 +227,9 @@ export const DiaryViewport = ({
   coachScope,
   coachTags,
 }: DiaryViewportProps) => {
+  const tCover = t.getNamespace('cover');
+  const tClosing = t.getNamespace('closing');
+  const coverBrand = tCover.t('brand');
   const data = useDiaryData();
   const navigation = useDiaryNavigation();
 
@@ -185,9 +289,25 @@ export const DiaryViewport = ({
     }
 
     const currentPage = book.getCurrentPageIndex();
-    if (currentPage !== navigation.currentIndex) {
-      book.flip(navigation.currentIndex);
+    if (currentPage === navigation.currentIndex) {
+      return;
     }
+
+    const currentSpread = Math.floor(currentPage / 2);
+    const targetSpread = Math.floor(navigation.currentIndex / 2);
+
+    if (currentSpread === targetSpread) {
+      return;
+    }
+
+    const delta = Math.abs(currentPage - navigation.currentIndex);
+
+    if (delta <= 2) {
+      book.flip(navigation.currentIndex);
+      return;
+    }
+
+    book.turnToPage(navigation.currentIndex);
   }, [navigation.currentIndex]);
 
   const handleFlip = useCallback(
@@ -204,10 +324,6 @@ export const DiaryViewport = ({
     (index: number) => {
       if (navigation.currentIndex !== index) {
         navigation.setIndex(index);
-      }
-      const book = flipRef.current?.pageFlip?.();
-      if (book) {
-        book.flip(index);
       }
     },
     [navigation],
@@ -242,6 +358,37 @@ export const DiaryViewport = ({
   const entryDatesSet = useMemo(() => {
     return new Set(Array.from(entryMetaMap.values(), item => item.dateISO));
   }, [entryMetaMap]);
+
+  const goalsSectionIndex = useMemo(() => {
+    return navigation.pages.find(
+      page => page.kind === 'goals' && page.side === 'left',
+    )?.index ?? null;
+  }, [navigation.pages]);
+
+  const calendarSectionIndex = useMemo(() => {
+    return navigation.pages.find(
+      page => page.kind === 'calendar' && page.side === 'left',
+    )?.index ?? null;
+  }, [navigation.pages]);
+
+  const isGoalsSectionActive = goalsSectionIndex !== null
+    && (
+      navigation.currentIndex === goalsSectionIndex
+      || navigation.currentIndex === goalsSectionIndex + 1
+    );
+
+  const isCalendarSectionActive = calendarSectionIndex !== null
+    && (
+      navigation.currentIndex === calendarSectionIndex
+      || navigation.currentIndex === calendarSectionIndex + 1
+    );
+
+  const todaySectionIndex = useMemo(() => {
+    const page = navigation.pages.find(
+      item => item.kind === 'day' && item.dateISO === todayISO,
+    );
+    return page?.index ?? null;
+  }, [navigation.pages, todayISO]);
 
   const calendarCells = useMemo(() => {
     return buildCalendarGrid(calendarMonth, entryDatesSet, todayISO);
@@ -371,12 +518,13 @@ export const DiaryViewport = ({
       <div className="flex h-full flex-col justify-end gap-6">
         <div className="space-y-3 text-left text-muted-foreground/90">
           <p className="text-sm uppercase tracking-[0.4em] text-muted-foreground">
-            Psicologia Etica
+            {coverBrand}
           </p>
-          <h1 className="text-4xl font-semibold text-foreground">Diario Riservato</h1>
+          <h1 className="text-4xl font-semibold text-foreground">
+            {tCover.t('leftTitle')}
+          </h1>
           <p className="max-w-xs text-sm leading-relaxed">
-            Un luogo sicuro per annotare giornate, progressi e obiettivi condivisi con il tuo
-            professionista di fiducia.
+            {tCover.t('leftDescription')}
           </p>
         </div>
         <div className="rounded-2xl border border-border/40 bg-background/70 px-5 py-4 text-xs uppercase tracking-widest text-muted-foreground">
@@ -389,11 +537,10 @@ export const DiaryViewport = ({
   const coverRightPage = (
     <article key="cover-right" className={`${basePageClass} diary-page--cover-right`}>
       <div className="flex h-full flex-col items-center justify-center text-center text-primary-foreground/90">
-        <p className="text-sm uppercase tracking-[0.35em]">Psicologia Etica</p>
-        <h2 className="mt-4 text-4xl font-bold">Private Journal</h2>
+        <p className="text-sm uppercase tracking-[0.35em]">{coverBrand}</p>
+        <h2 className="mt-4 text-4xl font-bold">{tCover.t('rightTitle')}</h2>
         <p className="mt-6 max-w-xs text-sm leading-relaxed">
-          Protezione end-to-end, controllo totale dell&apos;accesso, strumenti pensati per il percorso
-          terapeutico.
+          {tCover.t('rightDescription')}
         </p>
         <div className="mt-8 flex items-center gap-2 text-xs uppercase tracking-widest">
           <span>{locale.toUpperCase()}</span>
@@ -408,14 +555,13 @@ export const DiaryViewport = ({
     <article key="closing-left" className={`${basePageClass} diary-page--cover-back-left`}>
       <div className="flex h-full flex-col justify-between text-sm text-muted-foreground/80">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em]">Note</p>
+          <p className="text-xs uppercase tracking-[0.3em]">{tClosing.t('noteLabel')}</p>
           <p className="mt-2 max-w-72 leading-relaxed">
-            Continua a custodire qui i tuoi pensieri quotidiani. Ricorda che puoi condividere solo
-            quello che desideri con il tuo professionista.
+            {tClosing.t('noteDescription')}
           </p>
         </div>
         <p className="text-right text-xs uppercase tracking-[0.35em] text-muted-foreground/70">
-          Psicologia Etica · Riservato
+          {tClosing.t('signature', { brand: coverBrand })}
         </p>
       </div>
     </article>
@@ -424,7 +570,7 @@ export const DiaryViewport = ({
   const closingRightPage = (
     <article key="closing-right" className={`${basePageClass} diary-page--cover-back-right`}>
       <div className="flex h-full flex-col items-center justify-end gap-6 text-center text-primary-foreground/85">
-        <p className="text-xs uppercase tracking-[0.35em]">Grazie per aver scritto oggi</p>
+        <p className="text-xs uppercase tracking-[0.35em]">{tClosing.t('gratitude')}</p>
         <div className="rounded-full border border-primary/30 bg-primary/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.4em]">
           {t.getNamespace('nav').t('today')}
         </div>
@@ -549,7 +695,9 @@ export const DiaryViewport = ({
             const isSelected = calendarSelection === cell.dateISO;
             const baseClasses = [
               'flex h-16 flex-col items-center justify-center rounded-xl border text-sm transition',
-              cell.isCurrentMonth ? 'border-border/60 bg-background' : 'border-dashed border-border/40 bg-muted/20 text-muted-foreground',
+              cell.isCurrentMonth
+                ? 'border-border/60 bg-background hover:border-primary/60 hover:bg-primary/5'
+                : 'border-dashed border-border/40 bg-muted/20 text-muted-foreground cursor-not-allowed opacity-60',
               cell.hasEntry ? 'shadow-[0_0_0_1px_rgba(59,130,246,0.35)]' : '',
               isSelected ? 'border-primary bg-primary/10 text-primary' : '',
               cell.isToday && !isSelected ? 'border-primary/60' : '',
@@ -561,6 +709,7 @@ export const DiaryViewport = ({
                 type="button"
                 onClick={() => handleCalendarSelect(cell.dateISO)}
                 className={baseClasses}
+                disabled={!cell.isCurrentMonth}
               >
                 <span className="text-base font-semibold">{cell.label}</span>
                 {cell.hasEntry && (
@@ -577,15 +726,13 @@ export const DiaryViewport = ({
   const calendarRightPage = (
     <article key="calendar-right" className={`${basePageClass} diary-page--calendar`}>
       <div className="flex h-full flex-col gap-4">
-        <header className="space-y-1">
-          <h3 className="text-lg font-semibold text-foreground">
-            {t.getNamespace('overview').t('heatmapTitle')}
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            {t.getNamespace('overview').t('calendarTitle')}
-          </p>
-        </header>
-
+        <ProgressSection
+          t={t}
+          locale={locale}
+          todayISO={todayISO}
+          calendarMonth={calendarMonth}
+          entryDatesSet={entryDatesSet}
+        />
         {hasOtherYears && (
           <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-border/60 bg-background/80 p-2 text-sm">
             {availableYears.map(yearValue => (
@@ -625,16 +772,6 @@ export const DiaryViewport = ({
             ))}
           </div>
         )}
-
-        <div className="rounded-xl border border-border/60 bg-background/80 p-4 text-sm">
-          <p className="font-semibold text-foreground">
-            {t.getNamespace('entry').t('editable')}
-          </p>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t.getNamespace('share').t('toastErrorDescription')}
-          </p>
-        </div>
-
         <div className="space-y-3">
           <h4 className="text-sm font-semibold text-foreground">
             {t.getNamespace('goals').t('title')}
@@ -798,6 +935,11 @@ export const DiaryViewport = ({
           <textarea
             value={navigation.currentDate === page.dateISO ? currentBody : ''}
             onChange={event => setCurrentBody(event.target.value)}
+            onFocus={() => {
+              if (navigation.currentDate !== page.dateISO) {
+                navigation.setDate(page.dateISO);
+              }
+            }}
             className="h-72 w-full resize-none rounded-2xl border border-border/70 bg-transparent px-4 py-3 text-sm leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             placeholder={t.getNamespace('entry').t('placeholder')}
             disabled={!editable}
@@ -859,23 +1001,33 @@ export const DiaryViewport = ({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => goToIndex(GOALS_LEFT_INDEX)}
+                onClick={() => {
+                  if (goalsSectionIndex !== null) {
+                    goToIndex(goalsSectionIndex);
+                  }
+                }}
                 className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
-                  navigation.currentIndex === GOALS_LEFT_INDEX || navigation.currentIndex === GOALS_LEFT_INDEX + 1
+                  isGoalsSectionActive
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border/60 text-muted-foreground hover:bg-muted/60'
                 }`}
+                disabled={goalsSectionIndex === null}
               >
                 {t.getNamespace('nav').t('goals')}
               </button>
               <button
                 type="button"
-                onClick={() => goToIndex(CALENDAR_LEFT_INDEX)}
+                onClick={() => {
+                  if (calendarSectionIndex !== null) {
+                    goToIndex(calendarSectionIndex);
+                  }
+                }}
                 className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
-                  navigation.currentIndex === CALENDAR_LEFT_INDEX || navigation.currentIndex === CALENDAR_LEFT_INDEX + 1
+                  isCalendarSectionActive
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border/60 text-muted-foreground hover:bg-muted/60'
                 }`}
+                disabled={calendarSectionIndex === null}
               >
                 {t.getNamespace('nav').t('calendar')}
               </button>
@@ -892,7 +1044,9 @@ export const DiaryViewport = ({
                 {t.getNamespace('nav').t('today')}
               </span>
               <span className="rounded-full bg-primary px-2 py-0.5 text-primary-foreground">
-                {formatDateLabel(todayISO, locale)}
+                {todaySectionIndex !== null
+                  ? formatDateLabel(todayISO, locale)
+                  : t.getNamespace('calendar').t('empty' as never)}
               </span>
             </div>
           </div>
