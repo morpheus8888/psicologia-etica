@@ -236,7 +236,6 @@ export const DiaryViewport = ({
   const flipRef = useRef<any>(null);
   const [currentBody, setCurrentBody] = useState('');
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
-  const [currentMood, setCurrentMood] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [goalLinkOpen, setGoalLinkOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(`${todayISO}T00:00:00`));
@@ -254,13 +253,11 @@ export const DiaryViewport = ({
       if (!entry) {
         setCurrentBody('');
         setCurrentEntryId(null);
-        setCurrentMood(null);
         return;
       }
 
       setCurrentBody(entry.content.body);
       setCurrentEntryId(entry.record.id);
-      setCurrentMood(entry.record.mood ?? null);
     });
   }, [data, navigation.currentDate]);
 
@@ -341,13 +338,12 @@ export const DiaryViewport = ({
         createdAtISO: new Date().toISOString(),
         updatedAtISO: new Date().toISOString(),
       },
-      mood: currentMood,
       tzAtEntry: data.profile?.timezone ?? null,
     });
 
     setCurrentEntryId(saved.record.id);
     return saved;
-  }, [currentBody, currentMood, data, navigation.currentDate]);
+  }, [currentBody, data, navigation.currentDate]);
 
   const goals = useMemo(() => Array.from(data.goals.values()), [data.goals]);
   const entryMetaMap = data.entryMeta;
@@ -813,13 +809,15 @@ export const DiaryViewport = ({
     const disableShare = !navigation.currentDate || (!currentEntryId && !editable);
     const disableGoalLink = !navigation.currentDate || (!currentEntryId && !editable);
     const pageTextareaId = `diary-entry-${page.dateISO}`;
+    const isActivePage = navigation.currentDate === page.dateISO;
+    const hasPersistedEntry = entryMetaMap.has(page.dateISO);
+    const showReadonlyLabel = !editable && hasPersistedEntry;
+    const textareaPlaceholder = editable ? t.getNamespace('entry').t('placeholder') : undefined;
 
     const ensurePageActive = () => {
-      if (navigation.currentDate !== page.dateISO) {
+      if (!isActivePage) {
         navigation.setDate(page.dateISO);
-        return;
-      }
-      if (navigation.currentIndex !== page.index) {
+      } else if (navigation.currentIndex !== page.index) {
         navigation.setIndex(page.index);
       }
     };
@@ -829,7 +827,9 @@ export const DiaryViewport = ({
         key={page.dateISO}
         className={`${basePageClass} diary-page--entry`}
         onPointerDownCapture={() => {
-          ensurePageActive();
+          if (!isActivePage || navigation.currentIndex !== page.index) {
+            ensurePageActive();
+          }
         }}
       >
         <div className="flex h-full flex-col gap-4">
@@ -838,33 +838,15 @@ export const DiaryViewport = ({
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
                 {formatDateLabel(page.dateISO, locale)}
               </p>
-              <h3 className="text-xl font-semibold text-foreground">
-                {editable
-                  ? t.getNamespace('entry').t('editable')
-                  : t.getNamespace('entry').t('readonly')}
-              </h3>
+              {(editable || showReadonlyLabel) && (
+                <h3 className="text-xl font-semibold text-foreground">
+                  {editable
+                    ? t.getNamespace('entry').t('editable')
+                    : t.getNamespace('entry').t('readonly')}
+                </h3>
+              )}
             </div>
             <div className="flex items-center gap-2">
-              <select
-                value={currentMood ?? ''}
-                onChange={event => setCurrentMood(event.target.value || null)}
-                className="rounded-full border border-border bg-background px-3 py-1 text-xs"
-                disabled={!editable}
-              >
-                <option value="">{t.getNamespace('entry').t('moodPlaceholder')}</option>
-                <option value="positive">
-                  😊
-                  {t.getNamespace('entry').t('moodPositive')}
-                </option>
-                <option value="neutral">
-                  😐
-                  {t.getNamespace('entry').t('moodNeutral')}
-                </option>
-                <option value="negative">
-                  😞
-                  {t.getNamespace('entry').t('moodNegative')}
-                </option>
-              </select>
               {data.professionals.length > 0
               && ui.iconButton({
                 icon: <Settings2 className="size-4" />,
@@ -950,19 +932,21 @@ export const DiaryViewport = ({
           )}
 
           <textarea
-            value={navigation.currentDate === page.dateISO ? currentBody : ''}
+            value={isActivePage ? currentBody : ''}
             onChange={event => setCurrentBody(event.target.value)}
             onFocus={() => {
               ensurePageActive();
-              window.requestAnimationFrame(() => {
-                const node = document.getElementById(pageTextareaId) as HTMLTextAreaElement | null;
-                node?.focus();
-              });
+              if (editable) {
+                window.requestAnimationFrame(() => {
+                  const node = document.getElementById(pageTextareaId) as HTMLTextAreaElement | null;
+                  node?.focus();
+                });
+              }
             }}
             id={pageTextareaId}
             className="h-72 w-full resize-none rounded-2xl border border-border/70 bg-transparent px-4 py-3 text-sm leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-            placeholder={t.getNamespace('entry').t('placeholder')}
-            disabled={!editable}
+            placeholder={textareaPlaceholder}
+            readOnly={!editable}
           />
 
           <div className="flex justify-end">
