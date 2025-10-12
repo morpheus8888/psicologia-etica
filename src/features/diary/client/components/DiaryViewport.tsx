@@ -241,6 +241,7 @@ export const DiaryViewport = ({
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(`${todayISO}T00:00:00`));
   const [calendarSelection, setCalendarSelection] = useState(() => navigation.currentDate ?? todayISO);
   const isDirtyRef = useRef(false);
+  const passiveHandlersCleanupRef = useRef<(() => void) | null>(null);
 
   const isDesktop = ui.isDesktop();
   const encryption = useDiaryEncryption();
@@ -329,6 +330,67 @@ export const DiaryViewport = ({
 
     book.turnToPage(navigation.currentIndex);
   }, [navigation.currentIndex]);
+
+  const ensurePassiveTouchHandlers = useCallback(() => {
+    const book = flipRef.current?.pageFlip?.();
+    const uiInstance: any = book?.ui;
+    if (!uiInstance || typeof uiInstance.getDistElement !== 'function') {
+      return false;
+    }
+
+    const touchStart = uiInstance.onTouchStart as EventListener | undefined;
+    const touchMove = uiInstance.onTouchMove as EventListener | undefined;
+    const touchEnd = uiInstance.onTouchEnd as EventListener | undefined;
+    const distElement: HTMLElement | null = uiInstance.getDistElement();
+
+    if (!distElement || !touchStart || !touchMove || !touchEnd) {
+      return false;
+    }
+
+    passiveHandlersCleanupRef.current?.();
+
+    distElement.removeEventListener('touchstart', touchStart);
+    window.removeEventListener('touchmove', touchMove);
+    window.removeEventListener('touchend', touchEnd);
+
+    distElement.addEventListener('touchstart', touchStart, { passive: true });
+    window.addEventListener('touchmove', touchMove, { passive: true });
+    window.addEventListener('touchend', touchEnd, { passive: true });
+
+    passiveHandlersCleanupRef.current = () => {
+      distElement.removeEventListener('touchstart', touchStart);
+      window.removeEventListener('touchmove', touchMove);
+      window.removeEventListener('touchend', touchEnd);
+    };
+
+    return true;
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let rafId: number | null = null;
+
+    const attempt = () => {
+      if (cancelled) {
+        return;
+      }
+      const applied = ensurePassiveTouchHandlers();
+      if (!applied) {
+        rafId = window.requestAnimationFrame(attempt);
+      }
+    };
+
+    attempt();
+
+    return () => {
+      cancelled = true;
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+      passiveHandlersCleanupRef.current?.();
+      passiveHandlersCleanupRef.current = null;
+    };
+  }, [ensurePassiveTouchHandlers]);
 
   const handleFlip = useCallback(
     (event: { data: number }) => {
