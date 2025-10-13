@@ -953,7 +953,7 @@ export const DiaryViewport = ({
     return (
       <article
         key={page.dateISO}
-        className={`${basePageClass} diary-page--entry`}
+        className={`${basePageClass} diary-page--entry ${restrictClickToEdges ? 'pointer-events-none' : ''}`}
         onPointerDownCapture={(event) => {
           if (restrictClickToEdges) {
             return;
