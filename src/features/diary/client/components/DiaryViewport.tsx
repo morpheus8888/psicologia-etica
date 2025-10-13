@@ -22,7 +22,7 @@ import { DiaryGoalLinkPanel } from './DiaryGoalLinkPanel';
 import { DiarySharePanel } from './DiarySharePanel';
 
 const FlipBook = HTMLFlipBook as unknown as ComponentType<any>;
-const PAGE_EDGE_CLICK_THRESHOLD_PX = 64;
+const PAGE_EDGE_WIDTH_CLASS = 'w-16'; // 64px edge activation zones
 
 const normalizeDate = (dateISO: string) => dateISO.slice(0, 10);
 
@@ -607,7 +607,7 @@ export const DiaryViewport = ({
     );
   }
 
-  const basePageClass = 'page diary-page flex h-full flex-col p-8';
+  const basePageClass = 'page diary-page relative flex h-full flex-col p-8';
 
   const coverLeftPage = (
     <article key="cover-left" className={`${basePageClass} diary-page--cover-left`}>
@@ -955,31 +955,52 @@ export const DiaryViewport = ({
         key={page.dateISO}
         className={`${basePageClass} diary-page--entry`}
         onPointerDownCapture={(event) => {
+          if (restrictClickToEdges) {
+            return;
+          }
           const target = event.target as HTMLElement | null;
           const isDebugPanelInteraction = target?.closest('[data-diary-debug-panel="true"]');
           if (isDebugPanelInteraction) {
             return;
           }
-
-          if (restrictClickToEdges) {
-            const element = event.currentTarget as HTMLElement;
-            const rect = element.getBoundingClientRect();
-            const pointerX = event.clientX;
-            const withinLeftEdge = pointerX - rect.left <= PAGE_EDGE_CLICK_THRESHOLD_PX;
-            const withinRightEdge = rect.right - pointerX <= PAGE_EDGE_CLICK_THRESHOLD_PX;
-            const isEdgeClick = withinLeftEdge || withinRightEdge;
-
-            if (!isEdgeClick) {
-              return;
-            }
-          }
-
           if (!isActivePage || navigation.currentIndex !== page.index) {
             ensurePageActive();
           }
         }}
       >
-        <div className="flex h-full flex-col gap-4">
+        {restrictClickToEdges && (
+          <>
+            <button
+              type="button"
+              className={`pointer-events-auto absolute inset-y-0 left-0 ${PAGE_EDGE_WIDTH_CLASS} cursor-pointer border-none bg-transparent p-0`}
+              aria-hidden="true"
+              tabIndex={-1}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                ensurePageActive();
+              }}
+              onClick={(event) => {
+                event.preventDefault();
+                ensurePageActive();
+              }}
+            />
+            <button
+              type="button"
+              className={`pointer-events-auto absolute inset-y-0 right-0 ${PAGE_EDGE_WIDTH_CLASS} cursor-pointer border-none bg-transparent p-0`}
+              aria-hidden="true"
+              tabIndex={-1}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                ensurePageActive();
+              }}
+              onClick={(event) => {
+                event.preventDefault();
+                ensurePageActive();
+              }}
+            />
+          </>
+        )}
+        <div className="pointer-events-auto relative z-10 flex h-full flex-col gap-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
