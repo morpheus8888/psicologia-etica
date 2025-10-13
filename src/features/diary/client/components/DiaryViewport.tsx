@@ -18,6 +18,7 @@ import { useDiaryNavigation } from '@/features/diary/client/context/DiaryNavigat
 import { resolveDiaryTimezone } from '@/features/diary/feature/resolveTimezone';
 
 import { DiaryCoachDock } from './DiaryCoachDock';
+import { DiaryEntryEditor } from './DiaryEntryEditor';
 import { DiaryGoalLinkPanel } from './DiaryGoalLinkPanel';
 import { DiarySharePanel } from './DiarySharePanel';
 
@@ -116,6 +117,31 @@ const computeConsecutiveStreak = (todayISO: string, entryDates: Set<string>) => 
   }
 
   return streak;
+};
+
+const FONT_OPTIONS = [
+  { id: 'sans', className: 'diary-entry-font-sans' },
+  { id: 'serif', className: 'diary-entry-font-serif' },
+  { id: 'mono', className: 'diary-entry-font-mono' },
+] as const;
+
+const COLOR_OPTIONS = [
+  { id: 'ink', className: 'diary-entry-color-ink' },
+  { id: 'sepia', className: 'diary-entry-color-sepia' },
+  { id: 'ocean', className: 'diary-entry-color-ocean' },
+] as const;
+
+type EntryFontValue = typeof FONT_OPTIONS[number]['id'];
+type EntryColorValue = typeof COLOR_OPTIONS[number]['id'];
+
+type DiaryEntryStyle = {
+  font: EntryFontValue;
+  color: EntryColorValue;
+};
+
+const ENTRY_EDITOR_DEFAULT_STYLE: DiaryEntryStyle = {
+  font: FONT_OPTIONS[0].id,
+  color: COLOR_OPTIONS[0].id,
 };
 
 type DiaryViewportProps = {
@@ -236,6 +262,18 @@ export const DiaryViewport = ({
     () => entryNamespace.getNamespace('debug'),
     [entryNamespace],
   );
+  const entryEditorNamespace = useMemo(
+    () => entryNamespace.getNamespace('editor'),
+    [entryNamespace],
+  );
+  const entryEditorFontNamespace = useMemo(
+    () => entryEditorNamespace.getNamespace('fontOptions'),
+    [entryEditorNamespace],
+  );
+  const entryEditorColorNamespace = useMemo(
+    () => entryEditorNamespace.getNamespace('colorOptions'),
+    [entryEditorNamespace],
+  );
   const coverBrand = tCover.t('brand');
   const data = useDiaryData();
   const navigation = useDiaryNavigation();
@@ -247,8 +285,23 @@ export const DiaryViewport = ({
   const [goalLinkOpen, setGoalLinkOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(`${todayISO}T00:00:00`));
   const [calendarSelection, setCalendarSelection] = useState(() => navigation.currentDate ?? todayISO);
+  const [entryStyles, setEntryStyles] = useState<Map<string, DiaryEntryStyle>>(
+    () => new Map(),
+  );
   const isDirtyRef = useRef(false);
   const passiveHandlersCleanupRef = useRef<(() => void) | null>(null);
+
+  const updateEntryStyle = useCallback(
+    (dateISO: string, partial: Partial<DiaryEntryStyle>) => {
+      setEntryStyles((prev) => {
+        const next = new Map(prev);
+        const previous = next.get(dateISO) ?? ENTRY_EDITOR_DEFAULT_STYLE;
+        next.set(dateISO, { ...previous, ...partial });
+        return next;
+      });
+    },
+    [],
+  );
 
   const isDesktop = ui.isDesktop();
   const encryption = useDiaryEncryption();
@@ -903,6 +956,9 @@ export const DiaryViewport = ({
 
   const dayPagesNodes = dayPages.map((page) => {
     const restrictClickToEdges = page.index !== firstDayPageIndex && page.index !== lastDayPageIndex;
+    const entryStyle = entryStyles.get(page.dateISO) ?? ENTRY_EDITOR_DEFAULT_STYLE;
+    const fontOption = FONT_OPTIONS.find(option => option.id === entryStyle.font) ?? FONT_OPTIONS[0];
+    const colorOption = COLOR_OPTIONS.find(option => option.id === entryStyle.color) ?? COLOR_OPTIONS[0];
     const editable = isEntryEditable(
       page.dateISO,
       todayISO,
@@ -912,7 +968,6 @@ export const DiaryViewport = ({
     const hasDeadlineForPage = goals.some(goal => goal.content.deadlineISO === page.dateISO);
     const disableShare = !navigation.currentDate || (!currentEntryId && !editable);
     const disableGoalLink = !navigation.currentDate || (!currentEntryId && !editable);
-    const pageTextareaId = `diary-entry-${page.dateISO}`;
     const isActivePage = navigation.currentDate === page.dateISO;
     const hasPersistedEntry = entryMetaMap.has(page.dateISO);
     const showReadonlyLabel = !editable && hasPersistedEntry;
@@ -948,6 +1003,14 @@ export const DiaryViewport = ({
       } else if (navigation.currentIndex !== page.index) {
         navigation.setIndex(page.index);
       }
+    };
+
+    const handleFontSelect = (value: EntryFontValue) => {
+      updateEntryStyle(page.dateISO, { font: value });
+    };
+
+    const handleColorSelect = (value: EntryColorValue) => {
+      updateEntryStyle(page.dateISO, { color: value });
     };
 
     return (
@@ -1116,25 +1179,72 @@ export const DiaryViewport = ({
               )
             : (
                 <>
-                  <textarea
+                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/40 bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+                    <label
+                      htmlFor={`diary-entry-font-${page.dateISO}`}
+                      className="flex items-center gap-2 font-semibold"
+                    >
+                      {entryEditorNamespace.t('fontLabel')}
+                      <select
+                        id={`diary-entry-font-${page.dateISO}`}
+                        className="rounded-md border border-border/60 bg-background px-2 py-1 text-xs font-semibold text-foreground shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                        value={entryStyle.font}
+                        onChange={(event) => {
+                          handleFontSelect(event.target.value as EntryFontValue);
+                        }}
+                        disabled={!editable}
+                      >
+                        {FONT_OPTIONS.map(option => (
+                          <option key={option.id} value={option.id}>
+                            {entryEditorFontNamespace.t(option.id as never)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label
+                      htmlFor={`diary-entry-color-${page.dateISO}`}
+                      className="flex items-center gap-2 font-semibold"
+                    >
+                      {entryEditorNamespace.t('colorLabel')}
+                      <select
+                        id={`diary-entry-color-${page.dateISO}`}
+                        className="rounded-md border border-border/60 bg-background px-2 py-1 text-xs font-semibold text-foreground shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                        value={entryStyle.color}
+                        onChange={(event) => {
+                          handleColorSelect(event.target.value as EntryColorValue);
+                        }}
+                        disabled={!editable}
+                      >
+                        {COLOR_OPTIONS.map(option => (
+                          <option key={option.id} value={option.id}>
+                            {entryEditorColorNamespace.t(option.id as never)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <DiaryEntryEditor
                     value={isActivePage ? currentBody : ''}
-                    onChange={(event) => {
-                      setCurrentBody(event.target.value);
-                      isDirtyRef.current = true;
-                    }}
+                    editable={editable}
+                    placeholder={textareaPlaceholder ?? ''}
                     onFocus={() => {
                       ensurePageActive();
+                    }}
+                    onChange={(nextValue) => {
+                      if (!isActivePage) {
+                        return;
+                      }
+                      if (nextValue === currentBody) {
+                        return;
+                      }
+                      setCurrentBody(nextValue);
                       if (editable) {
-                        window.requestAnimationFrame(() => {
-                          const node = document.getElementById(pageTextareaId) as HTMLTextAreaElement | null;
-                          node?.focus();
-                        });
+                        isDirtyRef.current = true;
                       }
                     }}
-                    id={pageTextareaId}
-                    className="h-72 w-full resize-none rounded-2xl border border-border/70 bg-transparent px-4 py-3 text-sm leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                    placeholder={textareaPlaceholder}
-                    readOnly={!editable}
+                    fontClassName={fontOption.className}
+                    colorClassName={colorOption.className}
                   />
 
                   {editable && (

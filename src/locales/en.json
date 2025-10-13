@@ -175,6 +175,20 @@
       "share": "Share",
       "deadlineCta": "Link today's page",
       "linkGoal": "Link goal",
+      "editor": {
+        "fontLabel": "Font",
+        "colorLabel": "Ink",
+        "fontOptions": {
+          "sans": "Sans Serif",
+          "serif": "Serif",
+          "mono": "Monospace"
+        },
+        "colorOptions": {
+          "ink": "Graphite",
+          "sepia": "Sepia",
+          "ocean": "Ocean"
+        }
+      },
       "debug": {
         "title": "Diary debug",
         "resolvedTimezone": "Resolved timezone",

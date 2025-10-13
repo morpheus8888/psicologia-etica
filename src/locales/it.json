@@ -175,6 +175,20 @@
       "share": "Condividi",
       "deadlineCta": "Collega questa pagina",
       "linkGoal": "Collega obiettivo",
+      "editor": {
+        "fontLabel": "Carattere",
+        "colorLabel": "Colore inchiostro",
+        "fontOptions": {
+          "sans": "Sans Serif",
+          "serif": "Graziato",
+          "mono": "Monospazio"
+        },
+        "colorOptions": {
+          "ink": "Grafite",
+          "sepia": "Seppia",
+          "ocean": "Oceano"
+        }
+      },
       "debug": {
         "title": "Debug diario",
         "resolvedTimezone": "Timezone calcolata",
