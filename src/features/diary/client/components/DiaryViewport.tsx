@@ -977,10 +977,12 @@ export const DiaryViewport = ({
               tabIndex={-1}
               onPointerDown={(event) => {
                 event.preventDefault();
+                event.stopPropagation();
                 ensurePageActive();
               }}
               onClick={(event) => {
                 event.preventDefault();
+                event.stopPropagation();
                 ensurePageActive();
               }}
             />
@@ -991,16 +993,23 @@ export const DiaryViewport = ({
               tabIndex={-1}
               onPointerDown={(event) => {
                 event.preventDefault();
+                event.stopPropagation();
                 ensurePageActive();
               }}
               onClick={(event) => {
                 event.preventDefault();
+                event.stopPropagation();
                 ensurePageActive();
               }}
             />
           </>
         )}
-        <div className="pointer-events-auto relative z-10 flex h-full flex-col gap-4">
+        <div
+          className="pointer-events-auto relative z-10 flex h-full flex-col gap-4"
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
