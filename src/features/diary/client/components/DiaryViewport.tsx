@@ -22,6 +22,7 @@ import { DiaryGoalLinkPanel } from './DiaryGoalLinkPanel';
 import { DiarySharePanel } from './DiarySharePanel';
 
 const FlipBook = HTMLFlipBook as unknown as ComponentType<any>;
+const PAGE_EDGE_CLICK_THRESHOLD_PX = 64;
 
 const normalizeDate = (dateISO: string) => dateISO.slice(0, 10);
 
@@ -897,7 +898,11 @@ export const DiaryViewport = ({
     </article>
   );
 
+  const firstDayPageIndex = dayPages.length > 0 ? dayPages[0]?.index ?? null : null;
+  const lastDayPageIndex = dayPages.length > 0 ? dayPages[dayPages.length - 1]?.index ?? null : null;
+
   const dayPagesNodes = dayPages.map((page) => {
+    const restrictClickToEdges = page.index !== firstDayPageIndex && page.index !== lastDayPageIndex;
     const editable = isEntryEditable(
       page.dateISO,
       todayISO,
@@ -952,7 +957,24 @@ export const DiaryViewport = ({
         onPointerDownCapture={(event) => {
           const target = event.target as HTMLElement | null;
           const isDebugPanelInteraction = target?.closest('[data-diary-debug-panel="true"]');
-          if (!isDebugPanelInteraction && (!isActivePage || navigation.currentIndex !== page.index)) {
+          if (isDebugPanelInteraction) {
+            return;
+          }
+
+          if (restrictClickToEdges) {
+            const element = event.currentTarget as HTMLElement;
+            const rect = element.getBoundingClientRect();
+            const pointerX = event.clientX;
+            const withinLeftEdge = pointerX - rect.left <= PAGE_EDGE_CLICK_THRESHOLD_PX;
+            const withinRightEdge = rect.right - pointerX <= PAGE_EDGE_CLICK_THRESHOLD_PX;
+            const isEdgeClick = withinLeftEdge || withinRightEdge;
+
+            if (!isEdgeClick) {
+              return;
+            }
+          }
+
+          if (!isActivePage || navigation.currentIndex !== page.index) {
             ensurePageActive();
           }
         }}
