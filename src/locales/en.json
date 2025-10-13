@@ -174,7 +174,26 @@
       "deadlineTodaySubtitle": "Link this page to the goal to keep your progress aligned.",
       "share": "Share",
       "deadlineCta": "Link today's page",
-      "linkGoal": "Link goal"
+      "linkGoal": "Link goal",
+      "debug": {
+        "title": "Diary debug",
+        "resolvedTimezone": "Resolved timezone",
+        "profileTimezone": "Profile timezone",
+        "todayISO": "Today (ISO)",
+        "currentPageISO": "Page date (ISO)",
+        "nowISO": "Current timestamp",
+        "navigationCurrentDate": "Navigation date",
+        "navigationIndex": "Navigation index",
+        "pageIndex": "Page index",
+        "isActivePage": "Page is active",
+        "isEditable": "Editable",
+        "hasPersistedEntry": "Persisted entry",
+        "graceMinutes": "Grace minutes",
+        "currentEntryId": "Current entry id",
+        "yes": "Yes",
+        "no": "No",
+        "missing": "Not available"
+      }
     },
     "unlock": {
       "setupTitle": "Set your diary password",

@@ -174,7 +174,26 @@
       "deadlineTodaySubtitle": "Collega questa pagina all'obiettivo per restare sul pezzo.",
       "share": "Condividi",
       "deadlineCta": "Collega questa pagina",
-      "linkGoal": "Collega obiettivo"
+      "linkGoal": "Collega obiettivo",
+      "debug": {
+        "title": "Debug diario",
+        "resolvedTimezone": "Timezone calcolata",
+        "profileTimezone": "Timezone profilo",
+        "todayISO": "Oggi (ISO)",
+        "currentPageISO": "Pagina (ISO)",
+        "nowISO": "Timestamp runtime",
+        "navigationCurrentDate": "Data selezionata",
+        "navigationIndex": "Indice navigazione",
+        "pageIndex": "Indice pagina",
+        "isActivePage": "Pagina attiva",
+        "isEditable": "Modificabile",
+        "hasPersistedEntry": "Entry salvata",
+        "graceMinutes": "Minuti tolleranza",
+        "currentEntryId": "ID entry corrente",
+        "yes": "Sì",
+        "no": "No",
+        "missing": "Non disponibile"
+      }
     },
     "unlock": {
       "setupTitle": "Imposta la password del diario",

@@ -10,6 +10,7 @@ import { DiaryApp } from '@/features/diary/client/components/DiaryApp';
 import type { DiaryRouteProps } from '@/registries/diaryRouteRegistry';
 
 import type { DiaryFeatureRouteConfig, DiaryFeatureRuntimeConfig } from './config';
+import { resolveDiaryTimezone } from './resolveTimezone';
 
 type CreateDiaryRouteMountParams = {
   adapters: DiaryFeatureAdapters;
@@ -30,7 +31,10 @@ export const createDiaryRouteMount = ({
     const keyring = await adapters.keyringStore.getEncMasterKey(userId);
 
     const now = runtime.getNow?.() ?? new Date();
-    const timezone = profile?.timezone ?? 'UTC';
+    const timezone = resolveDiaryTimezone({
+      locale,
+      profileTimezone: profile?.timezone,
+    });
 
     const toISODate = (date: Date) => {
       const formatter = new Intl.DateTimeFormat('en-CA', {

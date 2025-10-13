@@ -15,6 +15,7 @@ import type { TranslationAdapter, UIAdapter } from '@/features/diary/adapters/ty
 import { useDiaryData } from '@/features/diary/client/context/DiaryDataContext';
 import { useDiaryEncryption } from '@/features/diary/client/context/DiaryEncryptionContext';
 import { useDiaryNavigation } from '@/features/diary/client/context/DiaryNavigationContext';
+import { resolveDiaryTimezone } from '@/features/diary/feature/resolveTimezone';
 
 import { DiaryCoachDock } from './DiaryCoachDock';
 import { DiaryGoalLinkPanel } from './DiaryGoalLinkPanel';
@@ -229,6 +230,11 @@ export const DiaryViewport = ({
 }: DiaryViewportProps) => {
   const tCover = t.getNamespace('cover');
   const tClosing = t.getNamespace('closing');
+  const entryNamespace = useMemo(() => t.getNamespace('entry'), [t]);
+  const entryDebugNamespace = useMemo(
+    () => entryNamespace.getNamespace('debug'),
+    [entryNamespace],
+  );
   const coverBrand = tCover.t('brand');
   const data = useDiaryData();
   const navigation = useDiaryNavigation();
@@ -433,6 +439,13 @@ export const DiaryViewport = ({
 
   const goals = useMemo(() => Array.from(data.goals.values()), [data.goals]);
   const entryMetaMap = data.entryMeta;
+  const resolvedTimezone = useMemo(
+    () => resolveDiaryTimezone({
+      locale,
+      profileTimezone: data.profile?.timezone,
+    }),
+    [locale, data.profile?.timezone],
+  );
   const currentMeta = navigation.currentDate ? entryMetaMap.get(navigation.currentDate) : null;
   const sharedProfessionalIds = currentMeta?.sharedProfessionalIds ?? [];
   const linkedGoalIds = currentMeta?.goalIds ?? [];
@@ -900,6 +913,29 @@ export const DiaryViewport = ({
     const showReadonlyLabel = !editable && hasPersistedEntry;
     const textareaPlaceholder = editable ? t.getNamespace('entry').t('placeholder') : undefined;
     const showEmptyReadOnlyState = !editable && !hasPersistedEntry;
+    const formatBoolean = (value: boolean) => (value ? entryDebugNamespace.t('yes') : entryDebugNamespace.t('no'));
+    const formatValue = (value: string | number | null | undefined) => {
+      if (value === null || value === undefined || (typeof value === 'string' && value.length === 0)) {
+        return entryDebugNamespace.t('missing');
+      }
+
+      return String(value);
+    };
+    const debugItems = [
+      { label: entryDebugNamespace.t('currentPageISO'), value: page.dateISO },
+      { label: entryDebugNamespace.t('todayISO'), value: todayISO },
+      { label: entryDebugNamespace.t('nowISO'), value: nowISO },
+      { label: entryDebugNamespace.t('pageIndex'), value: page.index },
+      { label: entryDebugNamespace.t('navigationIndex'), value: navigation.currentIndex },
+      { label: entryDebugNamespace.t('navigationCurrentDate'), value: navigation.currentDate },
+      { label: entryDebugNamespace.t('isActivePage'), value: formatBoolean(isActivePage) },
+      { label: entryDebugNamespace.t('isEditable'), value: formatBoolean(editable) },
+      { label: entryDebugNamespace.t('hasPersistedEntry'), value: formatBoolean(hasPersistedEntry) },
+      { label: entryDebugNamespace.t('graceMinutes'), value: data.diaryGraceMinutes },
+      { label: entryDebugNamespace.t('profileTimezone'), value: data.profile?.timezone },
+      { label: entryDebugNamespace.t('resolvedTimezone'), value: resolvedTimezone },
+      { label: entryDebugNamespace.t('currentEntryId'), value: currentEntryId },
+    ] as const;
 
     const ensurePageActive = () => {
       if (!isActivePage) {
@@ -1062,6 +1098,20 @@ export const DiaryViewport = ({
                   )}
                 </>
               )}
+
+          <div className="rounded-xl border border-dashed border-muted-foreground/40 bg-muted/10 p-3 text-xs">
+            <p className="mb-2 font-semibold text-foreground">
+              {entryDebugNamespace.t('title')}
+            </p>
+            <ul className="space-y-1 text-muted-foreground">
+              {debugItems.map(item => (
+                <li key={item.label} className="flex gap-2">
+                  <span className="w-44 shrink-0 text-foreground">{item.label}</span>
+                  <span className="break-all">{formatValue(item.value)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
         </div>
       </article>

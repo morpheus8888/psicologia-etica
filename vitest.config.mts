@@ -18,5 +18,8 @@ export default defineConfig({
     ],
     setupFiles: ['./vitest-setup.ts'],
     env: loadEnv('', process.cwd(), ''),
+    pool: 'threads',
+    maxWorkers: 1,
+    minWorkers: 1,
   },
 });
