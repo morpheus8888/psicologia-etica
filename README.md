@@ -139,7 +139,7 @@ SUPPORTED_LOCALES=it,en
 
 ## 📓 Stato integrazione Diario (WIP)
 - ✅ Modalità desktop con flip-book (react-pageflip): copertina (pagine 0-1) in stile notebook, pagine 2-3 dedicate agli obiettivi, pagine 4-5 al calendario mensile, dalla pagina 6 in poi le entry giornaliere. I pulsanti "Obiettivi", "Calendario" e "Oggi" portano rapidamente ai rispettivi spread.
-- 📚 La UI del flip-book usa [react-pageflip](https://github.com/Nodlik/react-pageflip); attenersi alla documentazione per API/prop avanzate.
+- 📚 La UI del flip-book usa [react-pageflip](https://github.com/Nodlik/react-pageflip); attenersi alla documentazione per API/prop avanzate (vedi anche `docs/react-pageflip.md`).
 - ✅ Condivisione E2EE con professionisti: envelope cifrato, audit trail (`diary_share_audits`) e meta sincronizzati lato client.
 - ✅ Pagina impostazioni con cambio password (voce spostata nel menu Impostazioni).
 - ✅ Coach dock con stati ask/sleep e highlight delle scadenze goal direttamente nelle pagine giornaliere.

@@ -949,8 +949,10 @@ export const DiaryViewport = ({
       <article
         key={page.dateISO}
         className={`${basePageClass} diary-page--entry`}
-        onPointerDownCapture={() => {
-          if (!isActivePage || navigation.currentIndex !== page.index) {
+        onPointerDownCapture={(event) => {
+          const target = event.target as HTMLElement | null;
+          const isDebugPanelInteraction = target?.closest('[data-diary-debug-panel="true"]');
+          if (!isDebugPanelInteraction && (!isActivePage || navigation.currentIndex !== page.index)) {
             ensurePageActive();
           }
         }}
@@ -1099,7 +1101,10 @@ export const DiaryViewport = ({
                 </>
               )}
 
-          <div className="rounded-xl border border-dashed border-muted-foreground/40 bg-muted/10 p-3 text-xs">
+          <div
+            className="pointer-events-auto select-text rounded-xl border border-dashed border-muted-foreground/40 bg-muted/10 p-3 text-xs"
+            data-diary-debug-panel="true"
+          >
             <p className="mb-2 font-semibold text-foreground">
               {entryDebugNamespace.t('title')}
             </p>
@@ -1224,7 +1229,6 @@ export const DiaryViewport = ({
             onFlip={handleFlip}
             disableFlipByClick
             showPageCorners
-            clickEventForward={false}
             mobileScrollSupport={false}
             className="w-full"
           >
