@@ -16,16 +16,27 @@ import {
   $getRoot,
   type EditorThemeClasses,
 } from 'lexical';
-import { useEffect, useMemo, useRef } from 'react';
+import {
+  type MutableRefObject,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 
 type DiaryEntryEditorProps = {
-  value: string;
+  entryKey: string;
+  initialValue: string;
   placeholder: string;
   editable: boolean;
-  onChange: (value: string) => void;
-  onFocus?: () => void;
+  onChange: (value: string, meta: { source: 'user' | 'external' }) => void;
+  suppressOnChangeRef: MutableRefObject<boolean>;
   fontClassName: string;
   colorClassName: string;
+  heading: string;
+  statusLabel?: string | null;
+  actions?: ReactNode;
+  side: 'left' | 'right';
 };
 
 const theme: EditorThemeClasses = {
@@ -48,26 +59,27 @@ const OnEditableChange = ({ editable }: { editable: boolean }) => {
   return null;
 };
 
-const PrefillPlugin = ({ value }: { value: string }) => {
+const PrefillPlugin = ({
+  value,
+  entryKey,
+  suppressOnChangeRef,
+}: {
+  value: string;
+  entryKey: string;
+  suppressOnChangeRef: MutableRefObject<boolean>;
+}) => {
   const [editor] = useLexicalComposerContext();
-  const lastValueRef = useRef<string | null>(null);
+  const lastEntryKeyRef = useRef<string | null>(null);
+  const hasInitialisedRef = useRef(false);
 
   useEffect(() => {
-    if (lastValueRef.current === value) {
+    if (lastEntryKeyRef.current === entryKey && hasInitialisedRef.current) {
       return;
     }
 
-    const currentText = editor.getEditorState().read(() => {
-      const root = $getRoot();
-      return root.getTextContent();
-    });
-
-    if (currentText === value) {
-      lastValueRef.current = value;
-      return;
-    }
-
-    lastValueRef.current = value;
+    lastEntryKeyRef.current = entryKey;
+    hasInitialisedRef.current = false;
+    suppressOnChangeRef.current = true;
     editor.update(() => {
       const root = $getRoot();
       root.clear();
@@ -87,20 +99,26 @@ const PrefillPlugin = ({ value }: { value: string }) => {
         }
         root.append(paragraph);
       });
+      hasInitialisedRef.current = true;
     });
-  }, [editor, value]);
+  }, [editor, entryKey, suppressOnChangeRef, value]);
 
   return null;
 };
 
 const DiaryEntryEditor = ({
-  value,
+  entryKey,
+  initialValue,
   placeholder,
   editable,
   onChange,
-  onFocus,
+  suppressOnChangeRef,
   fontClassName,
   colorClassName,
+  heading,
+  statusLabel,
+  actions,
+  side,
 }: DiaryEntryEditorProps) => {
   const initialConfig = useMemo<InitialConfigType>(() => ({
     namespace: 'diary-entry',
@@ -112,34 +130,66 @@ const DiaryEntryEditor = ({
     nodes: [],
   }), [editable]);
 
+  const sideClass = side === 'left' ? 'diary-entry-sheet--left' : 'diary-entry-sheet--right';
+
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <OnEditableChange editable={editable} />
-      <PrefillPlugin value={value} />
+      <PrefillPlugin
+        value={initialValue}
+        entryKey={entryKey}
+        suppressOnChangeRef={suppressOnChangeRef}
+      />
       <OnChangePlugin
         onChange={(editorState) => {
           editorState.read(() => {
             const root = $getRoot();
-            onChange(root.getTextContent());
+            const source = suppressOnChangeRef.current ? 'external' : 'user';
+            onChange(root.getTextContent(), { source });
+            if (suppressOnChangeRef.current) {
+              suppressOnChangeRef.current = false;
+            }
           });
         }}
       />
       <HistoryPlugin />
-      <div className={`diary-entry-paper ${fontClassName} ${colorClassName}`}>
-        <RichTextPlugin
-          contentEditable={(
-            <ContentEditable
-              className="diary-entry-content"
-              onFocus={onFocus}
+      <div className={`diary-entry-sheet ${sideClass}`}>
+        <div className="diary-entry-heading">
+          <div className="diary-entry-heading__info">
+            <p className="diary-entry-heading__date">{heading}</p>
+            {statusLabel
+              ? (
+                  <p className="diary-entry-heading__status">
+                    {statusLabel}
+                  </p>
+                )
+              : null}
+          </div>
+          {actions
+            ? (
+                <div className="diary-entry-heading__actions">
+                  {actions}
+                </div>
+              )
+            : null}
+        </div>
+        <div className="diary-entry-lines">
+          <div className={`diary-entry-text ${fontClassName} ${colorClassName}`}>
+            <RichTextPlugin
+              contentEditable={(
+                <ContentEditable
+                  className="diary-entry-content"
+                />
+              )}
+              placeholder={(
+                <div className="diary-entry-placeholder">
+                  {placeholder}
+                </div>
+              )}
+              ErrorBoundary={LexicalErrorBoundary}
             />
-          )}
-          placeholder={(
-            <div className="diary-entry-placeholder">
-              {placeholder}
-            </div>
-          )}
-          ErrorBoundary={LexicalErrorBoundary}
-        />
+          </div>
+        </div>
       </div>
     </LexicalComposer>
   );

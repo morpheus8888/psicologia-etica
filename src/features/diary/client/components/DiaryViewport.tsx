@@ -3,6 +3,8 @@
 import { CalendarDays, Link2, Settings2, Target } from 'lucide-react';
 import {
   type ComponentType,
+  Fragment,
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -24,6 +26,21 @@ import { DiarySharePanel } from './DiarySharePanel';
 
 const FlipBook = HTMLFlipBook as unknown as ComponentType<any>;
 const PAGE_EDGE_WIDTH_CLASS = 'w-16'; // 64px edge activation zones
+
+type PageFlipApi = {
+  update: () => void;
+  updateFromHtml?: (items: NodeListOf<HTMLElement> | HTMLElement[]) => void;
+  getUI: () => {
+    getDistElement: () => HTMLElement;
+  };
+  getCurrentPageIndex: () => number;
+  flip: (pageIndex: number, corner?: unknown) => void;
+  turnToPage: (pageIndex: number) => void;
+};
+
+type FlipBookHandle = {
+  pageFlip: () => (PageFlipApi & { ui?: unknown }) | undefined;
+};
 
 const normalizeDate = (dateISO: string) => dateISO.slice(0, 10);
 
@@ -75,7 +92,7 @@ const formatDateLabel = (dateISO: string, locale: string) => {
   const year = Number.parseInt(yearStr ?? '0', 10) || 0;
   const month = Number.parseInt(monthStr ?? '1', 10) || 1;
   const day = Number.parseInt(dayStr ?? '1', 10) || 1;
-  const date = new Date(Date.UTC(year, month - 1, day));
+  const date = new Date(year, month - 1, day);
   return date.toLocaleDateString(locale, {
     weekday: 'short',
     day: 'numeric',
@@ -278,7 +295,8 @@ export const DiaryViewport = ({
   const data = useDiaryData();
   const navigation = useDiaryNavigation();
 
-  const flipRef = useRef<any>(null);
+  const flipRef = useRef<FlipBookHandle | null>(null);
+  const flipRefreshFrameRef = useRef<number | null>(null);
   const [currentBody, setCurrentBody] = useState('');
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
@@ -290,6 +308,36 @@ export const DiaryViewport = ({
   );
   const isDirtyRef = useRef(false);
   const passiveHandlersCleanupRef = useRef<(() => void) | null>(null);
+  const suppressEditorOnChangeRef = useRef(false);
+  const lastLocalEditRef = useRef(0);
+  const lastRemoteUpdateRef = useRef(0);
+  const loadRequestIdRef = useRef(0);
+
+  // NOTE: flip-book contracts follow docs/stpageflip/README.md; check before tweaking behaviour.
+  const scheduleFlipRefresh = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    if (flipRefreshFrameRef.current !== null) {
+      window.cancelAnimationFrame(flipRefreshFrameRef.current);
+    }
+    flipRefreshFrameRef.current = window.requestAnimationFrame(() => {
+      flipRefreshFrameRef.current = null;
+      const pageFlipInstance = flipRef.current?.pageFlip?.();
+      if (!pageFlipInstance?.update) {
+        return;
+      }
+      pageFlipInstance.update();
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (flipRefreshFrameRef.current !== null) {
+        window.cancelAnimationFrame(flipRefreshFrameRef.current);
+      }
+    };
+  }, []);
 
   const updateEntryStyle = useCallback(
     (dateISO: string, partial: Partial<DiaryEntryStyle>) => {
@@ -299,8 +347,9 @@ export const DiaryViewport = ({
         next.set(dateISO, { ...previous, ...partial });
         return next;
       });
+      scheduleFlipRefresh();
     },
-    [],
+    [scheduleFlipRefresh],
   );
 
   const isDesktop = ui.isDesktop();
@@ -311,39 +360,79 @@ export const DiaryViewport = ({
 
     if (!targetDate) {
       isDirtyRef.current = false;
+      lastLocalEditRef.current = 0;
+      lastRemoteUpdateRef.current = 0;
+      suppressEditorOnChangeRef.current = true;
       setCurrentBody('');
       setCurrentEntryId(null);
+      scheduleFlipRefresh();
       return;
     }
 
+    const loadId = loadRequestIdRef.current + 1;
+    loadRequestIdRef.current = loadId;
+    const loadStartedAt = Date.now();
+
     isDirtyRef.current = false;
+    lastLocalEditRef.current = 0;
+    lastRemoteUpdateRef.current = 0;
+    suppressEditorOnChangeRef.current = true;
     setCurrentBody('');
     setCurrentEntryId(null);
 
     let cancelled = false;
 
     void data.loadEntry(targetDate).then((entry) => {
-      if (cancelled || navigation.currentDate !== targetDate) {
+      if (
+        cancelled
+        || navigation.currentDate !== targetDate
+        || loadRequestIdRef.current !== loadId
+      ) {
         return;
       }
 
       if (!entry) {
-        if (!isDirtyRef.current) {
-          setCurrentBody('');
-        }
+        lastRemoteUpdateRef.current = 0;
         setCurrentEntryId(null);
+        if (!isDirtyRef.current) {
+          suppressEditorOnChangeRef.current = true;
+          setCurrentBody('');
+        } else {
+          suppressEditorOnChangeRef.current = false;
+        }
+        scheduleFlipRefresh();
+        return;
+      }
+
+      setCurrentEntryId(entry.record.id);
+
+      const remoteTimestampRaw = Date.parse(entry.content.updatedAtISO ?? '');
+      const remoteTimestamp = Number.isNaN(remoteTimestampRaw)
+        ? loadStartedAt
+        : remoteTimestampRaw;
+      lastRemoteUpdateRef.current = remoteTimestamp;
+
+      if (lastLocalEditRef.current > loadStartedAt) {
+        suppressEditorOnChangeRef.current = false;
+        return;
+      }
+
+      if (isDirtyRef.current && lastLocalEditRef.current > remoteTimestamp) {
+        suppressEditorOnChangeRef.current = false;
         return;
       }
 
       isDirtyRef.current = false;
+      lastLocalEditRef.current = remoteTimestamp;
+      suppressEditorOnChangeRef.current = true;
       setCurrentBody(entry.content.body);
-      setCurrentEntryId(entry.record.id);
+      scheduleFlipRefresh();
     });
 
     return () => {
       cancelled = true;
     };
-  }, [data, navigation.currentDate]);
+  }, [data, navigation.currentDate, scheduleFlipRefresh]);
 
   useEffect(() => {
     void data.loadGoals();
@@ -471,15 +560,17 @@ export const DiaryViewport = ({
     [navigation],
   );
 
-  const handleSaveEntry = useCallback(async () => {
+  const handleSaveEntry = useCallback(async (bodyOverride?: string) => {
     if (!navigation.currentDate) {
       return null;
     }
 
+    const bodyToPersist = bodyOverride ?? currentBody;
+
     const saved = await data.saveEntry({
       dateISO: navigation.currentDate,
       content: {
-        body: currentBody,
+        body: bodyToPersist,
         createdAtISO: new Date().toISOString(),
         updatedAtISO: new Date().toISOString(),
       },
@@ -488,6 +579,10 @@ export const DiaryViewport = ({
 
     setCurrentEntryId(saved.record.id);
     isDirtyRef.current = false;
+    const savedTimestamp = Date.parse(saved.content.updatedAtISO ?? '') || Date.now();
+    lastLocalEditRef.current = savedTimestamp;
+    lastRemoteUpdateRef.current = savedTimestamp;
+    suppressEditorOnChangeRef.current = true;
     return saved;
   }, [currentBody, data, navigation.currentDate]);
 
@@ -954,6 +1049,8 @@ export const DiaryViewport = ({
   const firstDayPageIndex = dayPages.length > 0 ? dayPages[0]?.index ?? null : null;
   const lastDayPageIndex = dayPages.length > 0 ? dayPages[dayPages.length - 1]?.index ?? null : null;
 
+  let activeDebugPanel: React.ReactNode = null;
+
   const dayPagesNodes = dayPages.map((page) => {
     const restrictClickToEdges = page.index !== firstDayPageIndex && page.index !== lastDayPageIndex;
     const entryStyle = entryStyles.get(page.dateISO) ?? ENTRY_EDITOR_DEFAULT_STYLE;
@@ -981,6 +1078,8 @@ export const DiaryViewport = ({
 
       return String(value);
     };
+    const entryKey = `${page.dateISO}:${currentEntryId ?? 'draft'}`;
+
     const debugItems = [
       { label: entryDebugNamespace.t('currentPageISO'), value: page.dateISO },
       { label: entryDebugNamespace.t('todayISO'), value: todayISO },
@@ -996,6 +1095,29 @@ export const DiaryViewport = ({
       { label: entryDebugNamespace.t('resolvedTimezone'), value: resolvedTimezone },
       { label: entryDebugNamespace.t('currentEntryId'), value: currentEntryId },
     ] as const;
+
+    if (isActivePage) {
+      activeDebugPanel = (
+        <section
+          key={`debug-${page.dateISO}`}
+          className="pointer-events-auto rounded-2xl border border-dashed border-muted-foreground/40 bg-muted/10 p-4 text-xs shadow-sm backdrop-blur-sm"
+        >
+          <p className="mb-3 font-semibold text-foreground">
+            {entryDebugNamespace.t('title')}
+          </p>
+          <ul className="space-y-1 text-muted-foreground">
+            {debugItems.map(item => (
+              <li key={item.label} className="flex gap-2">
+                <span className="w-48 shrink-0 text-foreground">{item.label}</span>
+                <span className="break-all">{formatValue(item.value)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      );
+    }
+
+    const pageSide: 'left' | 'right' = page.index % 2 === 0 ? 'left' : 'right';
 
     const ensurePageActive = () => {
       if (!isActivePage) {
@@ -1013,17 +1135,150 @@ export const DiaryViewport = ({
       updateEntryStyle(page.dateISO, { color: value });
     };
 
+    const hasShareAction = data.professionals.length > 0;
+    const hasGoalAction = goals.length > 0;
+
+    const selectors = editable
+      ? (
+          <div className="diary-entry-heading__selects">
+            <label
+              htmlFor={`diary-entry-font-${page.dateISO}`}
+              className="diary-entry-heading__select"
+            >
+              <span>{entryEditorNamespace.t('fontLabel')}</span>
+              <select
+                id={`diary-entry-font-${page.dateISO}`}
+                className="diary-entry-heading__select-control"
+                value={entryStyle.font}
+                onChange={(event) => {
+                  handleFontSelect(event.target.value as EntryFontValue);
+                }}
+                disabled={!editable}
+              >
+                {FONT_OPTIONS.map(option => (
+                  <option key={option.id} value={option.id}>
+                    {entryEditorFontNamespace.t(option.id as never)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label
+              htmlFor={`diary-entry-color-${page.dateISO}`}
+              className="diary-entry-heading__select"
+            >
+              <span>{entryEditorNamespace.t('colorLabel')}</span>
+              <select
+                id={`diary-entry-color-${page.dateISO}`}
+                className="diary-entry-heading__select-control"
+                value={entryStyle.color}
+                onChange={(event) => {
+                  handleColorSelect(event.target.value as EntryColorValue);
+                }}
+                disabled={!editable}
+              >
+                {COLOR_OPTIONS.map(option => (
+                  <option key={option.id} value={option.id}>
+                    {entryEditorColorNamespace.t(option.id as never)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )
+      : null;
+
+    const actionNodes: ReactNode[] = [];
+
+    if (selectors) {
+      actionNodes.push(selectors);
+    }
+
+    if (hasShareAction) {
+      actionNodes.push(
+        ui.iconButton({
+          icon: <Settings2 className="size-4" />,
+          label: t.getNamespace('entry').t('share'),
+          variant: 'ghost',
+          disabled: disableShare,
+          onClick: async () => {
+            if (!navigation.currentDate) {
+              return;
+            }
+
+            let entryId = currentEntryId;
+            if (!entryId) {
+              if (!editable) {
+                return;
+              }
+
+              const saved = await handleSaveEntry(currentBody);
+              entryId = saved?.record.id ?? null;
+              if (!entryId) {
+                return;
+              }
+              setCurrentEntryId(entryId);
+            }
+
+            setShareOpen(true);
+          },
+        }),
+      );
+    }
+
+    if (hasGoalAction) {
+      actionNodes.push(
+        ui.iconButton({
+          icon: <Link2 className="size-4" />,
+          label: t.getNamespace('entry').t('linkGoal'),
+          variant: 'ghost',
+          disabled: disableGoalLink,
+          onClick: async () => {
+            if (!navigation.currentDate) {
+              return;
+            }
+
+            let entryId = currentEntryId;
+            if (!entryId) {
+              if (!editable) {
+                return;
+              }
+
+              const saved = await handleSaveEntry(currentBody);
+              entryId = saved?.record.id ?? null;
+              if (!entryId) {
+                return;
+              }
+              setCurrentEntryId(entryId);
+            }
+
+            setGoalLinkOpen(true);
+          },
+        }),
+      );
+    }
+
+    const headingActions = actionNodes.length > 0
+      ? actionNodes.map((node, index) => (
+        <Fragment key={`entry-action-${page.dateISO}-${index}`}>
+          {node}
+        </Fragment>
+      ))
+      : null;
+
+    const statusLabelText = editable
+      ? t.getNamespace('entry').t('editable')
+      : showReadonlyLabel
+        ? t.getNamespace('entry').t('readonly')
+        : showEmptyReadOnlyState
+          ? t.getNamespace('entry').t('emptyReadonly')
+          : null;
+
     return (
       <article
         key={page.dateISO}
         className={`${basePageClass} diary-page--entry ${restrictClickToEdges ? 'pointer-events-none' : ''}`}
-        onPointerDownCapture={(event) => {
+        onPointerDown={() => {
           if (restrictClickToEdges) {
-            return;
-          }
-          const target = event.target as HTMLElement | null;
-          const isDebugPanelInteraction = target?.closest('[data-diary-debug-panel="true"]');
-          if (isDebugPanelInteraction) {
             return;
           }
           if (!isActivePage || navigation.currentIndex !== page.index) {
@@ -1068,84 +1323,9 @@ export const DiaryViewport = ({
           </>
         )}
         <div
-          className="pointer-events-auto relative z-10 flex h-full flex-col gap-4"
-          onPointerDown={(event) => {
-            event.stopPropagation();
-          }}
+          data-diary-sheet="true"
+          className="diary-entry-sheet pointer-events-auto relative z-10 flex h-full flex-col gap-4"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                {formatDateLabel(page.dateISO, locale)}
-              </p>
-              {(editable || showReadonlyLabel) && (
-                <h3 className="text-xl font-semibold text-foreground">
-                  {editable
-                    ? t.getNamespace('entry').t('editable')
-                    : t.getNamespace('entry').t('readonly')}
-                </h3>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {data.professionals.length > 0
-              && ui.iconButton({
-                icon: <Settings2 className="size-4" />,
-                label: t.getNamespace('entry').t('share'),
-                variant: 'ghost',
-                disabled: disableShare,
-                onClick: async () => {
-                  if (!navigation.currentDate) {
-                    return;
-                  }
-
-                  let entryId = currentEntryId;
-                  if (!entryId) {
-                    if (!editable) {
-                      return;
-                    }
-
-                    const saved = await handleSaveEntry();
-                    entryId = saved?.record.id ?? null;
-                    if (!entryId) {
-                      return;
-                    }
-                    setCurrentEntryId(entryId);
-                  }
-
-                  setShareOpen(true);
-                },
-              })}
-              {goals.length > 0
-              && ui.iconButton({
-                icon: <Link2 className="size-4" />,
-                label: t.getNamespace('entry').t('linkGoal'),
-                variant: 'ghost',
-                disabled: disableGoalLink,
-                onClick: async () => {
-                  if (!navigation.currentDate) {
-                    return;
-                  }
-
-                  let entryId = currentEntryId;
-                  if (!entryId) {
-                    if (!editable) {
-                      return;
-                    }
-
-                    const saved = await handleSaveEntry();
-                    entryId = saved?.record.id ?? null;
-                    if (!entryId) {
-                      return;
-                    }
-                    setCurrentEntryId(entryId);
-                  }
-
-                  setGoalLinkOpen(true);
-                },
-              })}
-            </div>
-          </div>
-
           {hasDeadlineForPage && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-700">
               <div className="flex items-start justify-between gap-3">
@@ -1171,114 +1351,38 @@ export const DiaryViewport = ({
             </div>
           )}
 
-          {showEmptyReadOnlyState
-            ? (
-                <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-                  {t.getNamespace('entry').t('emptyReadonly')}
-                </div>
-              )
-            : (
-                <>
-                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/40 bg-background/60 px-3 py-2 text-xs text-muted-foreground">
-                    <label
-                      htmlFor={`diary-entry-font-${page.dateISO}`}
-                      className="flex items-center gap-2 font-semibold"
-                    >
-                      {entryEditorNamespace.t('fontLabel')}
-                      <select
-                        id={`diary-entry-font-${page.dateISO}`}
-                        className="rounded-md border border-border/60 bg-background px-2 py-1 text-xs font-semibold text-foreground shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                        value={entryStyle.font}
-                        onChange={(event) => {
-                          handleFontSelect(event.target.value as EntryFontValue);
-                        }}
-                        disabled={!editable}
-                      >
-                        {FONT_OPTIONS.map(option => (
-                          <option key={option.id} value={option.id}>
-                            {entryEditorFontNamespace.t(option.id as never)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label
-                      htmlFor={`diary-entry-color-${page.dateISO}`}
-                      className="flex items-center gap-2 font-semibold"
-                    >
-                      {entryEditorNamespace.t('colorLabel')}
-                      <select
-                        id={`diary-entry-color-${page.dateISO}`}
-                        className="rounded-md border border-border/60 bg-background px-2 py-1 text-xs font-semibold text-foreground shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                        value={entryStyle.color}
-                        onChange={(event) => {
-                          handleColorSelect(event.target.value as EntryColorValue);
-                        }}
-                        disabled={!editable}
-                      >
-                        {COLOR_OPTIONS.map(option => (
-                          <option key={option.id} value={option.id}>
-                            {entryEditorColorNamespace.t(option.id as never)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-
-                  <DiaryEntryEditor
-                    value={isActivePage ? currentBody : ''}
-                    editable={editable}
-                    placeholder={textareaPlaceholder ?? ''}
-                    onFocus={() => {
-                      ensurePageActive();
-                    }}
-                    onChange={(nextValue) => {
-                      if (!isActivePage) {
-                        return;
-                      }
-                      if (nextValue === currentBody) {
-                        return;
-                      }
-                      setCurrentBody(nextValue);
-                      if (editable) {
-                        isDirtyRef.current = true;
-                      }
-                    }}
-                    fontClassName={fontOption.className}
-                    colorClassName={colorOption.className}
-                  />
-
-                  {editable && (
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void handleSaveEntry();
-                        }}
-                        className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                      >
-                        {t.getNamespace('entry').t('save')}
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-
-          <div
-            className="pointer-events-auto select-text rounded-xl border border-dashed border-muted-foreground/40 bg-muted/10 p-3 text-xs"
-            data-diary-debug-panel="true"
-          >
-            <p className="mb-2 font-semibold text-foreground">
-              {entryDebugNamespace.t('title')}
-            </p>
-            <ul className="space-y-1 text-muted-foreground">
-              {debugItems.map(item => (
-                <li key={item.label} className="flex gap-2">
-                  <span className="w-44 shrink-0 text-foreground">{item.label}</span>
-                  <span className="break-all">{formatValue(item.value)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <DiaryEntryEditor
+            entryKey={entryKey}
+            initialValue={isActivePage ? currentBody : ''}
+            editable={editable}
+            placeholder={textareaPlaceholder ?? ''}
+            heading={formatDateLabel(page.dateISO, locale)}
+            statusLabel={statusLabelText}
+            actions={headingActions}
+            side={pageSide}
+            suppressOnChangeRef={suppressEditorOnChangeRef}
+            onChange={(nextValue, { source }) => {
+              if (!isActivePage) {
+                return;
+              }
+              if (nextValue === currentBody) {
+                return;
+              }
+              setCurrentBody(nextValue);
+              if (source === 'external') {
+                isDirtyRef.current = false;
+                return;
+              }
+              lastLocalEditRef.current = Date.now();
+              if (editable) {
+                isDirtyRef.current = true;
+                scheduleFlipRefresh();
+                void handleSaveEntry(nextValue);
+              }
+            }}
+            fontClassName={fontOption.className}
+            colorClassName={colorOption.className}
+          />
 
         </div>
       </article>
@@ -1375,7 +1479,7 @@ export const DiaryViewport = ({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-background shadow-sm">
+        <div className="diary-flipbook-shell">
           <FlipBook
             ref={flipRef}
             width={540}
@@ -1397,6 +1501,7 @@ export const DiaryViewport = ({
             {flipPages}
           </FlipBook>
         </div>
+        {activeDebugPanel}
       </div>
 
       {navigation.currentDate && shareOpen && (

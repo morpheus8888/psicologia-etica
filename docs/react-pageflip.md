@@ -2,6 +2,8 @@
 
 ## React PageFlip Notes
 
+> ⚠️ Always re-read `docs/stpageflip/README.md` (local snapshot of the upstream docs) before touching the diary flip-book. It mirrors the authoritative API reference and keeps us aligned with `PageFlip.loadFromHtml` / `updateFromHtml` expectations.
+
 Version 2.0.0 of `react-pageflip` rewrote the library around React hooks and **changed several method APIs**. Keep these references handy whenever you touch the diary flip-book:
 
 - Live demo with source: https://nodlik.github.io/react-pageflip/
