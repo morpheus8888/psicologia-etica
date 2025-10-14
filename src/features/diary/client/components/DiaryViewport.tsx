@@ -506,6 +506,20 @@ export const DiaryViewport = ({
     [navigation],
   );
 
+  const handleOrientationChange = useCallback((event: { data: string }) => {
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.info('[DiaryFlipbook] orientation changed:', event.data);
+    }
+  }, []);
+
+  const handleStateChange = useCallback((event: { data: string }) => {
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.info('[DiaryFlipbook] state changed:', event.data);
+    }
+  }, []);
+
   const goToIndex = useCallback(
     (index: number) => {
       if (navigation.currentIndex !== index) {
@@ -1082,76 +1096,78 @@ export const DiaryViewport = ({
     const hasShareAction = data.professionals.length > 0;
     const hasGoalAction = goals.length > 0;
 
-    const actionNodes: ReactNode[] = [];
+    const actionNodes: { key: string; element: ReactNode }[] = [];
 
     if (hasShareAction) {
-      actionNodes.push(
-        ui.iconButton({
-          icon: <Settings2 className="size-4" />,
-          label: t.getNamespace('entry').t('share'),
-          variant: 'ghost',
-          disabled: disableShare,
-          onClick: async () => {
-            if (!navigation.currentDate) {
+      const shareKey = `entry-action-share-${page.dateISO}`;
+      const shareAction = ui.iconButton({
+        icon: <Settings2 className="size-4" />,
+        label: t.getNamespace('entry').t('share'),
+        variant: 'ghost',
+        disabled: disableShare,
+        onClick: async () => {
+          if (!navigation.currentDate) {
+            return;
+          }
+
+          let entryId = currentEntryId;
+          if (!entryId) {
+            if (!editable) {
               return;
             }
 
-            let entryId = currentEntryId;
+            const saved = await handleSaveEntry(currentBody);
+            entryId = saved?.record.id ?? null;
             if (!entryId) {
-              if (!editable) {
-                return;
-              }
-
-              const saved = await handleSaveEntry(currentBody);
-              entryId = saved?.record.id ?? null;
-              if (!entryId) {
-                return;
-              }
-              setCurrentEntryId(entryId);
+              return;
             }
+            setCurrentEntryId(entryId);
+          }
 
-            setShareOpen(true);
-          },
-        }),
-      );
+          setShareOpen(true);
+        },
+      });
+
+      actionNodes.push({ key: shareKey, element: shareAction });
     }
 
     if (hasGoalAction) {
-      actionNodes.push(
-        ui.iconButton({
-          icon: <Link2 className="size-4" />,
-          label: t.getNamespace('entry').t('linkGoal'),
-          variant: 'ghost',
-          disabled: disableGoalLink,
-          onClick: async () => {
-            if (!navigation.currentDate) {
+      const goalKey = `entry-action-goal-${page.dateISO}`;
+      const goalAction = ui.iconButton({
+        icon: <Link2 className="size-4" />,
+        label: t.getNamespace('entry').t('linkGoal'),
+        variant: 'ghost',
+        disabled: disableGoalLink,
+        onClick: async () => {
+          if (!navigation.currentDate) {
+            return;
+          }
+
+          let entryId = currentEntryId;
+          if (!entryId) {
+            if (!editable) {
               return;
             }
 
-            let entryId = currentEntryId;
+            const saved = await handleSaveEntry(currentBody);
+            entryId = saved?.record.id ?? null;
             if (!entryId) {
-              if (!editable) {
-                return;
-              }
-
-              const saved = await handleSaveEntry(currentBody);
-              entryId = saved?.record.id ?? null;
-              if (!entryId) {
-                return;
-              }
-              setCurrentEntryId(entryId);
+              return;
             }
+            setCurrentEntryId(entryId);
+          }
 
-            setGoalLinkOpen(true);
-          },
-        }),
-      );
+          setGoalLinkOpen(true);
+        },
+      });
+
+      actionNodes.push({ key: goalKey, element: goalAction });
     }
 
     const headingActions = actionNodes.length > 0
-      ? actionNodes.map((node, index) => (
-        <Fragment key={`entry-action-${page.dateISO}-${index}`}>
-          {node}
+      ? actionNodes.map(action => (
+        <Fragment key={action.key}>
+          {action.element}
         </Fragment>
       ))
       : null;
@@ -1267,7 +1283,6 @@ export const DiaryViewport = ({
               lastLocalEditRef.current = Date.now();
               if (editable) {
                 isDirtyRef.current = true;
-                scheduleFlipRefresh();
                 void handleSaveEntry(nextValue);
               }
             }}
@@ -1384,9 +1399,13 @@ export const DiaryViewport = ({
             showCover={false}
             drawShadow={false}
             onFlip={handleFlip}
+            onChangeOrientation={handleOrientationChange}
+            onChangeState={handleStateChange}
             disableFlipByClick
             showPageCorners
             mobileScrollSupport={false}
+            usePortrait={false}
+            renderOnlyPageLengthChange
             className="w-full"
           >
             {flipPages}
