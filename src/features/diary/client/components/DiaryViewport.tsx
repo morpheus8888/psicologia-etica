@@ -136,30 +136,39 @@ const computeConsecutiveStreak = (todayISO: string, entryDates: Set<string>) => 
   return streak;
 };
 
-const FONT_OPTIONS = [
-  { id: 'sans', className: 'diary-entry-font-sans' },
-  { id: 'serif', className: 'diary-entry-font-serif' },
-  { id: 'mono', className: 'diary-entry-font-mono' },
+const DEFAULT_ENTRY_FONT_CLASS = 'diary-entry-font-sans';
+const DEFAULT_ENTRY_COLOR_CLASS = 'diary-entry-color-ink';
+
+const CALENDAR_OBSERVANCE_KEYS = [
+  '2022-02-01',
+  '2022-02-02',
+  '2022-02-03',
+  '2022-02-04',
+  '2022-02-05',
+  '2022-02-06',
+  '2022-02-07',
+  '2022-02-08',
+  '2022-02-09',
+  '2022-02-10',
+  '2022-02-11',
+  '2022-02-12',
+  '2022-02-13',
+  '2022-02-14',
+  '2022-02-15',
+  '2022-02-16',
+  '2022-02-17',
+  '2022-02-18',
+  '2022-02-19',
+  '2022-02-20',
+  '2022-02-21',
+  '2022-02-22',
+  '2022-02-23',
+  '2022-02-24',
+  '2022-02-25',
+  '2022-02-26',
+  '2022-02-27',
+  '2022-02-28',
 ] as const;
-
-const COLOR_OPTIONS = [
-  { id: 'ink', className: 'diary-entry-color-ink' },
-  { id: 'sepia', className: 'diary-entry-color-sepia' },
-  { id: 'ocean', className: 'diary-entry-color-ocean' },
-] as const;
-
-type EntryFontValue = typeof FONT_OPTIONS[number]['id'];
-type EntryColorValue = typeof COLOR_OPTIONS[number]['id'];
-
-type DiaryEntryStyle = {
-  font: EntryFontValue;
-  color: EntryColorValue;
-};
-
-const ENTRY_EDITOR_DEFAULT_STYLE: DiaryEntryStyle = {
-  font: FONT_OPTIONS[0].id,
-  color: COLOR_OPTIONS[0].id,
-};
 
 type DiaryViewportProps = {
   locale: string;
@@ -279,17 +288,13 @@ export const DiaryViewport = ({
     () => entryNamespace.getNamespace('debug'),
     [entryNamespace],
   );
-  const entryEditorNamespace = useMemo(
-    () => entryNamespace.getNamespace('editor'),
-    [entryNamespace],
+  const calendarPageNamespace = useMemo(
+    () => t.getNamespace('calendarPage'),
+    [t],
   );
-  const entryEditorFontNamespace = useMemo(
-    () => entryEditorNamespace.getNamespace('fontOptions'),
-    [entryEditorNamespace],
-  );
-  const entryEditorColorNamespace = useMemo(
-    () => entryEditorNamespace.getNamespace('colorOptions'),
-    [entryEditorNamespace],
+  const calendarObservancesNamespace = useMemo(
+    () => calendarPageNamespace.getNamespace('observances'),
+    [calendarPageNamespace],
   );
   const coverBrand = tCover.t('brand');
   const data = useDiaryData();
@@ -303,15 +308,17 @@ export const DiaryViewport = ({
   const [goalLinkOpen, setGoalLinkOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(`${todayISO}T00:00:00`));
   const [calendarSelection, setCalendarSelection] = useState(() => navigation.currentDate ?? todayISO);
-  const [entryStyles, setEntryStyles] = useState<Map<string, DiaryEntryStyle>>(
-    () => new Map(),
-  );
   const isDirtyRef = useRef(false);
   const passiveHandlersCleanupRef = useRef<(() => void) | null>(null);
   const suppressEditorOnChangeRef = useRef(false);
   const lastLocalEditRef = useRef(0);
   const lastRemoteUpdateRef = useRef(0);
   const loadRequestIdRef = useRef(0);
+  const loadEntryRef = useRef(data.loadEntry);
+
+  useEffect(() => {
+    loadEntryRef.current = data.loadEntry;
+  }, [data.loadEntry]);
 
   // NOTE: flip-book contracts follow docs/stpageflip/README.md; check before tweaking behaviour.
   const scheduleFlipRefresh = useCallback(() => {
@@ -338,19 +345,6 @@ export const DiaryViewport = ({
       }
     };
   }, []);
-
-  const updateEntryStyle = useCallback(
-    (dateISO: string, partial: Partial<DiaryEntryStyle>) => {
-      setEntryStyles((prev) => {
-        const next = new Map(prev);
-        const previous = next.get(dateISO) ?? ENTRY_EDITOR_DEFAULT_STYLE;
-        next.set(dateISO, { ...previous, ...partial });
-        return next;
-      });
-      scheduleFlipRefresh();
-    },
-    [scheduleFlipRefresh],
-  );
 
   const isDesktop = ui.isDesktop();
   const encryption = useDiaryEncryption();
@@ -382,7 +376,7 @@ export const DiaryViewport = ({
 
     let cancelled = false;
 
-    void data.loadEntry(targetDate).then((entry) => {
+    void loadEntryRef.current(targetDate).then((entry) => {
       if (
         cancelled
         || navigation.currentDate !== targetDate
@@ -432,7 +426,7 @@ export const DiaryViewport = ({
     return () => {
       cancelled = true;
     };
-  }, [data, navigation.currentDate, scheduleFlipRefresh]);
+  }, [navigation.currentDate, scheduleFlipRefresh]);
 
   useEffect(() => {
     void data.loadGoals();
@@ -637,6 +631,17 @@ export const DiaryViewport = ({
   const calendarCells = useMemo(() => {
     return buildCalendarGrid(calendarMonth, entryDatesSet, todayISO);
   }, [calendarMonth, entryDatesSet, todayISO]);
+
+  const calendarObservances = useMemo(
+    () => new Map<string, string>(
+      CALENDAR_OBSERVANCE_KEYS.map(dateISO => [dateISO, calendarObservancesNamespace.t(dateISO)]),
+    ),
+    [calendarObservancesNamespace],
+  );
+
+  const observancesFallback = calendarPageNamespace.t('observancesFallback');
+  const outOfMonthLabel = calendarPageNamespace.t('outOfMonth');
+  const hasEntryBadgeLabel = calendarPageNamespace.t('hasEntryBadge');
 
   const entryMonthsByYear = useMemo(() => {
     const byYear = new Map<number, Set<number>>();
@@ -907,61 +912,63 @@ export const DiaryViewport = ({
   const calendarLeftPage = (
     <article key="calendar-left" className={`${basePageClass} diary-page--calendar`}>
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t.getNamespace('nav').t('calendar')}
-            </p>
-            <h3 className="text-2xl font-semibold text-foreground">
-              {calendarMonth.toLocaleDateString(locale, {
-                month: 'long',
-                year: 'numeric',
-              })}
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={handleGoToday}
-            className="rounded-full border border-primary/40 px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary/10"
-          >
-            {t.getNamespace('nav').t('today')}
-          </button>
+        <div className="diary-calendar-header">
+          <h3 className="diary-calendar-header__title">
+            {calendarMonth.toLocaleDateString(locale, {
+              month: 'long',
+              year: 'numeric',
+            })}
+          </h3>
+          <p className="diary-calendar-header__subtitle">
+            {calendarPageNamespace.t('subtitle')}
+          </p>
         </div>
-        <div className="mt-4 grid w-full grid-cols-7 gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map(label => (
-            <span key={label} className="text-center">
-              {label}
-            </span>
-          ))}
-        </div>
-        <div className="mt-2 grid flex-1 grid-cols-7 gap-2 text-sm">
-          {calendarCells.map((cell) => {
-            const isSelected = calendarSelection === cell.dateISO;
-            const baseClasses = [
-              'flex h-16 flex-col items-center justify-center rounded-xl border text-sm transition',
-              cell.isCurrentMonth
-                ? 'border-border/60 bg-background hover:border-primary/60 hover:bg-primary/5'
-                : 'border-dashed border-border/40 bg-muted/20 text-muted-foreground cursor-not-allowed opacity-60',
-              cell.hasEntry ? 'shadow-[0_0_0_1px_rgba(59,130,246,0.35)]' : '',
-              isSelected ? 'border-primary bg-primary/10 text-primary' : '',
-              cell.isToday && !isSelected ? 'border-primary/60' : '',
-            ].join(' ');
+        <div className="mt-6 flex-1 overflow-y-auto">
+          <ul className="diary-calendar-grid" role="list">
+            {calendarCells.map((cell) => {
+              const isSelected = calendarSelection === cell.dateISO;
+              const isDisabled = !cell.isCurrentMonth;
+              const observanceLabel = isDisabled
+                ? outOfMonthLabel
+                : calendarObservances.get(cell.dateISO) ?? observancesFallback;
+              const cardClasses = [
+                'diary-calendar-card',
+                isDisabled ? 'diary-calendar-card--disabled' : '',
+                cell.hasEntry ? 'diary-calendar-card--has-entry' : '',
+                isSelected ? 'diary-calendar-card--selected' : '',
+                cell.isToday ? 'diary-calendar-card--today' : '',
+              ].filter(Boolean).join(' ');
+              const ariaLabel = calendarPageNamespace.t('cardAriaLabel', {
+                date: formatDateLabel(cell.dateISO, locale),
+                observance: observanceLabel,
+              });
 
-            return (
-              <button
-                key={cell.dateISO}
-                type="button"
-                onClick={() => handleCalendarSelect(cell.dateISO)}
-                className={baseClasses}
-                disabled={!cell.isCurrentMonth}
-              >
-                <span className="text-base font-semibold">{cell.label}</span>
-                {cell.hasEntry && (
-                  <span className="mt-1 h-1.5 w-8 rounded-full bg-primary" />
-                )}
-              </button>
-            );
-          })}
+              return (
+                <li key={cell.dateISO} className="diary-calendar-grid__item">
+                  <button
+                    type="button"
+                    onClick={() => handleCalendarSelect(cell.dateISO)}
+                    className={cardClasses}
+                    disabled={isDisabled}
+                    aria-pressed={isSelected}
+                    aria-label={ariaLabel}
+                    aria-current={isSelected ? 'date' : undefined}
+                    data-date-iso={cell.dateISO}
+                  >
+                    <time dateTime={cell.dateISO} className="diary-calendar-card__day">
+                      {cell.label}
+                    </time>
+                    <span className="diary-calendar-card__label">
+                      {observanceLabel}
+                    </span>
+                    <span className="diary-calendar-card__badge">
+                      {hasEntryBadgeLabel}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       </div>
     </article>
@@ -1053,9 +1060,6 @@ export const DiaryViewport = ({
 
   const dayPagesNodes = dayPages.map((page) => {
     const restrictClickToEdges = page.index !== firstDayPageIndex && page.index !== lastDayPageIndex;
-    const entryStyle = entryStyles.get(page.dateISO) ?? ENTRY_EDITOR_DEFAULT_STYLE;
-    const fontOption = FONT_OPTIONS.find(option => option.id === entryStyle.font) ?? FONT_OPTIONS[0];
-    const colorOption = COLOR_OPTIONS.find(option => option.id === entryStyle.color) ?? COLOR_OPTIONS[0];
     const editable = isEntryEditable(
       page.dateISO,
       todayISO,
@@ -1127,71 +1131,10 @@ export const DiaryViewport = ({
       }
     };
 
-    const handleFontSelect = (value: EntryFontValue) => {
-      updateEntryStyle(page.dateISO, { font: value });
-    };
-
-    const handleColorSelect = (value: EntryColorValue) => {
-      updateEntryStyle(page.dateISO, { color: value });
-    };
-
     const hasShareAction = data.professionals.length > 0;
     const hasGoalAction = goals.length > 0;
 
-    const selectors = editable
-      ? (
-          <div className="diary-entry-heading__selects">
-            <label
-              htmlFor={`diary-entry-font-${page.dateISO}`}
-              className="diary-entry-heading__select"
-            >
-              <span>{entryEditorNamespace.t('fontLabel')}</span>
-              <select
-                id={`diary-entry-font-${page.dateISO}`}
-                className="diary-entry-heading__select-control"
-                value={entryStyle.font}
-                onChange={(event) => {
-                  handleFontSelect(event.target.value as EntryFontValue);
-                }}
-                disabled={!editable}
-              >
-                {FONT_OPTIONS.map(option => (
-                  <option key={option.id} value={option.id}>
-                    {entryEditorFontNamespace.t(option.id as never)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label
-              htmlFor={`diary-entry-color-${page.dateISO}`}
-              className="diary-entry-heading__select"
-            >
-              <span>{entryEditorNamespace.t('colorLabel')}</span>
-              <select
-                id={`diary-entry-color-${page.dateISO}`}
-                className="diary-entry-heading__select-control"
-                value={entryStyle.color}
-                onChange={(event) => {
-                  handleColorSelect(event.target.value as EntryColorValue);
-                }}
-                disabled={!editable}
-              >
-                {COLOR_OPTIONS.map(option => (
-                  <option key={option.id} value={option.id}>
-                    {entryEditorColorNamespace.t(option.id as never)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        )
-      : null;
-
     const actionNodes: ReactNode[] = [];
-
-    if (selectors) {
-      actionNodes.push(selectors);
-    }
 
     if (hasShareAction) {
       actionNodes.push(
@@ -1380,8 +1323,8 @@ export const DiaryViewport = ({
                 void handleSaveEntry(nextValue);
               }
             }}
-            fontClassName={fontOption.className}
-            colorClassName={colorOption.className}
+            fontClassName={DEFAULT_ENTRY_FONT_CLASS}
+            colorClassName={DEFAULT_ENTRY_COLOR_CLASS}
           />
 
         </div>
