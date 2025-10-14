@@ -1405,6 +1405,8 @@ export const DiaryViewport = ({
             disableFlipByClick
             showPageCorners
             mobileScrollSupport={false}
+            usePortrait={false}
+            renderOnlyPageLengthChange
             className="w-full"
           >
             {flipPages}
