@@ -19,7 +19,6 @@ import { useDiaryEncryption } from '@/features/diary/client/context/DiaryEncrypt
 import { useDiaryNavigation } from '@/features/diary/client/context/DiaryNavigationContext';
 import { cryptoAdapter } from '@/features/diary/client/cryptoAdapter';
 import { decryptPayload, encryptPayload } from '@/features/diary/client/cryptoUtils';
-import { resolveDiaryTimezone } from '@/features/diary/feature/resolveTimezone';
 
 import { DiaryCoachDock } from './DiaryCoachDock';
 import { DiaryEntryEditor } from './DiaryEntryEditor';
@@ -31,6 +30,44 @@ const PAGE_EDGE_WIDTH_CLASS = 'w-16'; // 64px edge activation zones
 const SAVE_DEBOUNCE_MS = 800;
 const DRAFT_STORAGE_KEY_PREFIX = 'diary::draft::';
 const DRAFT_STORAGE_VERSION = 1;
+const DEBUG_BUFFER_LIMIT = 200;
+const DEBUG_STUCK_TIMEOUT_MS = 1200;
+const FLIP_UPDATE_THROTTLE_MS = 120;
+const TOUCH_EVENTS = new Set(['touchstart', 'touchmove', 'touchend', 'touchcancel']);
+
+type DebugCounters = {
+  editorUser: number;
+  editorExternal: number;
+  editorSuppressed: number;
+  editorComposition: number;
+  flipInit: number;
+  flipEvents: number;
+  flipUpdates: number;
+  flipUpdatesSkipped: number;
+  draftsSaved: number;
+  draftsLoaded: number;
+  savesQueued: number;
+  savesFlushed: number;
+  ensurePassiveApplied: number;
+  ensurePassiveSkipped: number;
+  navigationChanges: number;
+  stuckEvents: number;
+};
+
+type DebugEvent = {
+  ts: number;
+  label: string;
+  details: Record<string, unknown>;
+};
+
+const safeJson = (value: unknown, maxLength = 400) => {
+  try {
+    const text = JSON.stringify(value);
+    return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text;
+  } catch {
+    return '[unserializable]';
+  }
+};
 
 const getDraftStorageKey = (dateISO: string) => `${DRAFT_STORAGE_KEY_PREFIX}${dateISO}`;
 
@@ -55,6 +92,50 @@ const decodeBase64ToBytes = (value: string) => {
     buffer[index] = binary.charCodeAt(index);
   }
   return buffer;
+};
+
+type PatchedEventTarget = EventTarget & {
+  addEventListener: typeof EventTarget.prototype.addEventListener;
+  removeEventListener: typeof EventTarget.prototype.removeEventListener;
+  __diaryPassivePatched?: boolean;
+};
+
+const enforcePassiveListeners = (target: EventTarget | null | undefined) => {
+  if (!target) {
+    return false;
+  }
+  const patchedTarget = target as PatchedEventTarget;
+  if (patchedTarget.__diaryPassivePatched) {
+    return false;
+  }
+  const originalAdd = patchedTarget.addEventListener;
+  if (typeof originalAdd !== 'function') {
+    return false;
+  }
+
+  const patchedAdd: typeof patchedTarget.addEventListener = function (
+    this: PatchedEventTarget,
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions,
+  ) {
+    if (TOUCH_EVENTS.has(type)) {
+      let normalized: AddEventListenerOptions;
+      if (typeof options === 'boolean') {
+        normalized = { passive: true, capture: options };
+      } else if (options) {
+        normalized = { ...options, passive: true };
+      } else {
+        normalized = { passive: true };
+      }
+      return originalAdd.call(this, type, listener, normalized);
+    }
+    return originalAdd.call(this, type, listener, options as any);
+  };
+
+  patchedTarget.addEventListener = patchedAdd;
+  patchedTarget.__diaryPassivePatched = true;
+  return true;
 };
 
 type DraftSnapshot = {
@@ -296,11 +377,6 @@ export const DiaryViewport = ({
 }: DiaryViewportProps) => {
   const tCover = t.getNamespace('cover');
   const tClosing = t.getNamespace('closing');
-  const entryNamespace = useMemo(() => t.getNamespace('entry'), [t]);
-  const entryDebugNamespace = useMemo(
-    () => entryNamespace.getNamespace('debug'),
-    [entryNamespace],
-  );
   const coverBrand = tCover.t('brand');
   const data = useDiaryData();
   const navigation = useDiaryNavigation();
@@ -327,10 +403,290 @@ export const DiaryViewport = ({
   const lastRemoteUpdateRef = useRef(0);
   const loadRequestIdRef = useRef(0);
   const loadEntryRef = useRef(data.loadEntry);
+  const debugEventsRef = useRef<DebugEvent[]>([]);
+  const debugCountersRef = useRef<DebugCounters>({
+    editorUser: 0,
+    editorExternal: 0,
+    editorSuppressed: 0,
+    editorComposition: 0,
+    flipInit: 0,
+    flipEvents: 0,
+    flipUpdates: 0,
+    flipUpdatesSkipped: 0,
+    draftsSaved: 0,
+    draftsLoaded: 0,
+    savesQueued: 0,
+    savesFlushed: 0,
+    ensurePassiveApplied: 0,
+    ensurePassiveSkipped: 0,
+    navigationChanges: 0,
+    stuckEvents: 0,
+  });
+  const debugRefreshRafRef = useRef<number | null>(null);
+  const [, setDebugVersion] = useState(0);
+  const [debugOptions, setDebugOptions] = useState({
+    suspendFlipUpdates: false,
+    disableEdgeOverlays: false,
+    blockTouchReattach: false,
+    verbose: false,
+  });
+  const debugOptionsRef = useRef(debugOptions);
+  const debugLastUserInputRef = useRef(0);
+  const debugStuckTimeoutRef = useRef<number | null>(null);
+  const [debugCopyMessage, setDebugCopyMessage] = useState<string | null>(null);
+  const compositionActiveRef = useRef(false);
+  const lastFlipUpdateTimeRef = useRef(0);
+  const editorVersionRef = useRef<Map<string, number>>(new Map());
+  const [, forceEditorVersionUpdate] = useState(0);
+  const [isFlipbookReady, setIsFlipbookReady] = useState(false);
 
   useEffect(() => {
     loadEntryRef.current = data.loadEntry;
   }, [data.loadEntry]);
+
+  useEffect(() => {
+    debugOptionsRef.current = debugOptions;
+  }, [debugOptions]);
+
+  const collectDebugSnapshot = useCallback((context?: string) => ({
+    context,
+    navigationDate: navigation.currentDate,
+    navigationIndex: navigation.currentIndex,
+    bookReady: flipBookReadyRef.current,
+    isDirty: isDirtyRef.current,
+    suppressOnChange: suppressEditorOnChangeRef.current,
+    externalOrigin: externalChangeOriginRef.current,
+    pendingSave: pendingSaveValueRef.current
+      ? {
+          dateISO: pendingSaveValueRef.current.dateISO,
+          bodyLength: pendingSaveValueRef.current.body.length,
+        }
+      : null,
+    currentBodyLength: currentBodyRef.current.length,
+    lastLocalEdit: lastLocalEditRef.current,
+    lastRemoteUpdate: lastRemoteUpdateRef.current,
+    debugOptions: debugOptionsRef.current,
+  }), [navigation.currentDate, navigation.currentIndex]);
+
+  const scheduleDebugRefresh = useCallback(() => {
+    if (typeof window === 'undefined') {
+      setDebugVersion(prev => prev + 1);
+      return;
+    }
+    if (debugRefreshRafRef.current !== null) {
+      return;
+    }
+    debugRefreshRafRef.current = window.requestAnimationFrame(() => {
+      debugRefreshRafRef.current = null;
+      setDebugVersion(prev => prev + 1);
+    });
+  }, []);
+
+  const logDebug = useCallback((label: string, details: Record<string, unknown> = {}, includeSnapshot = false) => {
+    const entry: DebugEvent = {
+      ts: typeof performance !== 'undefined' ? performance.now() : Date.now(),
+      label,
+      details: includeSnapshot ? { ...details, snapshot: collectDebugSnapshot(label) } : details,
+    };
+    debugEventsRef.current.push(entry);
+    if (debugEventsRef.current.length > DEBUG_BUFFER_LIMIT) {
+      debugEventsRef.current.splice(0, debugEventsRef.current.length - DEBUG_BUFFER_LIMIT);
+    }
+    scheduleDebugRefresh();
+  }, [collectDebugSnapshot, scheduleDebugRefresh]);
+
+  const incrementCounter = useCallback((key: keyof DebugCounters) => {
+    debugCountersRef.current[key] += 1;
+    if (debugOptionsRef.current.verbose) {
+      logDebug('debug.counter', { key, value: debugCountersRef.current[key] });
+    }
+  }, [logDebug]);
+
+  const scheduleDebugStuckCheck = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    if (debugStuckTimeoutRef.current !== null) {
+      window.clearTimeout(debugStuckTimeoutRef.current);
+    }
+    const scheduledAt = Date.now();
+    debugStuckTimeoutRef.current = window.setTimeout(() => {
+      debugStuckTimeoutRef.current = null;
+      if (Date.now() - debugLastUserInputRef.current >= DEBUG_STUCK_TIMEOUT_MS) {
+        incrementCounter('stuckEvents');
+        logDebug('editor.stuck', {
+          lastUserInputAt: debugLastUserInputRef.current,
+          checkAt: scheduledAt + DEBUG_STUCK_TIMEOUT_MS,
+        }, true);
+      }
+    }, DEBUG_STUCK_TIMEOUT_MS);
+  }, [incrementCounter, logDebug]);
+
+  useEffect(() => {
+    return () => {
+      if (debugRefreshRafRef.current !== null && typeof window !== 'undefined') {
+        window.cancelAnimationFrame(debugRefreshRafRef.current);
+      }
+      if (debugStuckTimeoutRef.current !== null && typeof window !== 'undefined') {
+        window.clearTimeout(debugStuckTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const patchedWindow = enforcePassiveListeners(window);
+    const patchedDocument = typeof document !== 'undefined' ? enforcePassiveListeners(document) : false;
+    if (patchedWindow || patchedDocument) {
+      logDebug('touch.passive.globalPatch', {
+        patchedWindow,
+        patchedDocument,
+      });
+    }
+  }, [logDebug]);
+
+  useEffect(() => {
+    if (debugStuckTimeoutRef.current !== null && typeof window !== 'undefined') {
+      window.clearTimeout(debugStuckTimeoutRef.current);
+      debugStuckTimeoutRef.current = null;
+    }
+  }, [navigation.currentDate]);
+
+  useEffect(() => {
+    logDebug('debug.options.change', debugOptions);
+  }, [debugOptions, logDebug]);
+
+  const debugEvents = [...debugEventsRef.current].reverse();
+
+  const debugCounters = { ...debugCountersRef.current };
+
+  const handleDebugToggle = useCallback((key: keyof typeof debugOptions) => {
+    setDebugOptions(prev => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  }, []);
+
+  const handleCopyDebugLog = useCallback(() => {
+    const payload = {
+      timestamp: new Date().toISOString(),
+      snapshot: collectDebugSnapshot('copy'),
+      counters: debugCountersRef.current,
+      options: debugOptionsRef.current,
+      events: debugEventsRef.current,
+    };
+    const serialized = JSON.stringify(payload, null, 2);
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(serialized).then(() => {
+        setDebugCopyMessage('Copied debug log to clipboard');
+        logDebug('debug.copy.success', { length: serialized.length });
+      }).catch((error) => {
+        setDebugCopyMessage(`Copy failed: ${error instanceof Error ? error.message : String(error)}`);
+        logDebug('debug.copy.error', { message: error instanceof Error ? error.message : String(error) });
+      });
+    } else {
+      setDebugCopyMessage('Clipboard API unavailable; check console for payload');
+      logDebug('debug.copy.unavailable', { length: serialized.length });
+      if (typeof window !== 'undefined') {
+        // eslint-disable-next-line no-console
+        console.info('[DiaryDebug] Copy payload', payload);
+      }
+    }
+  }, [collectDebugSnapshot, logDebug]);
+
+  useEffect(() => {
+    if (!debugCopyMessage || typeof window === 'undefined') {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setDebugCopyMessage(null);
+    }, 3000);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [debugCopyMessage]);
+
+  const ensurePassiveTouchHandlers = useCallback(() => {
+    if (debugOptionsRef.current.blockTouchReattach) {
+      incrementCounter('ensurePassiveSkipped');
+      logDebug('touch.passive.skip', { reason: 'blockTouchReattach' });
+      return false;
+    }
+    const book = flipRef.current?.pageFlip?.();
+    const uiInstance: any = book?.ui;
+    if (!uiInstance || typeof uiInstance.getDistElement !== 'function') {
+      logDebug('touch.passive.unavailable', { reason: 'missing-ui-instance' });
+      return false;
+    }
+
+    const touchStart = uiInstance.onTouchStart as EventListener | undefined;
+    const touchMove = uiInstance.onTouchMove as EventListener | undefined;
+    const touchEnd = uiInstance.onTouchEnd as EventListener | undefined;
+    const distElement: HTMLElement | null = uiInstance.getDistElement();
+
+    if (!distElement || !touchStart || !touchMove || !touchEnd) {
+      logDebug('touch.passive.unavailable', {
+        reason: 'missing-handlers',
+        hasDistElement: Boolean(distElement),
+        hasTouchStart: Boolean(touchStart),
+        hasTouchMove: Boolean(touchMove),
+        hasTouchEnd: Boolean(touchEnd),
+      });
+      return false;
+    }
+
+    passiveHandlersCleanupRef.current?.();
+
+    distElement.removeEventListener('touchstart', touchStart);
+    window.removeEventListener('touchmove', touchMove);
+    window.removeEventListener('touchend', touchEnd);
+
+    const patchedDist = enforcePassiveListeners(distElement);
+    const patchedWindow = typeof window !== 'undefined' ? enforcePassiveListeners(window) : false;
+    if (patchedDist || patchedWindow) {
+      logDebug('touch.passive.patch', {
+        patchedDist,
+        patchedWindow,
+      });
+    }
+
+    distElement.addEventListener('touchstart', touchStart, { passive: true });
+    window.addEventListener('touchmove', touchMove, { passive: true });
+    window.addEventListener('touchend', touchEnd, { passive: true });
+
+    passiveHandlersCleanupRef.current = () => {
+      distElement.removeEventListener('touchstart', touchStart);
+      window.removeEventListener('touchmove', touchMove);
+      window.removeEventListener('touchend', touchEnd);
+    };
+
+    incrementCounter('ensurePassiveApplied');
+    logDebug('touch.passive.attached', {
+      distElement: uiInstance.getDistElement()?.tagName ?? 'unknown',
+    });
+    return true;
+  }, [incrementCounter, logDebug]);
+
+  const handleDebugDump = useCallback(() => {
+    logDebug('debug.dump', {}, true);
+  }, [logDebug]);
+
+  const getOrInitEditorVersion = useCallback((dateISO: string) => {
+    if (!editorVersionRef.current.has(dateISO)) {
+      editorVersionRef.current.set(dateISO, 0);
+    }
+    return editorVersionRef.current.get(dateISO) ?? 0;
+  }, []);
+
+  const bumpEditorVersion = useCallback((dateISO: string, reason: string) => {
+    const current = editorVersionRef.current.get(dateISO) ?? 0;
+    const next = current + 1;
+    editorVersionRef.current.set(dateISO, next);
+    forceEditorVersionUpdate(value => value + 1);
+    logDebug('editor.version.bump', { dateISO, version: next, reason });
+  }, [forceEditorVersionUpdate, logDebug]);
 
   // NOTE: flip-book contracts follow docs/stpageflip/README.md; check before tweaking behaviour.
   const scheduleFlipRefresh = useCallback(() => {
@@ -338,20 +694,47 @@ export const DiaryViewport = ({
       return;
     }
     if (!flipBookReadyRef.current) {
+      incrementCounter('flipUpdatesSkipped');
+      logDebug('flipbook.update.skip', { reason: 'not-ready' });
+      return;
+    }
+    if (debugOptionsRef.current.suspendFlipUpdates) {
+      incrementCounter('flipUpdatesSkipped');
+      logDebug('flipbook.update.skip', { reason: 'suspendFlipUpdates' });
+      return;
+    }
+    if (compositionActiveRef.current) {
+      incrementCounter('flipUpdatesSkipped');
+      logDebug('flipbook.update.skip', { reason: 'composition-active' });
       return;
     }
     if (flipRefreshFrameRef.current !== null) {
       window.cancelAnimationFrame(flipRefreshFrameRef.current);
     }
+    const scheduledAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (scheduledAt - lastFlipUpdateTimeRef.current < FLIP_UPDATE_THROTTLE_MS) {
+      incrementCounter('flipUpdatesSkipped');
+      logDebug('flipbook.update.skip', {
+        reason: 'throttled',
+        delta: scheduledAt - lastFlipUpdateTimeRef.current,
+      });
+      return;
+    }
     flipRefreshFrameRef.current = window.requestAnimationFrame(() => {
       flipRefreshFrameRef.current = null;
       const pageFlipInstance = flipRef.current?.pageFlip?.();
       if (!pageFlipInstance?.update) {
+        incrementCounter('flipUpdatesSkipped');
+        logDebug('flipbook.update.skip', { reason: 'no-instance' });
         return;
       }
+      incrementCounter('flipUpdates');
+      logDebug('flipbook.update', { scheduledAt, ready: flipBookReadyRef.current });
       pageFlipInstance.update();
+      lastFlipUpdateTimeRef.current = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      ensurePassiveTouchHandlers();
     });
-  }, []);
+  }, [ensurePassiveTouchHandlers, incrementCounter, logDebug]);
 
   useEffect(() => {
     return () => {
@@ -372,13 +755,22 @@ export const DiaryViewport = ({
     )
     : false;
 
+  useEffect(() => {
+    incrementCounter('navigationChanges');
+    logDebug('navigation.change', {
+      dateISO: navigation.currentDate,
+      index: navigation.currentIndex,
+    });
+  }, [incrementCounter, logDebug, navigation.currentDate, navigation.currentIndex]);
+
   const clearDraft = useCallback((dateISO: string) => {
     if (typeof window === 'undefined') {
       return;
     }
     window.localStorage.removeItem(getDraftStorageKey(dateISO));
     volatileDraftsRef.current.delete(dateISO);
-  }, []);
+    logDebug('draft.clear', { dateISO });
+  }, [logDebug]);
 
   const persistDraft = useCallback(
     async (dateISO: string, body: string) => {
@@ -390,6 +782,12 @@ export const DiaryViewport = ({
         volatileDraftsRef.current.set(dateISO, {
           body,
           updatedAt: Date.now(),
+        });
+        incrementCounter('draftsSaved');
+        logDebug('draft.persist', {
+          dateISO,
+          mode: 'volatile',
+          bodyLength: body.length,
         });
         return;
       }
@@ -408,13 +806,19 @@ export const DiaryViewport = ({
           nonce: encodeBytesToBase64(nonce),
         };
         window.localStorage.setItem(getDraftStorageKey(dateISO), JSON.stringify(record));
+        incrementCounter('draftsSaved');
+        logDebug('draft.persist', {
+          dateISO,
+          mode: 'encrypted-storage',
+          bodyLength: body.length,
+        });
       } catch (error) {
         if (process.env.NODE_ENV !== 'production') {
           console.error('Failed to persist diary draft', error);
         }
       }
     },
-    [encryption],
+    [encryption, incrementCounter, logDebug],
   );
 
   const loadDraft = useCallback(
@@ -425,6 +829,15 @@ export const DiaryViewport = ({
       // Prefer volatile in-memory draft when E2EE is locked (no plaintext persistence).
       if (encryption.status !== 'ready') {
         const snap = volatileDraftsRef.current.get(dateISO) ?? null;
+        if (snap) {
+          incrementCounter('draftsLoaded');
+          logDebug('draft.load', {
+            dateISO,
+            source: 'volatile',
+            bodyLength: snap.body.length,
+            updatedAt: snap.updatedAt,
+          });
+        }
         return snap;
       }
       const raw = window.localStorage.getItem(getDraftStorageKey(dateISO));
@@ -454,6 +867,13 @@ export const DiaryViewport = ({
             ciphertext: decodeBase64ToBytes(parsed.ciphertext),
             nonce: decodeBase64ToBytes(parsed.nonce),
           });
+          incrementCounter('draftsLoaded');
+          logDebug('draft.load', {
+            dateISO,
+            source: 'encrypted-storage',
+            bodyLength: (payload.body ?? '').length,
+            updatedAt,
+          });
           return {
             body: payload.body ?? '',
             updatedAt,
@@ -474,7 +894,7 @@ export const DiaryViewport = ({
         return null;
       }
     },
-    [encryption],
+    [encryption, incrementCounter, logDebug],
   );
 
   useEffect(() => {
@@ -493,6 +913,8 @@ export const DiaryViewport = ({
       return;
     }
 
+    getOrInitEditorVersion(targetDate);
+
     const loadId = loadRequestIdRef.current + 1;
     loadRequestIdRef.current = loadId;
     const loadStartedAt = Date.now();
@@ -509,6 +931,7 @@ export const DiaryViewport = ({
     let cancelled = false;
 
     const load = async () => {
+      logDebug('entry.load.start', { targetDate });
       let draft: DraftSnapshot | null = null;
 
       try {
@@ -534,6 +957,7 @@ export const DiaryViewport = ({
         isDirtyRef.current = true;
         lastLocalEditRef.current = draft.updatedAt;
         suppressEditorOnChangeRef.current = true;
+        bumpEditorVersion(targetDate, 'draft-load');
       }
 
       let entry: Awaited<ReturnType<typeof loadEntryRef.current>> | null = null;
@@ -562,7 +986,9 @@ export const DiaryViewport = ({
           externalChangeOriginRef.current = 'reset';
           currentBodyRef.current = '';
           setCurrentBody('');
+          bumpEditorVersion(targetDate, 'empty-entry');
         }
+        logDebug('entry.load.empty', { targetDate });
         scheduleFlipRefresh();
         return;
       }
@@ -591,6 +1017,12 @@ export const DiaryViewport = ({
       setCurrentBody(nextBody);
       externalChangeOriginRef.current = 'remote';
       clearDraft(targetDate);
+      logDebug('entry.load.success', {
+        targetDate,
+        remoteTimestamp,
+        bodyLength: nextBody.length,
+      });
+      bumpEditorVersion(targetDate, 'remote-load');
       scheduleFlipRefresh();
     };
 
@@ -599,7 +1031,7 @@ export const DiaryViewport = ({
     return () => {
       cancelled = true;
     };
-  }, [clearDraft, loadDraft, navigation.currentDate, scheduleFlipRefresh]);
+  }, [bumpEditorVersion, clearDraft, encryption.status, getOrInitEditorVersion, incrementCounter, loadDraft, logDebug, navigation.currentDate, scheduleFlipRefresh]);
 
   useEffect(() => {
     void data.loadGoals();
@@ -622,10 +1054,15 @@ export const DiaryViewport = ({
   useEffect(() => {
     const book = flipRef.current?.pageFlip?.();
     if (!book) {
+      logDebug('flipbook.syncNavigation.skip', { reason: 'no-instance' });
       return;
     }
 
     const currentPage = book.getCurrentPageIndex();
+    logDebug('flipbook.syncNavigation', {
+      currentPage,
+      targetIndex: navigation.currentIndex,
+    });
     if (currentPage === navigation.currentIndex) {
       return;
     }
@@ -640,47 +1077,14 @@ export const DiaryViewport = ({
     const delta = Math.abs(currentPage - navigation.currentIndex);
 
     if (delta <= 2) {
+      logDebug('flipbook.syncNavigation.flip', { currentPage, targetIndex: navigation.currentIndex });
       book.flip(navigation.currentIndex);
       return;
     }
 
+    logDebug('flipbook.syncNavigation.turn', { currentPage, targetIndex: navigation.currentIndex });
     book.turnToPage(navigation.currentIndex);
-  }, [navigation.currentIndex]);
-
-  const ensurePassiveTouchHandlers = useCallback(() => {
-    const book = flipRef.current?.pageFlip?.();
-    const uiInstance: any = book?.ui;
-    if (!uiInstance || typeof uiInstance.getDistElement !== 'function') {
-      return false;
-    }
-
-    const touchStart = uiInstance.onTouchStart as EventListener | undefined;
-    const touchMove = uiInstance.onTouchMove as EventListener | undefined;
-    const touchEnd = uiInstance.onTouchEnd as EventListener | undefined;
-    const distElement: HTMLElement | null = uiInstance.getDistElement();
-
-    if (!distElement || !touchStart || !touchMove || !touchEnd) {
-      return false;
-    }
-
-    passiveHandlersCleanupRef.current?.();
-
-    distElement.removeEventListener('touchstart', touchStart);
-    window.removeEventListener('touchmove', touchMove);
-    window.removeEventListener('touchend', touchEnd);
-
-    distElement.addEventListener('touchstart', touchStart, { passive: true });
-    window.addEventListener('touchmove', touchMove, { passive: true });
-    window.addEventListener('touchend', touchEnd, { passive: true });
-
-    passiveHandlersCleanupRef.current = () => {
-      distElement.removeEventListener('touchstart', touchStart);
-      window.removeEventListener('touchmove', touchMove);
-      window.removeEventListener('touchend', touchEnd);
-    };
-
-    return true;
-  }, []);
+  }, [logDebug, navigation.currentIndex]);
 
   useEffect(() => {
     let cancelled = false;
@@ -710,12 +1114,18 @@ export const DiaryViewport = ({
 
   const handleFlip = useCallback(
     (event: { data: number }) => {
+      const previousIndex = navigation.currentIndex;
       const nextIndex = event.data;
-      if (navigation.currentIndex !== nextIndex) {
+      incrementCounter('flipEvents');
+      logDebug('flipbook.flip', {
+        previousIndex,
+        nextIndex,
+      }, true);
+      if (previousIndex !== nextIndex) {
         navigation.setIndex(nextIndex);
       }
     },
-    [navigation],
+    [incrementCounter, logDebug, navigation],
   );
 
   const handleOrientationChange = useCallback((event: { data: string }) => {
@@ -723,14 +1133,16 @@ export const DiaryViewport = ({
       // eslint-disable-next-line no-console
       console.info('[DiaryFlipbook] orientation changed:', event.data);
     }
-  }, []);
+    logDebug('flipbook.orientation', { mode: event.data }, true);
+  }, [logDebug]);
 
   const handleStateChange = useCallback((event: { data: string }) => {
     if (process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
       console.info('[DiaryFlipbook] state changed:', event.data);
     }
-  }, []);
+    logDebug('flipbook.state', { state: event.data }, true);
+  }, [logDebug]);
 
   const goToIndex = useCallback(
     (index: number) => {
@@ -743,9 +1155,19 @@ export const DiaryViewport = ({
 
   const handleFlipbookInit = useCallback(() => {
     flipBookReadyRef.current = true;
+    setIsFlipbookReady(true);
+    const pageFlipInstance = flipRef.current?.pageFlip?.();
+    incrementCounter('flipInit');
+    const pageCount = pageFlipInstance && typeof (pageFlipInstance as any).getPageCount === 'function'
+      ? (pageFlipInstance as any).getPageCount()
+      : null;
+    logDebug('flipbook.init', {
+      navigationIndex: navigation.currentIndex,
+      pageCount,
+    }, true);
     scheduleFlipRefresh();
     ensurePassiveTouchHandlers();
-  }, [ensurePassiveTouchHandlers, scheduleFlipRefresh]);
+  }, [ensurePassiveTouchHandlers, incrementCounter, logDebug, navigation.currentIndex, scheduleFlipRefresh]);
 
   const handleSaveEntry = useCallback(
     async (bodyOverride?: string, dateOverride?: string) => {
@@ -759,15 +1181,29 @@ export const DiaryViewport = ({
 
       const nowISO = new Date().toISOString();
 
-      const saved = await data.saveEntry({
-        dateISO: targetDateISO,
-        content: {
-          body: bodyToPersist,
-          createdAtISO: nowISO,
-          updatedAtISO: nowISO,
-        },
-        tzAtEntry: data.profile?.timezone ?? null,
+      logDebug('entry.save.start', {
+        targetDateISO,
+        bodyLength: bodyToPersist.length,
       });
+
+      let saved: Awaited<ReturnType<typeof data.saveEntry>> | null = null;
+      try {
+        saved = await data.saveEntry({
+          dateISO: targetDateISO,
+          content: {
+            body: bodyToPersist,
+            createdAtISO: nowISO,
+            updatedAtISO: nowISO,
+          },
+          tzAtEntry: data.profile?.timezone ?? null,
+        });
+      } catch (error) {
+        logDebug('entry.save.error', {
+          targetDateISO,
+          message: error instanceof Error ? error.message : String(error),
+        }, true);
+        throw error;
+      }
 
       if (targetDateISO === navigation.currentDate) {
         setCurrentEntryId(saved.record.id);
@@ -787,9 +1223,14 @@ export const DiaryViewport = ({
         pendingSaveValueRef.current = null;
       }
       clearDraft(targetDateISO);
+      incrementCounter('savesFlushed');
+      logDebug('entry.save.success', {
+        targetDateISO,
+        bodyLength: bodyToPersist.length,
+      });
       return saved;
     },
-    [clearDraft, data, navigation.currentDate],
+    [clearDraft, data, incrementCounter, logDebug, navigation.currentDate],
   );
 
   const enqueueSave = useCallback(
@@ -801,6 +1242,11 @@ export const DiaryViewport = ({
       if (pendingSaveTimeoutRef.current !== null) {
         window.clearTimeout(pendingSaveTimeoutRef.current);
       }
+      incrementCounter('savesQueued');
+      logDebug('entry.save.enqueue', {
+        dateISO,
+        bodyLength: body.length,
+      });
       pendingSaveTimeoutRef.current = window.setTimeout(() => {
         pendingSaveTimeoutRef.current = null;
         const pending = pendingSaveValueRef.current;
@@ -812,12 +1258,16 @@ export const DiaryViewport = ({
           if (process.env.NODE_ENV !== 'production') {
             console.error('Failed to auto-save diary entry', error);
           }
+          logDebug('entry.save.enqueue.error', {
+            dateISO: pending.dateISO,
+            message: error instanceof Error ? error.message : String(error),
+          });
           pendingSaveValueRef.current = pending;
           isDirtyRef.current = true;
         });
       }, SAVE_DEBOUNCE_MS);
     },
-    [handleSaveEntry],
+    [handleSaveEntry, incrementCounter, logDebug],
   );
 
   const flushPendingSave = useCallback(
@@ -826,17 +1276,27 @@ export const DiaryViewport = ({
         window.clearTimeout(pendingSaveTimeoutRef.current);
         pendingSaveTimeoutRef.current = null;
       }
+      logDebug('entry.save.flush', { targetDate: targetDate ?? null });
       const pending = pendingSaveValueRef.current;
       if (pending && (!targetDate || pending.dateISO === targetDate)) {
         pendingSaveValueRef.current = null;
         try {
           await handleSaveEntry(pending.body, pending.dateISO);
+          incrementCounter('savesFlushed');
+          logDebug('entry.save.flush.success', {
+            dateISO: pending.dateISO,
+            bodyLength: pending.body.length,
+          });
         } catch (error) {
           if (process.env.NODE_ENV !== 'production') {
             console.error('Failed to flush diary entry', error);
           }
           pendingSaveValueRef.current = pending;
           isDirtyRef.current = true;
+          logDebug('entry.save.flush.error', {
+            dateISO: pending.dateISO,
+            message: error instanceof Error ? error.message : String(error),
+          });
         }
         return;
       }
@@ -848,14 +1308,23 @@ export const DiaryViewport = ({
       }
       try {
         await handleSaveEntry(currentBodyRef.current, navigation.currentDate);
+        incrementCounter('savesFlushed');
+        logDebug('entry.save.flush.success', {
+          dateISO: navigation.currentDate,
+          bodyLength: currentBodyRef.current.length,
+        });
       } catch (error) {
         if (process.env.NODE_ENV !== 'production') {
           console.error('Failed to flush diary entry', error);
         }
         isDirtyRef.current = true;
+        logDebug('entry.save.flush.error', {
+          dateISO: navigation.currentDate,
+          message: error instanceof Error ? error.message : String(error),
+        });
       }
     },
-    [handleSaveEntry, navigation.currentDate],
+    [handleSaveEntry, incrementCounter, logDebug, navigation.currentDate],
   );
 
   const hasPendingChanges = useCallback(() => {
@@ -886,6 +1355,13 @@ export const DiaryViewport = ({
       void persistDraft(navigation.currentDate, next);
       enqueueSave(navigation.currentDate, next);
       externalChangeOriginRef.current = null;
+      debugLastUserInputRef.current = Date.now();
+      incrementCounter('editorUser');
+      logDebug('editor.insertPrompt', {
+        bodyLength: next.length,
+        dateISO: navigation.currentDate,
+      });
+      scheduleDebugStuckCheck();
     },
     [
       enqueueSave,
@@ -893,8 +1369,32 @@ export const DiaryViewport = ({
       navigation.currentDate,
       persistDraft,
       scheduleFlipRefresh,
+      incrementCounter,
+      logDebug,
+      scheduleDebugStuckCheck,
     ],
   );
+
+  const handleEditorDebug = useCallback((type: string, payload?: Record<string, unknown>) => {
+    if (type === 'dom.compositionstart') {
+      compositionActiveRef.current = true;
+      incrementCounter('editorComposition');
+      logDebug('editor.composition.start', payload ?? {});
+      return;
+    }
+    if (type === 'dom.compositionend') {
+      compositionActiveRef.current = false;
+      incrementCounter('editorComposition');
+      logDebug('editor.composition.end', payload ?? {});
+      scheduleFlipRefresh();
+      return;
+    }
+    if (type === 'dom.input' || type === 'dom.beforeinput' || type === 'dom.keydown' || type === 'dom.keyup') {
+      debugLastUserInputRef.current = Date.now();
+      scheduleDebugStuckCheck();
+    }
+    logDebug(`editor.${type}`, payload ?? {});
+  }, [incrementCounter, logDebug, scheduleDebugStuckCheck, scheduleFlipRefresh]);
 
   useEffect(() => {
     const previousDate = previousDateRef.current;
@@ -948,13 +1448,6 @@ export const DiaryViewport = ({
 
   const goals = useMemo(() => Array.from(data.goals.values()), [data.goals]);
   const entryMetaMap = data.entryMeta;
-  const resolvedTimezone = useMemo(
-    () => resolveDiaryTimezone({
-      locale,
-      profileTimezone: data.profile?.timezone,
-    }),
-    [locale, data.profile?.timezone],
-  );
   const currentMeta = navigation.currentDate ? entryMetaMap.get(navigation.currentDate) : null;
   const sharedProfessionalIds = currentMeta?.sharedProfessionalIds ?? [];
   const linkedGoalIds = currentMeta?.goalIds ?? [];
@@ -1413,6 +1906,7 @@ export const DiaryViewport = ({
 
   const dayPagesNodes = dayPages.map((page) => {
     const restrictClickToEdges = page.index !== firstDayPageIndex && page.index !== lastDayPageIndex;
+    const edgesActive = restrictClickToEdges && !debugOptions.disableEdgeOverlays;
     const editable = isEntryEditable(
       page.dateISO,
       todayISO,
@@ -1427,49 +1921,136 @@ export const DiaryViewport = ({
     const showReadonlyLabel = !editable && hasPersistedEntry;
     const textareaPlaceholder = editable ? t.getNamespace('entry').t('placeholder') : undefined;
     const showEmptyReadOnlyState = !editable && !hasPersistedEntry;
-    const formatBoolean = (value: boolean) => (value ? entryDebugNamespace.t('yes') : entryDebugNamespace.t('no'));
-    const formatValue = (value: string | number | null | undefined) => {
-      if (value === null || value === undefined || (typeof value === 'string' && value.length === 0)) {
-        return entryDebugNamespace.t('missing');
-      }
-
-      return String(value);
-    };
-    const entryKey = `${page.dateISO}:${currentEntryId ?? 'draft'}`;
-
-    const debugItems = [
-      { label: entryDebugNamespace.t('currentPageISO'), value: page.dateISO },
-      { label: entryDebugNamespace.t('todayISO'), value: todayISO },
-      { label: entryDebugNamespace.t('nowISO'), value: nowISO },
-      { label: entryDebugNamespace.t('pageIndex'), value: page.index },
-      { label: entryDebugNamespace.t('navigationIndex'), value: navigation.currentIndex },
-      { label: entryDebugNamespace.t('navigationCurrentDate'), value: navigation.currentDate },
-      { label: entryDebugNamespace.t('isActivePage'), value: formatBoolean(isActivePage) },
-      { label: entryDebugNamespace.t('isEditable'), value: formatBoolean(editable) },
-      { label: entryDebugNamespace.t('hasPersistedEntry'), value: formatBoolean(hasPersistedEntry) },
-      { label: entryDebugNamespace.t('graceMinutes'), value: data.diaryGraceMinutes },
-      { label: entryDebugNamespace.t('profileTimezone'), value: data.profile?.timezone },
-      { label: entryDebugNamespace.t('resolvedTimezone'), value: resolvedTimezone },
-      { label: entryDebugNamespace.t('currentEntryId'), value: currentEntryId },
-    ] as const;
-
-    if (isActivePage) {
+    const entryVersion = getOrInitEditorVersion(page.dateISO);
+    const entryKey = `${page.dateISO}:v${entryVersion}`;
+    const showDebugPanel = page.dateISO === todayISO && isFlipbookReady;
+    if (showDebugPanel) {
+      const liveSnapshot = {
+        ...collectDebugSnapshot('panel'),
+        entryDate: page.dateISO,
+        entryKey,
+        entryVersion,
+        editable,
+        currentEntryId,
+      };
+      const recentEvents = debugEvents.slice(0, debugOptions.verbose ? 50 : 25);
+      const counterEntries = Object.entries(debugCounters).sort(([a], [b]) => a.localeCompare(b));
       activeDebugPanel = (
         <section
           key={`debug-${page.dateISO}`}
-          className="pointer-events-auto rounded-2xl border border-dashed border-muted-foreground/40 bg-muted/10 p-4 text-xs shadow-sm backdrop-blur-sm"
+          className="fixed bottom-4 right-4 z-[1000] max-w-[420px] rounded-2xl border border-sky-400/60 bg-sky-50 p-4 text-xs text-sky-900 shadow-xl backdrop-blur-sm dark:border-sky-500/60 dark:bg-sky-950/40 dark:text-sky-100"
         >
-          <p className="mb-3 font-semibold text-foreground">
-            {entryDebugNamespace.t('title')}
-          </p>
-          <ul className="space-y-1 text-muted-foreground">
-            {debugItems.map(item => (
-              <li key={item.label} className="flex gap-2">
-                <span className="w-48 shrink-0 text-foreground">{item.label}</span>
-                <span className="break-all">{formatValue(item.value)}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-sky-900 dark:text-sky-100">Diary Debug (Today)</p>
+              <p className="mt-1 text-[11px] text-sky-700 dark:text-sky-200/80">
+                Reproduced state for active editable page. Copy the log after reproducing the issue.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="rounded-md border border-sky-500/50 px-2 py-1 text-[11px] font-semibold text-sky-900 transition hover:bg-sky-200/60 dark:border-sky-400/60 dark:text-sky-100 dark:hover:bg-sky-800/40"
+                onClick={handleDebugDump}
+              >
+                Dump state
+              </button>
+              <button
+                type="button"
+                className="rounded-md border border-sky-500/50 px-2 py-1 text-[11px] font-semibold text-sky-900 transition hover:bg-sky-200/60 dark:border-sky-400/60 dark:text-sky-100 dark:hover:bg-sky-800/40"
+                onClick={handleCopyDebugLog}
+              >
+                Copy log
+              </button>
+            </div>
+          </div>
+          {debugCopyMessage
+            ? (
+                <p className="mb-2 rounded-md bg-sky-200/60 px-2 py-1 text-[11px] font-medium text-sky-900 dark:bg-sky-800/60 dark:text-sky-100">
+                  {debugCopyMessage}
+                </p>
+              )
+            : null}
+          <div className="mb-3 grid gap-2 rounded-lg border border-sky-400/50 bg-sky-100/60 p-3 text-[11px] dark:border-sky-500/50 dark:bg-sky-900/40">
+            <p className="font-semibold text-sky-900 dark:text-sky-100">Snapshot</p>
+            <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words bg-black/10 p-2 font-mono text-[10px] text-sky-900 dark:bg-black/40 dark:text-sky-100">
+              {safeJson(liveSnapshot, 1200)}
+            </pre>
+          </div>
+          <div className="mb-3 grid gap-1 text-[11px] text-sky-900 dark:text-sky-100">
+            <span className="font-semibold">Toggles</span>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={debugOptions.suspendFlipUpdates}
+                  onChange={() => handleDebugToggle('suspendFlipUpdates')}
+                />
+                <span>Suspend flip updates</span>
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={debugOptions.disableEdgeOverlays}
+                  onChange={() => handleDebugToggle('disableEdgeOverlays')}
+                />
+                <span>Disable edge overlays</span>
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={debugOptions.blockTouchReattach}
+                  onChange={() => handleDebugToggle('blockTouchReattach')}
+                />
+                <span>Block touch reattach</span>
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={debugOptions.verbose}
+                  onChange={() => handleDebugToggle('verbose')}
+                />
+                <span>Verbose logging</span>
+              </label>
+            </div>
+          </div>
+          <div className="mb-3 grid gap-1 text-[11px] text-sky-900 dark:text-sky-100">
+            <span className="font-semibold">Counters</span>
+            <div className="grid grid-cols-2 gap-1 md:grid-cols-3">
+              {counterEntries.map(([key, value]) => (
+                <span key={key} className="rounded border border-sky-400/40 bg-sky-100/60 px-2 py-1 font-mono dark:border-sky-500/40 dark:bg-sky-900/40">
+                  {key}
+                  :
+                  {value}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-1 text-[11px] text-sky-900 dark:text-sky-100">
+            <span className="font-semibold">Recent events</span>
+            <div className="max-h-48 overflow-auto rounded border border-sky-400/40 bg-sky-100/60 dark:border-sky-500/40 dark:bg-sky-900/40">
+              <ul className="divide-y divide-sky-400/30 dark:divide-sky-500/30">
+                {recentEvents.length === 0
+                  ? (
+                      <li className="p-2 text-sky-700 dark:text-sky-200/80">No events yet</li>
+                    )
+                  : recentEvents.map(event => (
+                    <li key={`${event.ts}-${event.label}`} className="p-2 font-mono">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>{event.label}</span>
+                        <span className="text-sky-700 dark:text-sky-200/80">
+                          {event.ts.toFixed(1)}
+                          ms
+                        </span>
+                      </div>
+                      <pre className="mt-1 whitespace-pre-wrap break-words text-[10px] text-sky-700 dark:text-sky-200/80">
+                        {safeJson(event.details, 800)}
+                      </pre>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          </div>
         </section>
       );
     }
@@ -1478,8 +2059,10 @@ export const DiaryViewport = ({
 
     const ensurePageActive = () => {
       if (!isActivePage) {
+        logDebug('navigation.ensureActive', { action: 'setDate', targetDate: page.dateISO });
         navigation.setDate(page.dateISO);
       } else if (navigation.currentIndex !== page.index) {
+        logDebug('navigation.ensureActive', { action: 'setIndex', targetIndex: page.index });
         navigation.setIndex(page.index);
       }
     };
@@ -1574,9 +2157,9 @@ export const DiaryViewport = ({
     return (
       <article
         key={page.dateISO}
-        className={`${basePageClass} diary-page--entry ${restrictClickToEdges ? 'pointer-events-none' : ''}`}
+        className={`${basePageClass} diary-page--entry ${edgesActive ? 'pointer-events-none' : ''}`}
         onPointerDown={() => {
-          if (restrictClickToEdges) {
+          if (edgesActive) {
             return;
           }
           if (!isActivePage || navigation.currentIndex !== page.index) {
@@ -1584,7 +2167,7 @@ export const DiaryViewport = ({
           }
         }}
       >
-        {restrictClickToEdges && (
+        {edgesActive && (
           <>
             <button
               type="button"
@@ -1660,7 +2243,15 @@ export const DiaryViewport = ({
             side={pageSide}
             suppressOnChangeRef={suppressEditorOnChangeRef}
             onChange={(nextValue, { source }) => {
+              logDebug('editor.onChange', {
+                source,
+                entryKey,
+                isActivePage,
+                editable,
+                bodyLength: nextValue.length,
+              });
               if (!isActivePage) {
+                incrementCounter('editorSuppressed');
                 return;
               }
               if (nextValue === currentBodyRef.current) {
@@ -1669,6 +2260,7 @@ export const DiaryViewport = ({
               setCurrentBody(nextValue);
               currentBodyRef.current = nextValue;
               if (source === 'external') {
+                incrementCounter('editorExternal');
                 if (externalChangeOriginRef.current === 'draft') {
                   isDirtyRef.current = true;
                 } else if (externalChangeOriginRef.current === 'remote') {
@@ -1677,8 +2269,11 @@ export const DiaryViewport = ({
                 externalChangeOriginRef.current = null;
                 return;
               }
+              incrementCounter('editorUser');
               lastLocalEditRef.current = Date.now();
+              debugLastUserInputRef.current = Date.now();
               if (!editable || !navigation.currentDate) {
+                incrementCounter('editorSuppressed');
                 return;
               }
               isDirtyRef.current = true;
@@ -1686,9 +2281,11 @@ export const DiaryViewport = ({
               void persistDraft(navigation.currentDate, nextValue);
               enqueueSave(navigation.currentDate, nextValue);
               externalChangeOriginRef.current = null;
+              scheduleDebugStuckCheck();
             }}
             fontClassName={DEFAULT_ENTRY_FONT_CLASS}
             colorClassName={DEFAULT_ENTRY_COLOR_CLASS}
+            onDebugEvent={handleEditorDebug}
           />
 
         </div>

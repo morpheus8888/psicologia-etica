@@ -37,6 +37,7 @@ type DiaryEntryEditorProps = {
   statusLabel?: string | null;
   actions?: ReactNode;
   side: 'left' | 'right';
+  onDebugEvent?: (type: string, payload?: Record<string, unknown>) => void;
 };
 
 const theme: EditorThemeClasses = {
@@ -51,11 +52,18 @@ const theme: EditorThemeClasses = {
   },
 };
 
-const OnEditableChange = ({ editable }: { editable: boolean }) => {
+const OnEditableChange = ({
+  editable,
+  onDebugEvent,
+}: {
+  editable: boolean;
+  onDebugEvent?: (type: string, payload?: Record<string, unknown>) => void;
+}) => {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
     editor.setEditable(editable);
-  }, [editor, editable]);
+    onDebugEvent?.('setEditable', { editable });
+  }, [editable, editor, onDebugEvent]);
   return null;
 };
 
@@ -63,10 +71,12 @@ const PrefillPlugin = ({
   value,
   entryKey,
   suppressOnChangeRef,
+  onDebugEvent,
 }: {
   value: string;
   entryKey: string;
   suppressOnChangeRef: MutableRefObject<boolean>;
+  onDebugEvent?: (type: string, payload?: Record<string, unknown>) => void;
 }) => {
   const [editor] = useLexicalComposerContext();
   const lastEntryKeyRef = useRef<string | null>(null);
@@ -74,6 +84,7 @@ const PrefillPlugin = ({
 
   useEffect(() => {
     if (lastEntryKeyRef.current === entryKey && hasInitialisedRef.current) {
+      onDebugEvent?.('prefill.skip', { entryKey, reason: 'already-initialised' });
       return;
     }
 
@@ -88,6 +99,7 @@ const PrefillPlugin = ({
         const paragraph = $createParagraphNode();
         root.append(paragraph);
         paragraph.select();
+        onDebugEvent?.('prefill.apply', { entryKey, valueLength: 0, lines: 0 });
         return;
       }
 
@@ -100,8 +112,9 @@ const PrefillPlugin = ({
         root.append(paragraph);
       });
       hasInitialisedRef.current = true;
+      onDebugEvent?.('prefill.apply', { entryKey, valueLength: value.length, lines: lines.length });
     });
-  }, [editor, entryKey, suppressOnChangeRef, value]);
+  }, [editor, entryKey, onDebugEvent, suppressOnChangeRef, value]);
 
   return null;
 };
@@ -119,6 +132,7 @@ const DiaryEntryEditor = ({
   statusLabel,
   actions,
   side,
+  onDebugEvent,
 }: DiaryEntryEditorProps) => {
   const initialConfig = useMemo<InitialConfigType>(() => ({
     namespace: 'diary-entry',
@@ -131,24 +145,115 @@ const DiaryEntryEditor = ({
   }), [editable]);
 
   const sideClass = side === 'left' ? 'diary-entry-sheet--left' : 'diary-entry-sheet--right';
+  const contentEditableRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    onDebugEvent?.('mount', { entryKey, editable });
+    return () => {
+      onDebugEvent?.('unmount', { entryKey });
+    };
+  }, [editable, entryKey, onDebugEvent]);
+
+  useEffect(() => {
+    const node = contentEditableRef.current;
+    if (!node || !onDebugEvent) {
+      return undefined;
+    }
+
+    const handleBeforeInput = (event: Event) => {
+      const inputEvent = event as InputEvent;
+      onDebugEvent('dom.beforeinput', {
+        inputType: inputEvent.inputType,
+        data: inputEvent.data,
+        isComposing: inputEvent.isComposing,
+      });
+    };
+
+    const handleInput = (event: Event) => {
+      const inputEvent = event as InputEvent;
+      onDebugEvent('dom.input', {
+        inputType: inputEvent.inputType,
+        data: inputEvent.data,
+        isComposing: inputEvent.isComposing,
+      });
+    };
+
+    const handleComposition = (type: string) => (event: CompositionEvent) => {
+      onDebugEvent(`dom.${type}`, {
+        data: event.data,
+      });
+    };
+
+    const handleKey = (type: string) => (event: KeyboardEvent) => {
+      onDebugEvent(`dom.${type}`, {
+        key: event.key,
+        code: event.code,
+        isComposing: event.isComposing,
+        repeat: event.repeat,
+      });
+    };
+
+    const handleFocusBlur = (type: string) => () => {
+      onDebugEvent(`dom.${type}`);
+    };
+
+    const compositionStartHandler = handleComposition('compositionstart');
+    const compositionUpdateHandler = handleComposition('compositionupdate');
+    const compositionEndHandler = handleComposition('compositionend');
+    const keyDownHandler = handleKey('keydown');
+    const keyUpHandler = handleKey('keyup');
+    const focusHandler = handleFocusBlur('focus');
+    const blurHandler = handleFocusBlur('blur');
+
+    node.addEventListener('beforeinput', handleBeforeInput);
+    node.addEventListener('input', handleInput);
+    node.addEventListener('compositionstart', compositionStartHandler);
+    node.addEventListener('compositionupdate', compositionUpdateHandler);
+    node.addEventListener('compositionend', compositionEndHandler);
+    node.addEventListener('keydown', keyDownHandler);
+    node.addEventListener('keyup', keyUpHandler);
+    node.addEventListener('focus', focusHandler);
+    node.addEventListener('blur', blurHandler);
+
+    return () => {
+      node.removeEventListener('beforeinput', handleBeforeInput);
+      node.removeEventListener('input', handleInput);
+      node.removeEventListener('compositionstart', compositionStartHandler);
+      node.removeEventListener('compositionupdate', compositionUpdateHandler);
+      node.removeEventListener('compositionend', compositionEndHandler);
+      node.removeEventListener('keydown', keyDownHandler);
+      node.removeEventListener('keyup', keyUpHandler);
+      node.removeEventListener('focus', focusHandler);
+      node.removeEventListener('blur', blurHandler);
+    };
+  }, [onDebugEvent]);
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <OnEditableChange editable={editable} />
+      <OnEditableChange editable={editable} onDebugEvent={onDebugEvent} />
       <PrefillPlugin
         value={initialValue}
         entryKey={entryKey}
         suppressOnChangeRef={suppressOnChangeRef}
+        onDebugEvent={onDebugEvent}
       />
       <OnChangePlugin
         onChange={(editorState) => {
           editorState.read(() => {
             const root = $getRoot();
-            const source = suppressOnChangeRef.current ? 'external' : 'user';
-            onChange(root.getTextContent(), { source });
-            if (suppressOnChangeRef.current) {
+            const wasSuppressed = suppressOnChangeRef.current;
+            const source = wasSuppressed ? 'external' : 'user';
+            const textContent = root.getTextContent();
+            onChange(textContent, { source });
+            if (wasSuppressed) {
               suppressOnChangeRef.current = false;
             }
+            onDebugEvent?.('onChangePlugin', {
+              entryKey,
+              source,
+              wasSuppressed,
+              textLength: textContent.length,
+            });
           });
         }}
       />
@@ -179,6 +284,7 @@ const DiaryEntryEditor = ({
               contentEditable={(
                 <ContentEditable
                   className="diary-entry-content"
+                  ref={contentEditableRef}
                 />
               )}
               placeholder={(
