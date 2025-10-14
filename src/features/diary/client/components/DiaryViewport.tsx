@@ -1283,6 +1283,7 @@ export const DiaryViewport = ({
               lastLocalEditRef.current = Date.now();
               if (editable) {
                 isDirtyRef.current = true;
+                scheduleFlipRefresh();
                 void handleSaveEntry(nextValue);
               }
             }}
@@ -1404,8 +1405,6 @@ export const DiaryViewport = ({
             disableFlipByClick
             showPageCorners
             mobileScrollSupport={false}
-            usePortrait={false}
-            renderOnlyPageLengthChange
             className="w-full"
           >
             {flipPages}
