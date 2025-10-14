@@ -321,6 +321,7 @@ export const DiaryViewport = ({
   const externalChangeOriginRef = useRef<'remote' | 'draft' | 'reset' | null>(null);
   const previousDateRef = useRef<string | null>(null);
   const passiveHandlersCleanupRef = useRef<(() => void) | null>(null);
+  const volatileDraftsRef = useRef<Map<string, DraftSnapshot>>(new Map());
   const suppressEditorOnChangeRef = useRef(false);
   const lastLocalEditRef = useRef(0);
   const lastRemoteUpdateRef = useRef(0);
@@ -376,6 +377,7 @@ export const DiaryViewport = ({
       return;
     }
     window.localStorage.removeItem(getDraftStorageKey(dateISO));
+    volatileDraftsRef.current.delete(dateISO);
   }, []);
 
   const persistDraft = useCallback(
@@ -384,6 +386,11 @@ export const DiaryViewport = ({
         return;
       }
       if (encryption.status !== 'ready') {
+        // Keep an in-memory volatile draft until the user unlocks E2EE.
+        volatileDraftsRef.current.set(dateISO, {
+          body,
+          updatedAt: Date.now(),
+        });
         return;
       }
       try {
@@ -414,6 +421,11 @@ export const DiaryViewport = ({
     async (dateISO: string): Promise<DraftSnapshot | null> => {
       if (typeof window === 'undefined') {
         return null;
+      }
+      // Prefer volatile in-memory draft when E2EE is locked (no plaintext persistence).
+      if (encryption.status !== 'ready') {
+        const snap = volatileDraftsRef.current.get(dateISO) ?? null;
+        return snap;
       }
       const raw = window.localStorage.getItem(getDraftStorageKey(dateISO));
       if (!raw) {
