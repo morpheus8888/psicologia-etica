@@ -17,6 +17,8 @@ import type { TranslationAdapter, UIAdapter } from '@/features/diary/adapters/ty
 import { useDiaryData } from '@/features/diary/client/context/DiaryDataContext';
 import { useDiaryEncryption } from '@/features/diary/client/context/DiaryEncryptionContext';
 import { useDiaryNavigation } from '@/features/diary/client/context/DiaryNavigationContext';
+import { cryptoAdapter } from '@/features/diary/client/cryptoAdapter';
+import { decryptPayload, encryptPayload } from '@/features/diary/client/cryptoUtils';
 import { resolveDiaryTimezone } from '@/features/diary/feature/resolveTimezone';
 
 import { DiaryCoachDock } from './DiaryCoachDock';
@@ -26,6 +28,48 @@ import { DiarySharePanel } from './DiarySharePanel';
 
 const FlipBook = HTMLFlipBook as unknown as ComponentType<any>;
 const PAGE_EDGE_WIDTH_CLASS = 'w-16'; // 64px edge activation zones
+const SAVE_DEBOUNCE_MS = 800;
+const DRAFT_STORAGE_KEY_PREFIX = 'diary::draft::';
+const DRAFT_STORAGE_VERSION = 1;
+
+const getDraftStorageKey = (dateISO: string) => `${DRAFT_STORAGE_KEY_PREFIX}${dateISO}`;
+
+const encodeBytesToBase64 = (bytes: Uint8Array) => {
+  if (typeof window === 'undefined') {
+    throw new TypeError('BASE64_UNAVAILABLE');
+  }
+  let binary = '';
+  bytes.forEach((value) => {
+    binary += String.fromCharCode(value);
+  });
+  return window.btoa(binary);
+};
+
+const decodeBase64ToBytes = (value: string) => {
+  if (typeof window === 'undefined') {
+    throw new TypeError('BASE64_UNAVAILABLE');
+  }
+  const binary = window.atob(value);
+  const buffer = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    buffer[index] = binary.charCodeAt(index);
+  }
+  return buffer;
+};
+
+type DraftSnapshot = {
+  body: string;
+  updatedAt: number;
+};
+
+type DraftStoragePayload = {
+  version: number;
+  updatedAt: string;
+  encrypted?: boolean;
+  body?: string;
+  ciphertext?: string;
+  nonce?: string;
+};
 
 type PageFlipApi = {
   update: () => void;
@@ -263,6 +307,7 @@ export const DiaryViewport = ({
 
   const flipRef = useRef<FlipBookHandle | null>(null);
   const flipRefreshFrameRef = useRef<number | null>(null);
+  const flipBookReadyRef = useRef(false);
   const [currentBody, setCurrentBody] = useState('');
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
@@ -270,6 +315,11 @@ export const DiaryViewport = ({
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(`${todayISO}T00:00:00`));
   const [calendarSelection, setCalendarSelection] = useState(() => navigation.currentDate ?? todayISO);
   const isDirtyRef = useRef(false);
+  const currentBodyRef = useRef('');
+  const pendingSaveTimeoutRef = useRef<number | null>(null);
+  const pendingSaveValueRef = useRef<{ dateISO: string; body: string } | null>(null);
+  const externalChangeOriginRef = useRef<'remote' | 'draft' | 'reset' | null>(null);
+  const previousDateRef = useRef<string | null>(null);
   const passiveHandlersCleanupRef = useRef<(() => void) | null>(null);
   const suppressEditorOnChangeRef = useRef(false);
   const lastLocalEditRef = useRef(0);
@@ -284,6 +334,9 @@ export const DiaryViewport = ({
   // NOTE: flip-book contracts follow docs/stpageflip/README.md; check before tweaking behaviour.
   const scheduleFlipRefresh = useCallback(() => {
     if (typeof window === 'undefined') {
+      return;
+    }
+    if (!flipBookReadyRef.current) {
       return;
     }
     if (flipRefreshFrameRef.current !== null) {
@@ -309,6 +362,108 @@ export const DiaryViewport = ({
 
   const isDesktop = ui.isDesktop();
   const encryption = useDiaryEncryption();
+  const isCurrentPageEditable = navigation.currentDate
+    ? isEntryEditable(
+      navigation.currentDate,
+      todayISO,
+      data.diaryGraceMinutes,
+      nowISO,
+    )
+    : false;
+
+  const clearDraft = useCallback((dateISO: string) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.removeItem(getDraftStorageKey(dateISO));
+  }, []);
+
+  const persistDraft = useCallback(
+    async (dateISO: string, body: string) => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+      if (encryption.status !== 'ready') {
+        return;
+      }
+      try {
+        const { cryptoKey } = encryption.getMasterKey();
+        const { ciphertext, nonce } = await encryptPayload({
+          key: cryptoKey,
+          cryptoAdapter,
+          payload: { body },
+        });
+        const record: DraftStoragePayload = {
+          version: DRAFT_STORAGE_VERSION,
+          updatedAt: new Date().toISOString(),
+          encrypted: true,
+          ciphertext: encodeBytesToBase64(ciphertext),
+          nonce: encodeBytesToBase64(nonce),
+        };
+        window.localStorage.setItem(getDraftStorageKey(dateISO), JSON.stringify(record));
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Failed to persist diary draft', error);
+        }
+      }
+    },
+    [encryption],
+  );
+
+  const loadDraft = useCallback(
+    async (dateISO: string): Promise<DraftSnapshot | null> => {
+      if (typeof window === 'undefined') {
+        return null;
+      }
+      const raw = window.localStorage.getItem(getDraftStorageKey(dateISO));
+      if (!raw) {
+        return null;
+      }
+      try {
+        const parsed = JSON.parse(raw) as DraftStoragePayload;
+        if (parsed.version !== DRAFT_STORAGE_VERSION || typeof parsed.updatedAt !== 'string') {
+          return null;
+        }
+        const updatedAt = Number.isFinite(Date.parse(parsed.updatedAt))
+          ? Date.parse(parsed.updatedAt)
+          : Date.now();
+        if (parsed.encrypted) {
+          if (!parsed.ciphertext || !parsed.nonce) {
+            return null;
+          }
+          if (encryption.status !== 'ready') {
+            // Keep draft for later; user must unlock before we can read it.
+            return null;
+          }
+          const { cryptoKey } = encryption.getMasterKey();
+          const payload = await decryptPayload<{ body: string }>({
+            key: cryptoKey,
+            cryptoAdapter,
+            ciphertext: decodeBase64ToBytes(parsed.ciphertext),
+            nonce: decodeBase64ToBytes(parsed.nonce),
+          });
+          return {
+            body: payload.body ?? '',
+            updatedAt,
+          };
+        }
+        if (typeof parsed.body !== 'string') {
+          return null;
+        }
+        return {
+          body: parsed.body,
+          updatedAt,
+        };
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('Failed to load diary draft', error);
+        }
+        window.localStorage.removeItem(getDraftStorageKey(dateISO));
+        return null;
+      }
+    },
+    [encryption],
+  );
 
   useEffect(() => {
     const targetDate = navigation.currentDate;
@@ -318,6 +473,8 @@ export const DiaryViewport = ({
       lastLocalEditRef.current = 0;
       lastRemoteUpdateRef.current = 0;
       suppressEditorOnChangeRef.current = true;
+      externalChangeOriginRef.current = 'reset';
+      currentBodyRef.current = '';
       setCurrentBody('');
       setCurrentEntryId(null);
       scheduleFlipRefresh();
@@ -332,12 +489,51 @@ export const DiaryViewport = ({
     lastLocalEditRef.current = 0;
     lastRemoteUpdateRef.current = 0;
     suppressEditorOnChangeRef.current = true;
+    externalChangeOriginRef.current = 'reset';
+    currentBodyRef.current = '';
     setCurrentBody('');
     setCurrentEntryId(null);
 
     let cancelled = false;
 
-    void loadEntryRef.current(targetDate).then((entry) => {
+    const load = async () => {
+      let draft: DraftSnapshot | null = null;
+
+      try {
+        draft = await loadDraft(targetDate);
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Failed to load diary draft', error);
+        }
+      }
+
+      if (
+        cancelled
+        || navigation.currentDate !== targetDate
+        || loadRequestIdRef.current !== loadId
+      ) {
+        return;
+      }
+
+      if (draft) {
+        currentBodyRef.current = draft.body;
+        setCurrentBody(draft.body);
+        externalChangeOriginRef.current = 'draft';
+        isDirtyRef.current = true;
+        lastLocalEditRef.current = draft.updatedAt;
+        suppressEditorOnChangeRef.current = true;
+      }
+
+      let entry: Awaited<ReturnType<typeof loadEntryRef.current>> | null = null;
+
+      try {
+        entry = await loadEntryRef.current(targetDate);
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Failed to load diary entry', error);
+        }
+      }
+
       if (
         cancelled
         || navigation.currentDate !== targetDate
@@ -349,11 +545,11 @@ export const DiaryViewport = ({
       if (!entry) {
         lastRemoteUpdateRef.current = 0;
         setCurrentEntryId(null);
-        if (!isDirtyRef.current) {
+        if (!draft) {
           suppressEditorOnChangeRef.current = true;
+          externalChangeOriginRef.current = 'reset';
+          currentBodyRef.current = '';
           setCurrentBody('');
-        } else {
-          suppressEditorOnChangeRef.current = false;
         }
         scheduleFlipRefresh();
         return;
@@ -367,27 +563,31 @@ export const DiaryViewport = ({
         : remoteTimestampRaw;
       lastRemoteUpdateRef.current = remoteTimestamp;
 
-      if (lastLocalEditRef.current > loadStartedAt) {
-        suppressEditorOnChangeRef.current = false;
-        return;
-      }
-
-      if (isDirtyRef.current && lastLocalEditRef.current > remoteTimestamp) {
-        suppressEditorOnChangeRef.current = false;
+      if (draft && draft.updatedAt > remoteTimestamp) {
+        isDirtyRef.current = true;
+        suppressEditorOnChangeRef.current = true;
+        externalChangeOriginRef.current = 'draft';
+        scheduleFlipRefresh();
         return;
       }
 
       isDirtyRef.current = false;
       lastLocalEditRef.current = remoteTimestamp;
       suppressEditorOnChangeRef.current = true;
-      setCurrentBody(entry.content.body);
+      const nextBody = entry.content.body ?? '';
+      currentBodyRef.current = nextBody;
+      setCurrentBody(nextBody);
+      externalChangeOriginRef.current = 'remote';
+      clearDraft(targetDate);
       scheduleFlipRefresh();
-    });
+    };
+
+    void load();
 
     return () => {
       cancelled = true;
     };
-  }, [navigation.currentDate, scheduleFlipRefresh]);
+  }, [clearDraft, loadDraft, navigation.currentDate, scheduleFlipRefresh]);
 
   useEffect(() => {
     void data.loadGoals();
@@ -529,31 +729,210 @@ export const DiaryViewport = ({
     [navigation],
   );
 
-  const handleSaveEntry = useCallback(async (bodyOverride?: string) => {
-    if (!navigation.currentDate) {
-      return null;
+  const handleFlipbookInit = useCallback(() => {
+    flipBookReadyRef.current = true;
+    scheduleFlipRefresh();
+    ensurePassiveTouchHandlers();
+  }, [ensurePassiveTouchHandlers, scheduleFlipRefresh]);
+
+  const handleSaveEntry = useCallback(
+    async (bodyOverride?: string, dateOverride?: string) => {
+      const targetDateISO = dateOverride ?? navigation.currentDate;
+      if (!targetDateISO) {
+        return null;
+      }
+      const bodyToPersist = bodyOverride ?? (targetDateISO === navigation.currentDate
+        ? currentBodyRef.current
+        : bodyOverride ?? '');
+
+      const nowISO = new Date().toISOString();
+
+      const saved = await data.saveEntry({
+        dateISO: targetDateISO,
+        content: {
+          body: bodyToPersist,
+          createdAtISO: nowISO,
+          updatedAtISO: nowISO,
+        },
+        tzAtEntry: data.profile?.timezone ?? null,
+      });
+
+      if (targetDateISO === navigation.currentDate) {
+        setCurrentEntryId(saved.record.id);
+        const savedTimestamp = Date.parse(saved.content.updatedAtISO ?? '') || Date.now();
+        lastLocalEditRef.current = savedTimestamp;
+        lastRemoteUpdateRef.current = savedTimestamp;
+        if (currentBodyRef.current === bodyToPersist) {
+          isDirtyRef.current = false;
+        }
+        suppressEditorOnChangeRef.current = true;
+      }
+      if (
+        pendingSaveValueRef.current
+        && pendingSaveValueRef.current.dateISO === targetDateISO
+        && pendingSaveValueRef.current.body === bodyToPersist
+      ) {
+        pendingSaveValueRef.current = null;
+      }
+      clearDraft(targetDateISO);
+      return saved;
+    },
+    [clearDraft, data, navigation.currentDate],
+  );
+
+  const enqueueSave = useCallback(
+    (dateISO: string, body: string) => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+      pendingSaveValueRef.current = { dateISO, body };
+      if (pendingSaveTimeoutRef.current !== null) {
+        window.clearTimeout(pendingSaveTimeoutRef.current);
+      }
+      pendingSaveTimeoutRef.current = window.setTimeout(() => {
+        pendingSaveTimeoutRef.current = null;
+        const pending = pendingSaveValueRef.current;
+        if (!pending || pending.dateISO !== dateISO) {
+          return;
+        }
+        pendingSaveValueRef.current = null;
+        void handleSaveEntry(pending.body, pending.dateISO).catch((error) => {
+          if (process.env.NODE_ENV !== 'production') {
+            console.error('Failed to auto-save diary entry', error);
+          }
+          pendingSaveValueRef.current = pending;
+          isDirtyRef.current = true;
+        });
+      }, SAVE_DEBOUNCE_MS);
+    },
+    [handleSaveEntry],
+  );
+
+  const flushPendingSave = useCallback(
+    async (targetDate?: string) => {
+      if (typeof window !== 'undefined' && pendingSaveTimeoutRef.current !== null) {
+        window.clearTimeout(pendingSaveTimeoutRef.current);
+        pendingSaveTimeoutRef.current = null;
+      }
+      const pending = pendingSaveValueRef.current;
+      if (pending && (!targetDate || pending.dateISO === targetDate)) {
+        pendingSaveValueRef.current = null;
+        try {
+          await handleSaveEntry(pending.body, pending.dateISO);
+        } catch (error) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.error('Failed to flush diary entry', error);
+          }
+          pendingSaveValueRef.current = pending;
+          isDirtyRef.current = true;
+        }
+        return;
+      }
+      if (targetDate && targetDate !== navigation.currentDate) {
+        return;
+      }
+      if (!navigation.currentDate || !isDirtyRef.current) {
+        return;
+      }
+      try {
+        await handleSaveEntry(currentBodyRef.current, navigation.currentDate);
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Failed to flush diary entry', error);
+        }
+        isDirtyRef.current = true;
+      }
+    },
+    [handleSaveEntry, navigation.currentDate],
+  );
+
+  const hasPendingChanges = useCallback(() => {
+    if (pendingSaveTimeoutRef.current !== null) {
+      return true;
     }
+    if (pendingSaveValueRef.current) {
+      return true;
+    }
+    return isDirtyRef.current;
+  }, []);
 
-    const bodyToPersist = bodyOverride ?? currentBody;
+  const handleInsertPrompt = useCallback(
+    (text: string) => {
+      if (!navigation.currentDate || !isCurrentPageEditable) {
+        return;
+      }
+      const trimmed = text.trim();
+      if (trimmed.length === 0) {
+        return;
+      }
+      const next = `${currentBodyRef.current}\n\n${trimmed}`.trim();
+      currentBodyRef.current = next;
+      setCurrentBody(next);
+      lastLocalEditRef.current = Date.now();
+      isDirtyRef.current = true;
+      scheduleFlipRefresh();
+      void persistDraft(navigation.currentDate, next);
+      enqueueSave(navigation.currentDate, next);
+      externalChangeOriginRef.current = null;
+    },
+    [
+      enqueueSave,
+      isCurrentPageEditable,
+      navigation.currentDate,
+      persistDraft,
+      scheduleFlipRefresh,
+    ],
+  );
 
-    const saved = await data.saveEntry({
-      dateISO: navigation.currentDate,
-      content: {
-        body: bodyToPersist,
-        createdAtISO: new Date().toISOString(),
-        updatedAtISO: new Date().toISOString(),
-      },
-      tzAtEntry: data.profile?.timezone ?? null,
-    });
+  useEffect(() => {
+    const previousDate = previousDateRef.current;
+    if (previousDate && previousDate !== navigation.currentDate) {
+      void flushPendingSave(previousDate);
+    }
+    previousDateRef.current = navigation.currentDate;
+  }, [flushPendingSave, navigation.currentDate]);
 
-    setCurrentEntryId(saved.record.id);
-    isDirtyRef.current = false;
-    const savedTimestamp = Date.parse(saved.content.updatedAtISO ?? '') || Date.now();
-    lastLocalEditRef.current = savedTimestamp;
-    lastRemoteUpdateRef.current = savedTimestamp;
-    suppressEditorOnChangeRef.current = true;
-    return saved;
-  }, [currentBody, data, navigation.currentDate]);
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasPendingChanges()) {
+        return;
+      }
+      event.preventDefault();
+      event.returnValue = '';
+      void flushPendingSave();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [flushPendingSave, hasPendingChanges]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        void flushPendingSave();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [flushPendingSave]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && pendingSaveTimeoutRef.current !== null) {
+        window.clearTimeout(pendingSaveTimeoutRef.current);
+      }
+      void flushPendingSave();
+    };
+  }, [flushPendingSave]);
 
   const goals = useMemo(() => Array.from(data.goals.values()), [data.goals]);
   const entryMetaMap = data.entryMeta;
@@ -1272,20 +1651,29 @@ export const DiaryViewport = ({
               if (!isActivePage) {
                 return;
               }
-              if (nextValue === currentBody) {
+              if (nextValue === currentBodyRef.current) {
                 return;
               }
               setCurrentBody(nextValue);
+              currentBodyRef.current = nextValue;
               if (source === 'external') {
-                isDirtyRef.current = false;
+                if (externalChangeOriginRef.current === 'draft') {
+                  isDirtyRef.current = true;
+                } else if (externalChangeOriginRef.current === 'remote') {
+                  isDirtyRef.current = false;
+                }
+                externalChangeOriginRef.current = null;
                 return;
               }
               lastLocalEditRef.current = Date.now();
-              if (editable) {
-                isDirtyRef.current = true;
-                scheduleFlipRefresh();
-                void handleSaveEntry(nextValue);
+              if (!editable || !navigation.currentDate) {
+                return;
               }
+              isDirtyRef.current = true;
+              scheduleFlipRefresh();
+              void persistDraft(navigation.currentDate, nextValue);
+              enqueueSave(navigation.currentDate, nextValue);
+              externalChangeOriginRef.current = null;
             }}
             fontClassName={DEFAULT_ENTRY_FONT_CLASS}
             colorClassName={DEFAULT_ENTRY_COLOR_CLASS}
@@ -1402,11 +1790,11 @@ export const DiaryViewport = ({
             onFlip={handleFlip}
             onChangeOrientation={handleOrientationChange}
             onChangeState={handleStateChange}
+            onInit={handleFlipbookInit}
             disableFlipByClick
             showPageCorners
             mobileScrollSupport={false}
             usePortrait={false}
-            renderOnlyPageLengthChange
             className="w-full"
           >
             {flipPages}
@@ -1510,7 +1898,7 @@ export const DiaryViewport = ({
           promptLocaleFallback={promptLocaleFallback}
           scope={coachScope}
           tags={coachTags}
-          onInsertPrompt={text => setCurrentBody(prev => `${prev}\n\n${text}`.trim())}
+          onInsertPrompt={handleInsertPrompt}
           t={t.getNamespace('coach')}
           ui={ui}
         />
