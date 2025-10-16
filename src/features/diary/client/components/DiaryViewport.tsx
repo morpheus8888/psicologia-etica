@@ -27,7 +27,7 @@ import { DiarySharePanel } from './DiarySharePanel';
 
 const FlipBook = HTMLFlipBook as unknown as ComponentType<any>;
 const PAGE_EDGE_WIDTH_CLASS = 'w-16'; // 64px edge activation zones
-const SAVE_DEBOUNCE_MS = 800;
+const SAVE_DEBOUNCE_MS = 10000;
 const DRAFT_STORAGE_KEY_PREFIX = 'diary::draft::';
 const DRAFT_STORAGE_VERSION = 1;
 const DEBUG_BUFFER_LIMIT = 200;
