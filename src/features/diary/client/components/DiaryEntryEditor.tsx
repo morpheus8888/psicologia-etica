@@ -99,6 +99,7 @@ const PrefillPlugin = ({
         const paragraph = $createParagraphNode();
         root.append(paragraph);
         paragraph.select();
+        hasInitialisedRef.current = true;
         onDebugEvent?.('prefill.apply', { entryKey, valueLength: 0, lines: 0 });
         return;
       }

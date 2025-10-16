@@ -451,6 +451,8 @@ export const DiaryViewport = ({
   const debugStuckTimeoutRef = useRef<number | null>(null);
   const [debugCopyMessage, setDebugCopyMessage] = useState<string | null>(null);
   const compositionActiveRef = useRef(false);
+  const editorHasFocusRef = useRef(false);
+  const pendingFlipRefreshRef = useRef(false);
   const lastFlipUpdateTimeRef = useRef(0);
   const editorVersionRef = useRef<Map<string, number>>(new Map());
   const [isFlipbookReady, setIsFlipbookReady] = useState(false);
@@ -704,7 +706,7 @@ export const DiaryViewport = ({
       distElement: uiInstance.getDistElement()?.tagName ?? 'unknown',
     });
     return true;
-  }, [incrementCounter, logDebug]);
+  }, [hasTouchSupport, incrementCounter, logDebug]);
 
   const handleDebugDump = useCallback(() => {
     logDebug('debug.dump', {}, true);
@@ -741,6 +743,14 @@ export const DiaryViewport = ({
       logDebug('flipbook.update.skip', { reason: 'composition-active' });
       return;
     }
+    if (editorHasFocusRef.current) {
+      if (!pendingFlipRefreshRef.current) {
+        pendingFlipRefreshRef.current = true;
+        incrementCounter('flipUpdatesSkipped');
+        logDebug('flipbook.update.skip', { reason: 'editor-focused' });
+      }
+      return;
+    }
     if (flipRefreshFrameRef.current !== null) {
       window.cancelAnimationFrame(flipRefreshFrameRef.current);
     }
@@ -757,10 +767,12 @@ export const DiaryViewport = ({
       flipRefreshFrameRef.current = null;
       const pageFlipInstance = flipRef.current?.pageFlip?.();
       if (!pageFlipInstance?.update) {
+        pendingFlipRefreshRef.current = false;
         incrementCounter('flipUpdatesSkipped');
         logDebug('flipbook.update.skip', { reason: 'no-instance' });
         return;
       }
+      pendingFlipRefreshRef.current = false;
       incrementCounter('flipUpdates');
       logDebug('flipbook.update', { scheduledAt, ready: flipBookReadyRef.current });
       pageFlipInstance.update();
@@ -1414,6 +1426,26 @@ export const DiaryViewport = ({
   );
 
   const handleEditorDebug = useCallback((type: string, payload?: Record<string, unknown>) => {
+    if (
+      (type === 'dom.beforeinput' || type === 'dom.input' || type === 'dom.keydown')
+      && !editorHasFocusRef.current
+    ) {
+      editorHasFocusRef.current = true;
+      logDebug('editor.dom.focus.inferred', payload ?? {});
+    }
+    if (type === 'dom.focus') {
+      editorHasFocusRef.current = true;
+      logDebug('editor.dom.focus', payload ?? {});
+      return;
+    }
+    if (type === 'dom.blur') {
+      editorHasFocusRef.current = false;
+      logDebug('editor.dom.blur', payload ?? {});
+      if (pendingFlipRefreshRef.current) {
+        scheduleFlipRefresh();
+      }
+      return;
+    }
     if (type === 'dom.compositionstart') {
       compositionActiveRef.current = true;
       incrementCounter('editorComposition');
