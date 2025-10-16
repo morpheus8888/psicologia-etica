@@ -230,8 +230,10 @@ const isEntryEditable = (
   todayISO: string,
   graceMinutes: number | null,
   nowISO: string,
+  clientTodayISO: string,
+  clientNow: number,
 ) => {
-  if (dateISO === todayISO) {
+  if (dateISO === todayISO || dateISO === clientTodayISO) {
     return true;
   }
 
@@ -240,7 +242,8 @@ const isEntryEditable = (
   }
 
   const target = new Date(`${dateISO}T23:59:59Z`).getTime();
-  const now = new Date(nowISO).getTime();
+  const nowServer = new Date(nowISO).getTime();
+  const now = Number.isNaN(clientNow) ? nowServer : clientNow;
   const diffMinutes = Math.abs(target - now) / 60000;
   return diffMinutes <= graceMinutes;
 };
@@ -441,6 +444,8 @@ export const DiaryViewport = ({
   const editorVersionRef = useRef<Map<string, number>>(new Map());
   const [, forceEditorVersionUpdate] = useState(0);
   const [isFlipbookReady, setIsFlipbookReady] = useState(false);
+  const clientTodayISORef = useRef(toISODate(new Date()));
+  const clientNowRef = useRef(Date.now());
 
   useEffect(() => {
     loadEntryRef.current = data.loadEntry;
@@ -548,6 +553,23 @@ export const DiaryViewport = ({
     setHasTouchSupport(hasTouchSupport);
     logDebug('touch.support.detect', { hasTouchSupport });
   }, [logDebug]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const refreshClientTime = () => {
+      clientTodayISORef.current = toISODate(new Date());
+      clientNowRef.current = Date.now();
+    };
+    refreshClientTime();
+    window.addEventListener('focus', refreshClientTime);
+    const intervalId = window.setInterval(refreshClientTime, 60_000);
+    return () => {
+      window.removeEventListener('focus', refreshClientTime);
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   useEffect(() => {
     if (debugStuckTimeoutRef.current !== null && typeof window !== 'undefined') {
@@ -757,6 +779,8 @@ export const DiaryViewport = ({
       todayISO,
       data.diaryGraceMinutes,
       nowISO,
+      clientTodayISORef.current,
+      clientNowRef.current,
     )
     : false;
 
@@ -1916,12 +1940,15 @@ export const DiaryViewport = ({
     const restrictClickToEdges = page.index !== firstDayPageIndex && page.index !== lastDayPageIndex;
     const edgesActive = restrictClickToEdges && !debugOptions.disableEdgeOverlays;
     const isActivePage = navigation.currentDate === page.dateISO;
-    const editable = isEntryEditable(
+    const allowEditing = isEntryEditable(
       page.dateISO,
       todayISO,
       data.diaryGraceMinutes,
       nowISO,
+      clientTodayISORef.current,
+      clientNowRef.current,
     );
+    const editable = isActivePage && allowEditing;
     const entryVersion = getOrInitEditorVersion(page.dateISO);
     const entryKey = `${page.dateISO}:v${entryVersion}`;
     const showDebugPanel = page.side === 'left' && page.dateISO === todayISO && isFlipbookReady;
@@ -2147,9 +2174,11 @@ export const DiaryViewport = ({
         navigationDate: navigation.currentDate,
         index: page.index,
         editable,
+        allowEditing,
         isActivePage,
         graceMinutes: data.diaryGraceMinutes,
         side: page.side,
+        clientTodayISO: clientTodayISORef.current,
       });
     }
 
