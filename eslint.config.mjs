@@ -26,6 +26,8 @@ export default antfu({
     'migrations/**/*',
     'next-env.d.ts',
     'docs/react-pageflip.md',
+    'docs/lexical/**',
+    'docs/stpageflip/**',
   ],
 }, ...tailwind.configs['flat/recommended'], jsxA11y.flatConfigs.recommended, {
   plugins: {
