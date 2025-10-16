@@ -17,7 +17,7 @@ type DiaryStaticPage =
   | { kind: 'cover-right'; index: number }
   | { kind: 'goals'; side: 'left' | 'right'; index: number }
   | { kind: 'calendar'; side: 'left' | 'right'; index: number };
-type DiaryDayPage = { kind: 'day'; index: number; dateISO: string };
+type DiaryDayPage = { kind: 'day'; side: 'left' | 'right'; index: number; dateISO: string };
 
 export type DiaryPage = DiaryStaticPage | DiaryDayPage;
 
@@ -88,7 +88,7 @@ export const DiaryNavigationProvider = ({
       return deepLink.index;
     }
     const position = initialDatePages.indexOf(initialActiveDate);
-    return position >= 0 ? basePageCount + position : basePageCount;
+    return position >= 0 ? basePageCount + position * 2 : basePageCount;
   }, [basePageCount, deepLink?.index, initialActiveDate, initialDatePages]);
 
   const initialCurrentDate = useMemo(() => {
@@ -96,7 +96,7 @@ export const DiaryNavigationProvider = ({
       if (deepLink.index < basePageCount) {
         return null;
       }
-      const position = deepLink.index - basePageCount;
+      const position = Math.floor((deepLink.index - basePageCount) / 2);
       return initialDatePages[position] ?? initialActiveDate;
     }
     return initialActiveDate;
@@ -116,11 +116,23 @@ export const DiaryNavigationProvider = ({
       { kind: 'calendar', side: 'right', index: 5 },
     ];
 
-    const dayPages = datePages.map((dateISO, position) => ({
-      kind: 'day' as const,
-      index: position + basePageCount,
-      dateISO,
-    }));
+    const dayPages = datePages.flatMap((dateISO, position) => {
+      const leftIndex = basePageCount + position * 2;
+      return [
+        {
+          kind: 'day' as const,
+          side: 'left' as const,
+          index: leftIndex,
+          dateISO,
+        },
+        {
+          kind: 'day' as const,
+          side: 'right' as const,
+          index: leftIndex + 1,
+          dateISO,
+        },
+      ];
+    });
 
     return [...staticPages, ...dayPages];
   }, [basePageCount, datePages]);
@@ -151,7 +163,7 @@ export const DiaryNavigationProvider = ({
         return [normalized, ...prev];
       });
 
-      const page = pages.find(item => item.kind === 'day' && item.dateISO === normalized);
+      const page = pages.find(item => item.kind === 'day' && item.side === 'left' && item.dateISO === normalized);
       const index = page?.index ?? basePageCount;
       setCurrentIndex(index);
       setCurrentDate(normalized);
@@ -181,7 +193,7 @@ export const DiaryNavigationProvider = ({
       });
 
       const selectedIndex = monthDays.indexOf(normalized);
-      const index = basePageCount + (selectedIndex >= 0 ? selectedIndex : 0);
+      const index = basePageCount + (selectedIndex >= 0 ? selectedIndex * 2 : 0);
       setCurrentIndex(index);
       setCurrentDate(normalized);
       routing.navigateToDiaryDate(normalized);

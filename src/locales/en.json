@@ -136,6 +136,9 @@
       "today": "Today",
       "desktopOnly": "The flip-book experience is currently available on desktop. Switch to a larger screen to explore your diary."
     },
+    "extension": {
+      "title": "Goals"
+    },
     "goals": {
       "title": "Goals & priorities",
       "empty": "No goals yet",

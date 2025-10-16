@@ -1907,23 +1907,16 @@ export const DiaryViewport = ({
   const dayPagesNodes = dayPages.map((page) => {
     const restrictClickToEdges = page.index !== firstDayPageIndex && page.index !== lastDayPageIndex;
     const edgesActive = restrictClickToEdges && !debugOptions.disableEdgeOverlays;
+    const isActivePage = navigation.currentDate === page.dateISO;
     const editable = isEntryEditable(
       page.dateISO,
       todayISO,
       data.diaryGraceMinutes,
       nowISO,
     );
-    const hasDeadlineForPage = goals.some(goal => goal.content.deadlineISO === page.dateISO);
-    const disableShare = !navigation.currentDate || (!currentEntryId && !editable);
-    const disableGoalLink = !navigation.currentDate || (!currentEntryId && !editable);
-    const isActivePage = navigation.currentDate === page.dateISO;
-    const hasPersistedEntry = entryMetaMap.has(page.dateISO);
-    const showReadonlyLabel = !editable && hasPersistedEntry;
-    const textareaPlaceholder = editable ? t.getNamespace('entry').t('placeholder') : undefined;
-    const showEmptyReadOnlyState = !editable && !hasPersistedEntry;
     const entryVersion = getOrInitEditorVersion(page.dateISO);
     const entryKey = `${page.dateISO}:v${entryVersion}`;
-    const showDebugPanel = page.dateISO === todayISO && isFlipbookReady;
+    const showDebugPanel = page.side === 'left' && page.dateISO === todayISO && isFlipbookReady;
     if (showDebugPanel) {
       const liveSnapshot = {
         ...collectDebugSnapshot('panel'),
@@ -2055,8 +2048,6 @@ export const DiaryViewport = ({
       );
     }
 
-    const pageSide: 'left' | 'right' = page.index % 2 === 0 ? 'left' : 'right';
-
     const ensurePageActive = () => {
       if (!isActivePage) {
         logDebug('navigation.ensureActive', { action: 'setDate', targetDate: page.dateISO });
@@ -2067,6 +2058,77 @@ export const DiaryViewport = ({
       }
     };
 
+    if (page.side === 'right') {
+      return (
+        <article
+          key={`${page.dateISO}-right`}
+          className={`${basePageClass} diary-page--entry ${edgesActive ? 'pointer-events-none' : ''}`}
+          onPointerDown={() => {
+            if (edgesActive) {
+              return;
+            }
+            if (!isActivePage || navigation.currentIndex !== page.index) {
+              ensurePageActive();
+            }
+          }}
+        >
+          {edgesActive && (
+            <>
+              <button
+                type="button"
+                className={`pointer-events-auto absolute inset-y-0 left-0 ${PAGE_EDGE_WIDTH_CLASS} cursor-pointer border-none bg-transparent p-0`}
+                aria-hidden="true"
+                tabIndex={-1}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  ensurePageActive();
+                }}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  ensurePageActive();
+                }}
+              />
+              <button
+                type="button"
+                className={`pointer-events-auto absolute inset-y-0 right-0 ${PAGE_EDGE_WIDTH_CLASS} cursor-pointer border-none bg-transparent p-0`}
+                aria-hidden="true"
+                tabIndex={-1}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  ensurePageActive();
+                }}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  ensurePageActive();
+                }}
+              />
+            </>
+          )}
+          <div
+            data-diary-sheet="true"
+            className="diary-entry-sheet diary-entry-sheet--right relative z-10 flex h-full flex-col"
+          >
+            <div className="px-6 pt-6">
+              <p className="text-lg font-semibold text-foreground">
+                {t.getNamespace('extension').t('title')}
+              </p>
+            </div>
+          </div>
+        </article>
+      );
+    }
+
+    const hasDeadlineForPage = goals.some(goal => goal.content.deadlineISO === page.dateISO);
+    const disableShare = !navigation.currentDate || (!currentEntryId && !editable);
+    const disableGoalLink = !navigation.currentDate || (!currentEntryId && !editable);
+    const hasPersistedEntry = entryMetaMap.has(page.dateISO);
+    const showReadonlyLabel = !editable && hasPersistedEntry;
+    const textareaPlaceholder = editable ? t.getNamespace('entry').t('placeholder') : undefined;
+    const showEmptyReadOnlyState = !editable && !hasPersistedEntry;
     const hasShareAction = data.professionals.length > 0;
     const hasGoalAction = goals.length > 0;
 
@@ -2156,7 +2218,7 @@ export const DiaryViewport = ({
 
     return (
       <article
-        key={page.dateISO}
+        key={`${page.dateISO}-left`}
         className={`${basePageClass} diary-page--entry ${edgesActive ? 'pointer-events-none' : ''}`}
         onPointerDown={() => {
           if (edgesActive) {
@@ -2240,7 +2302,7 @@ export const DiaryViewport = ({
             heading={formatDateLabel(page.dateISO, locale)}
             statusLabel={statusLabelText}
             actions={headingActions}
-            side={pageSide}
+            side={page.side}
             suppressOnChangeRef={suppressEditorOnChangeRef}
             onChange={(nextValue, { source }) => {
               logDebug('editor.onChange', {

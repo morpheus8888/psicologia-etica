@@ -136,6 +136,9 @@
       "today": "Oggi",
       "desktopOnly": "L'esperienza a sfoglio è disponibile solo da desktop. Passa a uno schermo più grande per esplorare il diario."
     },
+    "extension": {
+      "title": "Obiettivi"
+    },
     "goals": {
       "title": "Obiettivi e priorità",
       "empty": "Nessun obiettivo al momento",
