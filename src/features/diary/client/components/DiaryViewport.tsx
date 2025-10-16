@@ -2516,6 +2516,7 @@ export const DiaryViewport = ({
             showPageCorners
             mobileScrollSupport={false}
             usePortrait={false}
+            useMouseEvents={false}
             className="w-full"
           >
             {flipPages}
