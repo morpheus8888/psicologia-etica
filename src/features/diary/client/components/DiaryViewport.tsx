@@ -438,6 +438,14 @@ export const DiaryViewport = ({
     enableMobileScroll: false,
     verbose: false,
   });
+  const flipbookSettingsKey = useMemo(
+    () => JSON.stringify({
+      enableMouseEvents: debugOptions.enableMouseEvents,
+      enableClickFlip: debugOptions.enableClickFlip,
+      enableMobileScroll: debugOptions.enableMobileScroll,
+    }),
+    [debugOptions.enableClickFlip, debugOptions.enableMobileScroll, debugOptions.enableMouseEvents],
+  );
   const debugOptionsRef = useRef(debugOptions);
   const debugLastUserInputRef = useRef(0);
   const debugStuckTimeoutRef = useRef<number | null>(null);
@@ -2519,6 +2527,7 @@ export const DiaryViewport = ({
 
         <div className="diary-flipbook-shell">
           <FlipBook
+            key={flipbookSettingsKey}
             ref={flipRef}
             width={540}
             height={680}
