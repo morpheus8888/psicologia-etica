@@ -2127,7 +2127,7 @@ export const DiaryViewport = ({
       return (
         <article
           key={`${page.dateISO}-right`}
-          className={`${basePageClass} diary-page--entry ${edgesActive ? 'pointer-events-none' : ''}`}
+          className={`${basePageClass} diary-page--entry`}
           onPointerDown={() => {
             if (edgesActive) {
               return;
@@ -2299,7 +2299,7 @@ export const DiaryViewport = ({
     return (
       <article
         key={`${page.dateISO}-left`}
-        className={`${basePageClass} diary-page--entry ${edgesActive ? 'pointer-events-none' : ''}`}
+        className={`${basePageClass} diary-page--entry`}
         onPointerDown={() => {
           if (edgesActive) {
             return;
