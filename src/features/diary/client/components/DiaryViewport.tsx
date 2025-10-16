@@ -453,6 +453,8 @@ export const DiaryViewport = ({
   const compositionActiveRef = useRef(false);
   const editorHasFocusRef = useRef(false);
   const pendingFlipRefreshRef = useRef(false);
+  const editorHasFocusRef = useRef(false);
+  const pendingFlipRefreshRef = useRef(false);
   const lastFlipUpdateTimeRef = useRef(0);
   const editorVersionRef = useRef<Map<string, number>>(new Map());
   const [isFlipbookReady, setIsFlipbookReady] = useState(false);
@@ -765,14 +767,38 @@ export const DiaryViewport = ({
     }
     flipRefreshFrameRef.current = window.requestAnimationFrame(() => {
       flipRefreshFrameRef.current = null;
+
+      if (!flipBookReadyRef.current) {
+        pendingFlipRefreshRef.current = true;
+        incrementCounter('flipUpdatesSkipped');
+        logDebug('flipbook.update.skip', { reason: 'not-ready-late' });
+        return;
+      }
+      if (debugOptionsRef.current.suspendFlipUpdates) {
+        pendingFlipRefreshRef.current = true;
+        incrementCounter('flipUpdatesSkipped');
+        logDebug('flipbook.update.skip', { reason: 'suspendFlipUpdates-late' });
+        return;
+      }
+      if (compositionActiveRef.current) {
+        pendingFlipRefreshRef.current = true;
+        incrementCounter('flipUpdatesSkipped');
+        logDebug('flipbook.update.skip', { reason: 'composition-active-late' });
+        return;
+      }
+      if (editorHasFocusRef.current) {
+        pendingFlipRefreshRef.current = true;
+        incrementCounter('flipUpdatesSkipped');
+        logDebug('flipbook.update.skip', { reason: 'editor-focused-late' });
+        return;
+      }
+
       const pageFlipInstance = flipRef.current?.pageFlip?.();
       if (!pageFlipInstance?.update) {
-        pendingFlipRefreshRef.current = false;
         incrementCounter('flipUpdatesSkipped');
         logDebug('flipbook.update.skip', { reason: 'no-instance' });
         return;
       }
-      pendingFlipRefreshRef.current = false;
       incrementCounter('flipUpdates');
       logDebug('flipbook.update', { scheduledAt, ready: flipBookReadyRef.current });
       pageFlipInstance.update();
