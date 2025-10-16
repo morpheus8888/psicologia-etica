@@ -54,16 +54,18 @@ const theme: EditorThemeClasses = {
 
 const OnEditableChange = ({
   editable,
+  entryKey,
   onDebugEvent,
 }: {
   editable: boolean;
+  entryKey: string;
   onDebugEvent?: (type: string, payload?: Record<string, unknown>) => void;
 }) => {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
     editor.setEditable(editable);
-    onDebugEvent?.('setEditable', { editable });
-  }, [editable, editor, onDebugEvent]);
+    onDebugEvent?.('setEditable', { editable, entryKey });
+  }, [editable, editor, entryKey, onDebugEvent]);
   return null;
 };
 
@@ -231,7 +233,7 @@ const DiaryEntryEditor = ({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <OnEditableChange editable={editable} onDebugEvent={onDebugEvent} />
+      <OnEditableChange editable={editable} entryKey={entryKey} onDebugEvent={onDebugEvent} />
       <PrefillPlugin
         value={initialValue}
         entryKey={entryKey}

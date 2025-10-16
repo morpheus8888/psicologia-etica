@@ -453,6 +453,7 @@ export const DiaryViewport = ({
   const compositionActiveRef = useRef(false);
   const editorHasFocusRef = useRef(false);
   const pendingFlipRefreshRef = useRef(false);
+  const editorEditableStateRef = useRef<boolean | null>(null);
   const lastFlipUpdateTimeRef = useRef(0);
   const editorVersionRef = useRef<Map<string, number>>(new Map());
   const [isFlipbookReady, setIsFlipbookReady] = useState(false);
@@ -1514,6 +1515,25 @@ export const DiaryViewport = ({
   );
 
   const handleEditorDebug = useCallback((type: string, payload?: Record<string, unknown>) => {
+    if (type === 'setEditable') {
+      const nextEditable = Boolean(payload?.editable);
+      const entryKey = typeof payload?.entryKey === 'string' ? payload.entryKey : null;
+      const entryDate = entryKey ? entryKey.split(':')[0] ?? null : null;
+      const previousEditable = editorEditableStateRef.current;
+      editorEditableStateRef.current = nextEditable;
+      logDebug('editor.setEditable.state', {
+        entryKey,
+        entryDate,
+        editable: nextEditable,
+        previous: previousEditable,
+        navigationDate: navigation.currentDate,
+        isActivePage: entryDate ? navigation.currentDate === entryDate : null,
+      });
+      if (!nextEditable) {
+        editorHasFocusRef.current = false;
+      }
+      return;
+    }
     if (
       (type === 'dom.beforeinput' || type === 'dom.input' || type === 'dom.keydown')
       && !editorHasFocusRef.current
@@ -1552,7 +1572,7 @@ export const DiaryViewport = ({
       scheduleDebugStuckCheck();
     }
     logDebug(`editor.${type}`, payload ?? {});
-  }, [incrementCounter, logDebug, scheduleDebugStuckCheck, scheduleFlipRefresh]);
+  }, [incrementCounter, logDebug, navigation.currentDate, scheduleDebugStuckCheck, scheduleFlipRefresh]);
 
   useEffect(() => {
     const previousDate = previousDateRef.current;
@@ -2506,6 +2526,13 @@ export const DiaryViewport = ({
                 bodyLength: nextValue.length,
               });
               if (!isActivePage) {
+                logDebug('editor.onChange.suppressed', {
+                  reason: 'inactive-page',
+                  entryKey,
+                  navigationDate: navigation.currentDate,
+                  source,
+                  editable,
+                });
                 incrementCounter('editorSuppressed');
                 return;
               }
@@ -2528,6 +2555,13 @@ export const DiaryViewport = ({
               lastLocalEditRef.current = Date.now();
               debugLastUserInputRef.current = Date.now();
               if (!editable || !navigation.currentDate) {
+                logDebug('editor.onChange.suppressed', {
+                  reason: !editable ? 'not-editable' : 'missing-navigation-date',
+                  entryKey,
+                  navigationDate: navigation.currentDate,
+                  source,
+                  editable,
+                });
                 incrementCounter('editorSuppressed');
                 return;
               }
