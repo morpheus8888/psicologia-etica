@@ -433,6 +433,9 @@ export const DiaryViewport = ({
     suspendFlipUpdates: false,
     disableEdgeOverlays: false,
     blockTouchReattach: false,
+    enableMouseEvents: false,
+    enableClickFlip: false,
+    enableMobileScroll: false,
     verbose: false,
   });
   const debugOptionsRef = useRef(debugOptions);
@@ -2035,6 +2038,30 @@ export const DiaryViewport = ({
               <label className="flex items-center gap-1">
                 <input
                   type="checkbox"
+                  checked={debugOptions.enableMouseEvents}
+                  onChange={() => handleDebugToggle('enableMouseEvents')}
+                />
+                <span>Enable mouse gestures</span>
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={debugOptions.enableClickFlip}
+                  onChange={() => handleDebugToggle('enableClickFlip')}
+                />
+                <span>Enable corner clicks</span>
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={debugOptions.enableMobileScroll}
+                  onChange={() => handleDebugToggle('enableMobileScroll')}
+                />
+                <span>Mobile scroll support</span>
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
                   checked={debugOptions.verbose}
                   onChange={() => handleDebugToggle('verbose')}
                 />
@@ -2512,11 +2539,11 @@ export const DiaryViewport = ({
             onChangeOrientation={handleOrientationChange}
             onChangeState={handleStateChange}
             onInit={handleFlipbookInit}
-            disableFlipByClick
+            disableFlipByClick={!debugOptions.enableClickFlip}
             showPageCorners
-            mobileScrollSupport={false}
+            mobileScrollSupport={debugOptions.enableMobileScroll}
             usePortrait={false}
-            useMouseEvents={false}
+            useMouseEvents={debugOptions.enableMouseEvents}
             className="w-full"
           >
             {flipPages}
