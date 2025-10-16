@@ -427,7 +427,7 @@ export const DiaryViewport = ({
   const [debugOptions, setDebugOptions] = useState({
     suspendFlipUpdates: false,
     disableEdgeOverlays: false,
-    blockTouchReattach: false,
+    blockTouchReattach: true,
     verbose: false,
   });
   const debugOptionsRef = useRef(debugOptions);
