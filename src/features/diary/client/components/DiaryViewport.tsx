@@ -2140,6 +2140,19 @@ export const DiaryViewport = ({
     const hasShareAction = data.professionals.length > 0;
     const hasGoalAction = goals.length > 0;
 
+    if (debugOptions.verbose) {
+      logDebug('entry.page.editability', {
+        pageDateISO: page.dateISO,
+        todayISO,
+        navigationDate: navigation.currentDate,
+        index: page.index,
+        editable,
+        isActivePage,
+        graceMinutes: data.diaryGraceMinutes,
+        side: page.side,
+      });
+    }
+
     const actionNodes: { key: string; element: ReactNode }[] = [];
 
     if (hasShareAction) {
