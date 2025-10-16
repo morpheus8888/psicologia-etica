@@ -445,7 +445,6 @@ export const DiaryViewport = ({
   const compositionActiveRef = useRef(false);
   const lastFlipUpdateTimeRef = useRef(0);
   const editorVersionRef = useRef<Map<string, number>>(new Map());
-  const [, forceEditorVersionUpdate] = useState(0);
   const [isFlipbookReady, setIsFlipbookReady] = useState(false);
   const clientTodayISORef = useRef(toISODate(new Date()));
   const clientNowRef = useRef(Date.now());
@@ -711,12 +710,8 @@ export const DiaryViewport = ({
   }, []);
 
   const bumpEditorVersion = useCallback((dateISO: string, reason: string) => {
-    const current = editorVersionRef.current.get(dateISO) ?? 0;
-    const next = current + 1;
-    editorVersionRef.current.set(dateISO, next);
-    forceEditorVersionUpdate(value => value + 1);
-    logDebug('editor.version.bump', { dateISO, version: next, reason });
-  }, [forceEditorVersionUpdate, logDebug]);
+    logDebug('editor.version.bump.skipped', { dateISO, reason });
+  }, [logDebug]);
 
   // NOTE: flip-book contracts follow docs/stpageflip/README.md; check before tweaking behaviour.
   const scheduleFlipRefresh = useCallback(() => {
