@@ -521,6 +521,75 @@ export const DiaryViewport = ({
     }
   }, [logDebug]);
 
+  const evaluateEditability = useCallback(
+    (dateISO: string, context: 'current-page' | 'day-page' | 'load-sync' | 'debug') => {
+      const clientTodayISO = clientTodayISORef.current;
+      const clientNow = clientNowRef.current;
+      const graceMinutes = data.diaryGraceMinutes ?? null;
+      const computed = isEntryEditable(
+        dateISO,
+        todayISO,
+        graceMinutes,
+        nowISO,
+        clientTodayISO,
+        clientNow,
+      );
+      const targetMs = Date.parse(`${dateISO}T23:59:59Z`);
+      const serverNowMs = Date.parse(nowISO);
+      const effectiveNowMs = Number.isNaN(clientNow) ? serverNowMs : clientNow;
+      const diffMinutes = Number.isFinite(targetMs)
+        ? Math.abs(targetMs - effectiveNowMs) / 60000
+        : null;
+      let reason: string;
+      if (dateISO === todayISO) {
+        reason = 'match-server-today';
+      } else if (dateISO === clientTodayISO) {
+        reason = 'match-client-today';
+      } else if (!graceMinutes || graceMinutes <= 0) {
+        reason = 'grace-disabled';
+      } else if (diffMinutes !== null && diffMinutes <= graceMinutes) {
+        reason = 'within-grace';
+      } else if (diffMinutes === null) {
+        reason = 'invalid-target-date';
+      } else {
+        reason = 'grace-expired';
+      }
+      logDebug('entry.editable.evaluate', {
+        context,
+        dateISO,
+        result: computed,
+        reason,
+        todayISO,
+        clientTodayISO,
+        nowISO,
+        clientNow,
+        serverNowMs,
+        effectiveNowMs,
+        targetMs,
+        diffMinutes,
+        graceMinutes,
+      });
+      if (
+        process.env.NODE_ENV !== 'production'
+        && !computed
+        && diffMinutes !== null
+        && graceMinutes
+        && diffMinutes <= graceMinutes
+      ) {
+        logDebug('entry.editable.mismatch', {
+          context,
+          dateISO,
+          diffMinutes,
+          graceMinutes,
+          todayISO,
+          clientTodayISO,
+        }, true);
+      }
+      return computed;
+    },
+    [data.diaryGraceMinutes, logDebug, nowISO, todayISO],
+  );
+
   const scheduleDebugStuckCheck = useCallback(() => {
     if (typeof window === 'undefined') {
       return;
@@ -818,14 +887,7 @@ export const DiaryViewport = ({
   const isDesktop = ui.isDesktop();
   const encryption = useDiaryEncryption();
   const isCurrentPageEditable = navigation.currentDate
-    ? isEntryEditable(
-      navigation.currentDate,
-      todayISO,
-      data.diaryGraceMinutes,
-      nowISO,
-      clientTodayISORef.current,
-      clientNowRef.current,
-    )
+    ? evaluateEditability(navigation.currentDate, 'current-page')
     : false;
 
   useEffect(() => {
@@ -2004,14 +2066,7 @@ export const DiaryViewport = ({
     const restrictClickToEdges = page.index !== firstDayPageIndex && page.index !== lastDayPageIndex;
     const isActivePage = navigation.currentDate === page.dateISO;
     const edgesActive = restrictClickToEdges && !debugOptions.disableEdgeOverlays && !isActivePage;
-    const allowEditing = isEntryEditable(
-      page.dateISO,
-      todayISO,
-      data.diaryGraceMinutes,
-      nowISO,
-      clientTodayISORef.current,
-      clientNowRef.current,
-    );
+    const allowEditing = evaluateEditability(page.dateISO, 'day-page');
     const editable = isActivePage && allowEditing;
     const entryVersion = getOrInitEditorVersion(page.dateISO);
     const entryKey = `${page.dateISO}:v${entryVersion}`;
