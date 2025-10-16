@@ -1938,8 +1938,8 @@ export const DiaryViewport = ({
 
   const dayPagesNodes = dayPages.map((page) => {
     const restrictClickToEdges = page.index !== firstDayPageIndex && page.index !== lastDayPageIndex;
-    const edgesActive = restrictClickToEdges && !debugOptions.disableEdgeOverlays;
     const isActivePage = navigation.currentDate === page.dateISO;
+    const edgesActive = restrictClickToEdges && !debugOptions.disableEdgeOverlays && !isActivePage;
     const allowEditing = isEntryEditable(
       page.dateISO,
       todayISO,
