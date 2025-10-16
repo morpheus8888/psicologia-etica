@@ -453,8 +453,6 @@ export const DiaryViewport = ({
   const compositionActiveRef = useRef(false);
   const editorHasFocusRef = useRef(false);
   const pendingFlipRefreshRef = useRef(false);
-  const editorHasFocusRef = useRef(false);
-  const pendingFlipRefreshRef = useRef(false);
   const lastFlipUpdateTimeRef = useRef(0);
   const editorVersionRef = useRef<Map<string, number>>(new Map());
   const [isFlipbookReady, setIsFlipbookReady] = useState(false);
@@ -795,10 +793,12 @@ export const DiaryViewport = ({
 
       const pageFlipInstance = flipRef.current?.pageFlip?.();
       if (!pageFlipInstance?.update) {
+        pendingFlipRefreshRef.current = false;
         incrementCounter('flipUpdatesSkipped');
         logDebug('flipbook.update.skip', { reason: 'no-instance' });
         return;
       }
+      pendingFlipRefreshRef.current = false;
       incrementCounter('flipUpdates');
       logDebug('flipbook.update', { scheduledAt, ready: flipBookReadyRef.current });
       pageFlipInstance.update();
