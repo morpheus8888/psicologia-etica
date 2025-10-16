@@ -384,6 +384,8 @@ export const DiaryViewport = ({
   const flipRef = useRef<FlipBookHandle | null>(null);
   const flipRefreshFrameRef = useRef<number | null>(null);
   const flipBookReadyRef = useRef(false);
+  const [hasTouchSupport, setHasTouchSupport] = useState(false);
+  const touchSupportRef = useRef(false);
   const [currentBody, setCurrentBody] = useState('');
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
@@ -534,6 +536,20 @@ export const DiaryViewport = ({
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const hasTouchSupport = Boolean(
+      'ontouchstart' in window
+      || (navigator?.maxTouchPoints ?? 0) > 0
+      || window.matchMedia?.('(pointer: coarse)')?.matches,
+    );
+    touchSupportRef.current = hasTouchSupport;
+    setHasTouchSupport(hasTouchSupport);
+    logDebug('touch.support.detect', { hasTouchSupport });
+  }, [logDebug]);
+
+  useEffect(() => {
     if (debugStuckTimeoutRef.current !== null && typeof window !== 'undefined') {
       window.clearTimeout(debugStuckTimeoutRef.current);
       debugStuckTimeoutRef.current = null;
@@ -595,6 +611,10 @@ export const DiaryViewport = ({
   }, [debugCopyMessage]);
 
   const ensurePassiveTouchHandlers = useCallback(() => {
+    if (!hasTouchSupport) {
+      logDebug('touch.passive.skip', { reason: 'no-touch-support' });
+      return false;
+    }
     if (debugOptionsRef.current.blockTouchReattach) {
       incrementCounter('ensurePassiveSkipped');
       logDebug('touch.passive.skip', { reason: 'blockTouchReattach' });
@@ -1072,6 +1092,9 @@ export const DiaryViewport = ({
   }, [logDebug, navigation.currentIndex]);
 
   useEffect(() => {
+    if (!hasTouchSupport) {
+      return undefined;
+    }
     let cancelled = false;
     let rafId: number | null = null;
 
@@ -1095,7 +1118,7 @@ export const DiaryViewport = ({
       passiveHandlersCleanupRef.current?.();
       passiveHandlersCleanupRef.current = null;
     };
-  }, [ensurePassiveTouchHandlers]);
+  }, [ensurePassiveTouchHandlers, hasTouchSupport]);
 
   const handleFlip = useCallback(
     (event: { data: number }) => {
