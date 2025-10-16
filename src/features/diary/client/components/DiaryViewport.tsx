@@ -428,7 +428,7 @@ export const DiaryViewport = ({
     stuckEvents: 0,
   });
   const debugRefreshRafRef = useRef<number | null>(null);
-  const [, setDebugVersion] = useState(0);
+  const [visibleDebugEvents, setVisibleDebugEvents] = useState<DebugEvent[]>([]);
   const [debugOptions, setDebugOptions] = useState({
     suspendFlipUpdates: false,
     disableEdgeOverlays: false,
@@ -449,11 +449,17 @@ export const DiaryViewport = ({
   const debugOptionsRef = useRef(debugOptions);
   const debugLastUserInputRef = useRef(0);
   const debugStuckTimeoutRef = useRef<number | null>(null);
-  const [debugCopyMessage, setDebugCopyMessage] = useState<string | null>(null);
+  const [debugActionMessage, setDebugActionMessage] = useState<{ text: string; tone: 'info' | 'success' | 'error' } | null>(null);
   const compositionActiveRef = useRef(false);
   const editorHasFocusRef = useRef(false);
   const pendingFlipRefreshRef = useRef(false);
   const editorEditableStateRef = useRef<boolean | null>(null);
+  const editabilityLogCacheRef = useRef<Map<string, { result: boolean; reason: string; diffMinutes: number | null; graceMinutes: number | null; ts: number }>>(new Map());
+  const debugSuppressLogsRef = useRef(false);
+  const suppressDayPageLogsRef = useRef(false);
+  const lastFlipStateRef = useRef<string | null>(null);
+  const lastFlipStateTsRef = useRef<number>(0);
+  const [isEditorInteracting, setIsEditorInteracting] = useState(false);
   const lastFlipUpdateTimeRef = useRef(0);
   const editorVersionRef = useRef<Map<string, number>>(new Map());
   const [isFlipbookReady, setIsFlipbookReady] = useState(false);
@@ -463,6 +469,10 @@ export const DiaryViewport = ({
   useEffect(() => {
     loadEntryRef.current = data.loadEntry;
   }, [data.loadEntry]);
+
+  useEffect(() => {
+    setVisibleDebugEvents([...debugEventsRef.current]);
+  }, []);
 
   useEffect(() => {
     debugOptionsRef.current = debugOptions;
@@ -489,8 +499,12 @@ export const DiaryViewport = ({
   }), [navigation.currentDate, navigation.currentIndex]);
 
   const scheduleDebugRefresh = useCallback(() => {
+    const snapshot = () => {
+      setVisibleDebugEvents([...debugEventsRef.current]);
+    };
+
     if (typeof window === 'undefined') {
-      setDebugVersion(prev => prev + 1);
+      snapshot();
       return;
     }
     if (debugRefreshRafRef.current !== null) {
@@ -498,11 +512,14 @@ export const DiaryViewport = ({
     }
     debugRefreshRafRef.current = window.requestAnimationFrame(() => {
       debugRefreshRafRef.current = null;
-      setDebugVersion(prev => prev + 1);
+      snapshot();
     });
   }, []);
 
   const logDebug = useCallback((label: string, details: Record<string, unknown> = {}, includeSnapshot = false) => {
+    if (debugSuppressLogsRef.current && label !== 'debug.log.clear') {
+      return;
+    }
     const entry: DebugEvent = {
       ts: typeof performance !== 'undefined' ? performance.now() : Date.now(),
       label,
@@ -538,9 +555,10 @@ export const DiaryViewport = ({
       const targetMs = Date.parse(`${dateISO}T23:59:59Z`);
       const serverNowMs = Date.parse(nowISO);
       const effectiveNowMs = Number.isNaN(clientNow) ? serverNowMs : clientNow;
-      const diffMinutes = Number.isFinite(targetMs)
+      const diffMinutesRaw = Number.isFinite(targetMs)
         ? Math.abs(targetMs - effectiveNowMs) / 60000
         : null;
+      const diffMinutes = diffMinutesRaw !== null ? Number.parseFloat(diffMinutesRaw.toFixed(2)) : null;
       let reason: string;
       if (dateISO === todayISO) {
         reason = 'match-server-today';
@@ -555,37 +573,62 @@ export const DiaryViewport = ({
       } else {
         reason = 'grace-expired';
       }
-      logDebug('entry.editable.evaluate', {
-        context,
-        dateISO,
-        result: computed,
-        reason,
-        todayISO,
-        clientTodayISO,
-        nowISO,
-        clientNow,
-        serverNowMs,
-        effectiveNowMs,
-        targetMs,
-        diffMinutes,
-        graceMinutes,
-      });
-      if (
-        process.env.NODE_ENV !== 'production'
-        && !computed
-        && diffMinutes !== null
-        && graceMinutes
-        && diffMinutes <= graceMinutes
-      ) {
-        logDebug('entry.editable.mismatch', {
+      if (context === 'day-page' && !debugOptionsRef.current.verbose) {
+        return computed;
+      }
+      if (suppressDayPageLogsRef.current && context === 'day-page') {
+        return computed;
+      }
+
+      const nowTs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const cacheKey = `${context}:${dateISO}`;
+      const previous = editabilityLogCacheRef.current.get(cacheKey);
+      const shouldLog = !previous
+        || previous.result !== computed
+        || previous.reason !== reason
+        || previous.diffMinutes !== diffMinutes
+        || previous.graceMinutes !== graceMinutes
+        || nowTs - previous.ts > 2000;
+      if (shouldLog) {
+        logDebug('entry.editable.evaluate', {
           context,
           dateISO,
-          diffMinutes,
-          graceMinutes,
+          result: computed,
+          reason,
           todayISO,
           clientTodayISO,
-        }, true);
+          nowISO,
+          clientNow,
+          serverNowMs,
+          effectiveNowMs,
+          targetMs,
+          diffMinutes,
+          graceMinutes,
+        });
+        if (
+          process.env.NODE_ENV !== 'production'
+          && !computed
+          && diffMinutes !== null
+          && graceMinutes
+          && diffMinutes <= graceMinutes
+        ) {
+          logDebug('entry.editable.mismatch', {
+            context,
+            dateISO,
+            diffMinutes,
+            graceMinutes,
+            todayISO,
+            clientTodayISO,
+          }, true);
+        }
       }
+      editabilityLogCacheRef.current.set(cacheKey, {
+        result: computed,
+        reason,
+        diffMinutes,
+        graceMinutes,
+        ts: nowTs,
+      });
       return computed;
     },
     [data.diaryGraceMinutes, logDebug, nowISO, todayISO],
@@ -664,7 +707,7 @@ export const DiaryViewport = ({
     logDebug('debug.options.change', debugOptions);
   }, [debugOptions, logDebug]);
 
-  const debugEvents = [...debugEventsRef.current].reverse();
+  const debugEvents = [...visibleDebugEvents].sort((a, b) => b.ts - a.ts);
 
   const debugCounters = { ...debugCountersRef.current };
 
@@ -686,14 +729,20 @@ export const DiaryViewport = ({
     const serialized = JSON.stringify(payload, null, 2);
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(serialized).then(() => {
-        setDebugCopyMessage('Copied debug log to clipboard');
+        setDebugActionMessage({ text: 'Copied debug log to clipboard', tone: 'success' });
         logDebug('debug.copy.success', { length: serialized.length });
       }).catch((error) => {
-        setDebugCopyMessage(`Copy failed: ${error instanceof Error ? error.message : String(error)}`);
+        setDebugActionMessage({
+          text: `Copy failed: ${error instanceof Error ? error.message : String(error)}`,
+          tone: 'error',
+        });
         logDebug('debug.copy.error', { message: error instanceof Error ? error.message : String(error) });
       });
     } else {
-      setDebugCopyMessage('Clipboard API unavailable; check console for payload');
+      setDebugActionMessage({
+        text: 'Clipboard API unavailable; check console for payload',
+        tone: 'info',
+      });
       logDebug('debug.copy.unavailable', { length: serialized.length });
       if (typeof window !== 'undefined') {
         // eslint-disable-next-line no-console
@@ -702,17 +751,43 @@ export const DiaryViewport = ({
     }
   }, [collectDebugSnapshot, logDebug]);
 
+  const handleClearDebugLog = useCallback(() => {
+    debugSuppressLogsRef.current = true;
+    suppressDayPageLogsRef.current = true;
+    debugEventsRef.current = [];
+    editabilityLogCacheRef.current.clear();
+    lastFlipStateRef.current = null;
+    lastFlipStateTsRef.current = 0;
+    setVisibleDebugEvents([]);
+    setDebugActionMessage({ text: 'Debug log cleared', tone: 'success' });
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          debugSuppressLogsRef.current = false;
+          suppressDayPageLogsRef.current = false;
+        });
+      });
+    } else {
+      debugSuppressLogsRef.current = false;
+      suppressDayPageLogsRef.current = false;
+    }
+  }, []);
+
   useEffect(() => {
-    if (!debugCopyMessage || typeof window === 'undefined') {
+    if (!debugActionMessage || typeof window === 'undefined') {
       return;
     }
     const timeoutId = window.setTimeout(() => {
-      setDebugCopyMessage(null);
+      setDebugActionMessage(null);
     }, 3000);
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [debugCopyMessage]);
+  }, [debugActionMessage]);
+
+  useEffect(() => {
+    setIsEditorInteracting(false);
+  }, [navigation.currentDate]);
 
   const ensurePassiveTouchHandlers = useCallback(() => {
     if (!hasTouchSupport) {
@@ -780,6 +855,7 @@ export const DiaryViewport = ({
 
   const handleDebugDump = useCallback(() => {
     logDebug('debug.dump', {}, true);
+    setDebugActionMessage({ text: 'Debug snapshot dumped to log', tone: 'info' });
   }, [logDebug]);
 
   const getOrInitEditorVersion = useCallback((dateISO: string) => {
@@ -1135,6 +1211,7 @@ export const DiaryViewport = ({
       const remoteTimestamp = Number.isNaN(remoteTimestampRaw)
         ? loadStartedAt
         : remoteTimestampRaw;
+      const previousLocalEdit = lastLocalEditRef.current;
       lastRemoteUpdateRef.current = remoteTimestamp;
 
       if (draft && draft.updatedAt > remoteTimestamp) {
@@ -1145,12 +1222,43 @@ export const DiaryViewport = ({
         return;
       }
 
+      const nextBody = entry.content.body ?? '';
+      if (
+        navigation.currentDate === targetDate
+        && previousLocalEdit
+        && previousLocalEdit > remoteTimestamp
+        && nextBody !== currentBodyRef.current
+      ) {
+        logDebug('entry.load.stale', {
+          targetDate,
+          remoteTimestamp,
+          previousLocalEdit,
+          incomingLength: nextBody.length,
+          currentLength: currentBodyRef.current.length,
+        });
+        return;
+      }
+
+      if (
+        navigation.currentDate === targetDate
+        && nextBody.length < currentBodyRef.current.length
+      ) {
+        logDebug('entry.load.ignored.shorter', {
+          targetDate,
+          remoteTimestamp,
+          incomingLength: nextBody.length,
+          currentLength: currentBodyRef.current.length,
+        });
+        return;
+      }
+
       isDirtyRef.current = false;
       lastLocalEditRef.current = remoteTimestamp;
       suppressEditorOnChangeRef.current = true;
-      const nextBody = entry.content.body ?? '';
-      currentBodyRef.current = nextBody;
-      setCurrentBody(nextBody);
+      if (nextBody !== currentBodyRef.current) {
+        currentBodyRef.current = nextBody;
+        setCurrentBody(nextBody);
+      }
       externalChangeOriginRef.current = 'remote';
       clearDraft(targetDate);
       logDebug('entry.load.success', {
@@ -1280,7 +1388,14 @@ export const DiaryViewport = ({
       // eslint-disable-next-line no-console
       console.info('[DiaryFlipbook] state changed:', event.data);
     }
-    logDebug('flipbook.state', { state: event.data }, true);
+    const state = event.data;
+    const nowTs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (lastFlipStateRef.current === state && nowTs - lastFlipStateTsRef.current < 500) {
+      return;
+    }
+    lastFlipStateRef.current = state;
+    lastFlipStateTsRef.current = nowTs;
+    logDebug('flipbook.state', { state }, true);
   }, [logDebug]);
 
   const goToIndex = useCallback(
@@ -1415,7 +1530,6 @@ export const DiaryViewport = ({
         window.clearTimeout(pendingSaveTimeoutRef.current);
         pendingSaveTimeoutRef.current = null;
       }
-      logDebug('entry.save.flush', { targetDate: targetDate ?? null });
       const pending = pendingSaveValueRef.current;
       if (pending && (!targetDate || pending.dateISO === targetDate)) {
         pendingSaveValueRef.current = null;
@@ -1531,6 +1645,7 @@ export const DiaryViewport = ({
       });
       if (!nextEditable) {
         editorHasFocusRef.current = false;
+        setIsEditorInteracting(false);
       }
       return;
     }
@@ -1543,11 +1658,13 @@ export const DiaryViewport = ({
     }
     if (type === 'dom.focus') {
       editorHasFocusRef.current = true;
+      setIsEditorInteracting(true);
       logDebug('editor.dom.focus', payload ?? {});
       return;
     }
     if (type === 'dom.blur') {
       editorHasFocusRef.current = false;
+      setIsEditorInteracting(false);
       logDebug('editor.dom.blur', payload ?? {});
       if (pendingFlipRefreshRef.current) {
         scheduleFlipRefresh();
@@ -2129,12 +2246,27 @@ export const DiaryViewport = ({
               >
                 Copy log
               </button>
+              <button
+                type="button"
+                className="rounded-md border border-sky-500/50 px-2 py-1 text-[11px] font-semibold text-sky-900 transition hover:bg-sky-200/60 dark:border-sky-400/60 dark:text-sky-100 dark:hover:bg-sky-800/40"
+                onClick={handleClearDebugLog}
+              >
+                Clear log
+              </button>
             </div>
           </div>
-          {debugCopyMessage
+          {debugActionMessage
             ? (
-                <p className="mb-2 rounded-md bg-sky-200/60 px-2 py-1 text-[11px] font-medium text-sky-900 dark:bg-sky-800/60 dark:text-sky-100">
-                  {debugCopyMessage}
+                <p
+                  className={`mb-2 rounded-md px-2 py-1 text-[11px] font-medium ${
+                    debugActionMessage.tone === 'error'
+                      ? 'bg-rose-200/70 text-rose-900 dark:bg-rose-900/40 dark:text-rose-100'
+                      : debugActionMessage.tone === 'success'
+                        ? 'bg-emerald-200/60 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100'
+                        : 'bg-sky-200/60 text-sky-900 dark:bg-sky-800/60 dark:text-sky-100'
+                  }`}
+                >
+                  {debugActionMessage.text}
                 </p>
               )
             : null}
@@ -2253,6 +2385,19 @@ export const DiaryViewport = ({
       } else if (navigation.currentIndex !== page.index) {
         logDebug('navigation.ensureActive', { action: 'setIndex', targetIndex: page.index });
         navigation.setIndex(page.index);
+      }
+    };
+
+    const handleEditorUserInteraction = (event: 'pointer' | 'focus' | 'blur') => {
+      if (event === 'blur') {
+        setIsEditorInteracting(false);
+        return;
+      }
+      if (!isEditorInteracting) {
+        setIsEditorInteracting(true);
+      }
+      if (!isActivePage || navigation.currentIndex !== page.index) {
+        ensurePageActive();
       }
     };
 
@@ -2517,6 +2662,7 @@ export const DiaryViewport = ({
             actions={headingActions}
             side={page.side}
             suppressOnChangeRef={suppressEditorOnChangeRef}
+            onUserInteraction={handleEditorUserInteraction}
             onChange={(nextValue, { source }) => {
               logDebug('editor.onChange', {
                 source,
@@ -2533,6 +2679,8 @@ export const DiaryViewport = ({
                   source,
                   editable,
                 });
+                ensurePageActive();
+                setIsEditorInteracting(true);
                 incrementCounter('editorSuppressed');
                 return;
               }
@@ -2690,11 +2838,11 @@ export const DiaryViewport = ({
             onChangeOrientation={handleOrientationChange}
             onChangeState={handleStateChange}
             onInit={handleFlipbookInit}
-            disableFlipByClick={!debugOptions.enableClickFlip}
-            showPageCorners
+            disableFlipByClick={!debugOptions.enableClickFlip || isEditorInteracting}
+            showPageCorners={debugOptions.enableClickFlip && !isEditorInteracting}
             mobileScrollSupport={debugOptions.enableMobileScroll}
             usePortrait={false}
-            useMouseEvents={debugOptions.enableMouseEvents}
+            useMouseEvents={debugOptions.enableMouseEvents && !isEditorInteracting}
             className="w-full"
           >
             {flipPages}

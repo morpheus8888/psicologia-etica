@@ -38,6 +38,7 @@ type DiaryEntryEditorProps = {
   actions?: ReactNode;
   side: 'left' | 'right';
   onDebugEvent?: (type: string, payload?: Record<string, unknown>) => void;
+  onUserInteraction?: (event: 'pointer' | 'focus' | 'blur') => void;
 };
 
 const theme: EditorThemeClasses = {
@@ -136,6 +137,7 @@ const DiaryEntryEditor = ({
   actions,
   side,
   onDebugEvent,
+  onUserInteraction,
 }: DiaryEntryEditorProps) => {
   const initialConfig = useMemo<InitialConfigType>(() => ({
     namespace: 'diary-entry',
@@ -198,6 +200,11 @@ const DiaryEntryEditor = ({
 
     const handleFocusBlur = (type: string) => () => {
       onDebugEvent(`dom.${type}`);
+      if (type === 'focus') {
+        onUserInteraction?.('focus');
+      } else if (type === 'blur') {
+        onUserInteraction?.('blur');
+      }
     };
 
     const compositionStartHandler = handleComposition('compositionstart');
@@ -207,6 +214,9 @@ const DiaryEntryEditor = ({
     const keyUpHandler = handleKey('keyup');
     const focusHandler = handleFocusBlur('focus');
     const blurHandler = handleFocusBlur('blur');
+    const pointerDownHandler = () => {
+      onUserInteraction?.('pointer');
+    };
 
     node.addEventListener('beforeinput', handleBeforeInput);
     node.addEventListener('input', handleInput);
@@ -217,6 +227,7 @@ const DiaryEntryEditor = ({
     node.addEventListener('keyup', keyUpHandler);
     node.addEventListener('focus', focusHandler);
     node.addEventListener('blur', blurHandler);
+    node.addEventListener('pointerdown', pointerDownHandler, { passive: true });
 
     return () => {
       node.removeEventListener('beforeinput', handleBeforeInput);
@@ -228,8 +239,9 @@ const DiaryEntryEditor = ({
       node.removeEventListener('keyup', keyUpHandler);
       node.removeEventListener('focus', focusHandler);
       node.removeEventListener('blur', blurHandler);
+      node.removeEventListener('pointerdown', pointerDownHandler);
     };
-  }, [onDebugEvent]);
+  }, [onDebugEvent, onUserInteraction]);
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
@@ -288,6 +300,10 @@ const DiaryEntryEditor = ({
                 <ContentEditable
                   className="diary-entry-content"
                   ref={contentEditableRef}
+                  onPointerDown={(event) => {
+                    event.stopPropagation();
+                    onUserInteraction?.('pointer');
+                  }}
                 />
               )}
               placeholder={(
