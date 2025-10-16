@@ -427,7 +427,7 @@ export const DiaryViewport = ({
   const [debugOptions, setDebugOptions] = useState({
     suspendFlipUpdates: false,
     disableEdgeOverlays: false,
-    blockTouchReattach: true,
+    blockTouchReattach: false,
     verbose: false,
   });
   const debugOptionsRef = useRef(debugOptions);
@@ -644,11 +644,10 @@ export const DiaryViewport = ({
     window.removeEventListener('touchend', touchEnd);
 
     const patchedDist = enforcePassiveListeners(distElement);
-    const patchedWindow = typeof window !== 'undefined' ? enforcePassiveListeners(window) : false;
-    if (patchedDist || patchedWindow) {
+    if (patchedDist) {
       logDebug('touch.passive.patch', {
-        patchedDist,
-        patchedWindow,
+        patchedDist: true,
+        patchedWindow: false,
       });
     }
 
