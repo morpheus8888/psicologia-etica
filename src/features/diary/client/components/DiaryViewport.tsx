@@ -534,20 +534,6 @@ export const DiaryViewport = ({
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const patchedWindow = enforcePassiveListeners(window);
-    const patchedDocument = typeof document !== 'undefined' ? enforcePassiveListeners(document) : false;
-    if (patchedWindow || patchedDocument) {
-      logDebug('touch.passive.globalPatch', {
-        patchedWindow,
-        patchedDocument,
-      });
-    }
-  }, [logDebug]);
-
-  useEffect(() => {
     if (debugStuckTimeoutRef.current !== null && typeof window !== 'undefined') {
       window.clearTimeout(debugStuckTimeoutRef.current);
       debugStuckTimeoutRef.current = null;
