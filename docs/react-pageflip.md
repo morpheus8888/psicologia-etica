@@ -9,6 +9,9 @@ Version 2.0.0 of `react-pageflip` rewrote the library around React hooks and **c
 - Live demo with source: https://nodlik.github.io/react-pageflip/
 - StPageFlip docs and examples: https://nodlik.github.io/StPageFlip/
 - TypeDoc API reference: https://nodlik.github.io/StPageFlip/docs/index.html
+- The flip-book renders a single Lexical editor on the active page. Non-active pages use
+  `DiaryEntryPreview`, so remember to update previews via `useDiaryEntrySession` before calling
+  `pageFlip.update()`.
 
 ### Installation
 

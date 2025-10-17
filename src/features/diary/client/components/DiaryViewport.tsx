@@ -17,19 +17,17 @@ import type { TranslationAdapter, UIAdapter } from '@/features/diary/adapters/ty
 import { useDiaryData } from '@/features/diary/client/context/DiaryDataContext';
 import { useDiaryEncryption } from '@/features/diary/client/context/DiaryEncryptionContext';
 import { useDiaryNavigation } from '@/features/diary/client/context/DiaryNavigationContext';
-import { cryptoAdapter } from '@/features/diary/client/cryptoAdapter';
-import { decryptPayload, encryptPayload } from '@/features/diary/client/cryptoUtils';
+import { useDiaryEntrySession } from '@/features/diary/client/hooks/useDiaryEntrySession';
+import { isEntryEditable } from '@/features/diary/client/utils/is-entry-editable';
 
 import { DiaryCoachDock } from './DiaryCoachDock';
 import { DiaryEntryEditor } from './DiaryEntryEditor';
+import { DiaryEntryPreview } from './DiaryEntryPreview';
 import { DiaryGoalLinkPanel } from './DiaryGoalLinkPanel';
 import { DiarySharePanel } from './DiarySharePanel';
 
 const FlipBook = HTMLFlipBook as unknown as ComponentType<any>;
 const PAGE_EDGE_WIDTH_CLASS = 'w-16'; // 64px edge activation zones
-const SAVE_DEBOUNCE_MS = 10000;
-const DRAFT_STORAGE_KEY_PREFIX = 'diary::draft::';
-const DRAFT_STORAGE_VERSION = 1;
 const DEBUG_BUFFER_LIMIT = 200;
 const DEBUG_STUCK_TIMEOUT_MS = 1200;
 const FLIP_UPDATE_THROTTLE_MS = 120;
@@ -60,6 +58,31 @@ type DebugEvent = {
   details: Record<string, unknown>;
 };
 
+type DebugOptionsState = {
+  suspendFlipUpdates: boolean;
+  disableEdgeOverlays: boolean;
+  blockTouchReattach: boolean;
+  enableMouseEvents: boolean;
+  enableClickFlip: boolean;
+  enableMobileScroll: boolean;
+  verbose: boolean;
+};
+
+type DebugSnapshot = {
+  context?: string;
+  navigationDate: string | null;
+  navigationIndex: number;
+  bookReady: boolean;
+  isDirty: boolean;
+  suppressOnChange: boolean;
+  externalOrigin: string | null;
+  pendingSave: { dateISO: string; bodyLength: number } | null;
+  currentBodyLength: number;
+  lastLocalEdit: number;
+  lastRemoteUpdate: number;
+  debugOptions: DebugOptionsState;
+};
+
 const safeJson = (value: unknown, maxLength = 400) => {
   try {
     const text = JSON.stringify(value);
@@ -67,31 +90,6 @@ const safeJson = (value: unknown, maxLength = 400) => {
   } catch {
     return '[unserializable]';
   }
-};
-
-const getDraftStorageKey = (dateISO: string) => `${DRAFT_STORAGE_KEY_PREFIX}${dateISO}`;
-
-const encodeBytesToBase64 = (bytes: Uint8Array) => {
-  if (typeof window === 'undefined') {
-    throw new TypeError('BASE64_UNAVAILABLE');
-  }
-  let binary = '';
-  bytes.forEach((value) => {
-    binary += String.fromCharCode(value);
-  });
-  return window.btoa(binary);
-};
-
-const decodeBase64ToBytes = (value: string) => {
-  if (typeof window === 'undefined') {
-    throw new TypeError('BASE64_UNAVAILABLE');
-  }
-  const binary = window.atob(value);
-  const buffer = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    buffer[index] = binary.charCodeAt(index);
-  }
-  return buffer;
 };
 
 type PatchedEventTarget = EventTarget & {
@@ -136,20 +134,6 @@ const enforcePassiveListeners = (target: EventTarget | null | undefined) => {
   patchedTarget.addEventListener = patchedAdd;
   patchedTarget.__diaryPassivePatched = true;
   return true;
-};
-
-type DraftSnapshot = {
-  body: string;
-  updatedAt: number;
-};
-
-type DraftStoragePayload = {
-  version: number;
-  updatedAt: string;
-  encrypted?: boolean;
-  body?: string;
-  ciphertext?: string;
-  nonce?: string;
 };
 
 type PageFlipApi = {
@@ -223,29 +207,6 @@ const formatDateLabel = (dateISO: string, locale: string) => {
     day: 'numeric',
     month: 'short',
   });
-};
-
-const isEntryEditable = (
-  dateISO: string,
-  todayISO: string,
-  graceMinutes: number | null,
-  nowISO: string,
-  clientTodayISO: string,
-  clientNow: number,
-) => {
-  if (dateISO === todayISO || dateISO === clientTodayISO) {
-    return true;
-  }
-
-  if (!graceMinutes || graceMinutes <= 0) {
-    return false;
-  }
-
-  const target = new Date(`${dateISO}T23:59:59Z`).getTime();
-  const nowServer = new Date(nowISO).getTime();
-  const now = Number.isNaN(clientNow) ? nowServer : clientNow;
-  const diffMinutes = Math.abs(target - now) / 60000;
-  return diffMinutes <= graceMinutes;
 };
 
 const computeConsecutiveStreak = (todayISO: string, entryDates: Set<string>) => {
@@ -389,25 +350,11 @@ export const DiaryViewport = ({
   const flipBookReadyRef = useRef(false);
   const [hasTouchSupport, setHasTouchSupport] = useState(false);
   const touchSupportRef = useRef(false);
-  const [currentBody, setCurrentBody] = useState('');
-  const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [goalLinkOpen, setGoalLinkOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(`${todayISO}T00:00:00`));
   const [calendarSelection, setCalendarSelection] = useState(() => navigation.currentDate ?? todayISO);
-  const isDirtyRef = useRef(false);
-  const currentBodyRef = useRef('');
-  const pendingSaveTimeoutRef = useRef<number | null>(null);
-  const pendingSaveValueRef = useRef<{ dateISO: string; body: string } | null>(null);
-  const externalChangeOriginRef = useRef<'remote' | 'draft' | 'reset' | null>(null);
-  const previousDateRef = useRef<string | null>(null);
   const passiveHandlersCleanupRef = useRef<(() => void) | null>(null);
-  const volatileDraftsRef = useRef<Map<string, DraftSnapshot>>(new Map());
-  const suppressEditorOnChangeRef = useRef(false);
-  const lastLocalEditRef = useRef(0);
-  const lastRemoteUpdateRef = useRef(0);
-  const loadRequestIdRef = useRef(0);
-  const loadEntryRef = useRef(data.loadEntry);
   const debugEventsRef = useRef<DebugEvent[]>([]);
   const debugCountersRef = useRef<DebugCounters>({
     editorUser: 0,
@@ -429,7 +376,7 @@ export const DiaryViewport = ({
   });
   const debugRefreshRafRef = useRef<number | null>(null);
   const [visibleDebugEvents, setVisibleDebugEvents] = useState<DebugEvent[]>([]);
-  const [debugOptions, setDebugOptions] = useState({
+  const [debugOptions, setDebugOptions] = useState<DebugOptionsState>({
     suspendFlipUpdates: false,
     disableEdgeOverlays: false,
     blockTouchReattach: false,
@@ -461,42 +408,24 @@ export const DiaryViewport = ({
   const lastFlipStateTsRef = useRef<number>(0);
   const [isEditorInteracting, setIsEditorInteracting] = useState(false);
   const lastFlipUpdateTimeRef = useRef(0);
-  const editorVersionRef = useRef<Map<string, number>>(new Map());
   const [isFlipbookReady, setIsFlipbookReady] = useState(false);
   const clientTodayISORef = useRef(toISODate(new Date()));
   const clientNowRef = useRef(Date.now());
 
-  useEffect(() => {
-    loadEntryRef.current = data.loadEntry;
-  }, [data.loadEntry]);
-
-  useEffect(() => {
-    setVisibleDebugEvents([...debugEventsRef.current]);
-  }, []);
-
-  useEffect(() => {
-    debugOptionsRef.current = debugOptions;
-  }, [debugOptions]);
-
-  const collectDebugSnapshot = useCallback((context?: string) => ({
-    context,
+  const collectDebugSnapshotRef = useRef<(context?: string) => DebugSnapshot>(() => ({
+    context: undefined,
     navigationDate: navigation.currentDate,
     navigationIndex: navigation.currentIndex,
     bookReady: flipBookReadyRef.current,
-    isDirty: isDirtyRef.current,
-    suppressOnChange: suppressEditorOnChangeRef.current,
-    externalOrigin: externalChangeOriginRef.current,
-    pendingSave: pendingSaveValueRef.current
-      ? {
-          dateISO: pendingSaveValueRef.current.dateISO,
-          bodyLength: pendingSaveValueRef.current.body.length,
-        }
-      : null,
-    currentBodyLength: currentBodyRef.current.length,
-    lastLocalEdit: lastLocalEditRef.current,
-    lastRemoteUpdate: lastRemoteUpdateRef.current,
+    isDirty: false,
+    suppressOnChange: false,
+    externalOrigin: null,
+    pendingSave: null,
+    currentBodyLength: 0,
+    lastLocalEdit: 0,
+    lastRemoteUpdate: 0,
     debugOptions: debugOptionsRef.current,
-  }), [navigation.currentDate, navigation.currentIndex]);
+  }));
 
   const scheduleDebugRefresh = useCallback(() => {
     const snapshot = () => {
@@ -515,6 +444,19 @@ export const DiaryViewport = ({
       snapshot();
     });
   }, []);
+
+  const collectDebugSnapshot = useCallback(
+    (context?: string) => collectDebugSnapshotRef.current(context),
+    [],
+  );
+
+  useEffect(() => {
+    setVisibleDebugEvents([...debugEventsRef.current]);
+  }, []);
+
+  useEffect(() => {
+    debugOptionsRef.current = debugOptions;
+  }, [debugOptions]);
 
   const logDebug = useCallback((label: string, details: Record<string, unknown> = {}, includeSnapshot = false) => {
     if (debugSuppressLogsRef.current && label !== 'debug.log.clear') {
@@ -858,17 +800,6 @@ export const DiaryViewport = ({
     setDebugActionMessage({ text: 'Debug snapshot dumped to log', tone: 'info' });
   }, [logDebug]);
 
-  const getOrInitEditorVersion = useCallback((dateISO: string) => {
-    if (!editorVersionRef.current.has(dateISO)) {
-      editorVersionRef.current.set(dateISO, 0);
-    }
-    return editorVersionRef.current.get(dateISO) ?? 0;
-  }, []);
-
-  const bumpEditorVersion = useCallback((dateISO: string, reason: string) => {
-    logDebug('editor.version.bump.skipped', { dateISO, reason });
-  }, [logDebug]);
-
   // NOTE: flip-book contracts follow docs/stpageflip/README.md; check before tweaking behaviour.
   const scheduleFlipRefresh = useCallback(() => {
     if (typeof window === 'undefined') {
@@ -963,9 +894,59 @@ export const DiaryViewport = ({
 
   const isDesktop = ui.isDesktop();
   const encryption = useDiaryEncryption();
-  const isCurrentPageEditable = navigation.currentDate
-    ? evaluateEditability(navigation.currentDate, 'current-page')
-    : false;
+  const session = useDiaryEntrySession({
+    data,
+    navigation,
+    encryption,
+    incrementCounter,
+    logDebug,
+    scheduleFlipRefresh,
+    scheduleDebugStuckCheck,
+    debugLastUserInputRef,
+    isCurrentPageEditable: () => (navigation.currentDate
+      ? evaluateEditability(navigation.currentDate, 'current-page')
+      : false),
+  });
+
+  const {
+    currentBody,
+    currentEntryId,
+    setCurrentEntryId,
+    currentBodyRef,
+    isDirtyRef,
+    suppressEditorOnChangeRef,
+    externalChangeOriginRef,
+    pendingSaveValueRef,
+    lastLocalEditRef,
+    lastRemoteUpdateRef,
+    getOrInitEditorVersion,
+    handleSaveEntry,
+    enqueueSave,
+    handleInsertPrompt,
+    persistDraft,
+    getPreviewBody,
+    updateActiveBody,
+  } = session;
+
+  collectDebugSnapshotRef.current = (context?: string) => ({
+    context,
+    navigationDate: navigation.currentDate,
+    navigationIndex: navigation.currentIndex,
+    bookReady: flipBookReadyRef.current,
+    isDirty: isDirtyRef.current,
+    suppressOnChange: suppressEditorOnChangeRef.current,
+    externalOrigin: externalChangeOriginRef.current,
+    pendingSave: pendingSaveValueRef.current
+      ? {
+          dateISO: pendingSaveValueRef.current.dateISO,
+          bodyLength: pendingSaveValueRef.current.body.length,
+        }
+      : null,
+    currentBodyLength: currentBodyRef.current.length,
+    lastLocalEdit: lastLocalEditRef.current,
+    lastRemoteUpdate: lastRemoteUpdateRef.current,
+    debugOptions: debugOptionsRef.current,
+  });
 
   useEffect(() => {
     incrementCounter('navigationChanges');
@@ -974,308 +955,6 @@ export const DiaryViewport = ({
       index: navigation.currentIndex,
     });
   }, [incrementCounter, logDebug, navigation.currentDate, navigation.currentIndex]);
-
-  const clearDraft = useCallback((dateISO: string) => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    window.localStorage.removeItem(getDraftStorageKey(dateISO));
-    volatileDraftsRef.current.delete(dateISO);
-    logDebug('draft.clear', { dateISO });
-  }, [logDebug]);
-
-  const persistDraft = useCallback(
-    async (dateISO: string, body: string) => {
-      if (typeof window === 'undefined') {
-        return;
-      }
-      if (encryption.status !== 'ready') {
-        // Keep an in-memory volatile draft until the user unlocks E2EE.
-        volatileDraftsRef.current.set(dateISO, {
-          body,
-          updatedAt: Date.now(),
-        });
-        incrementCounter('draftsSaved');
-        logDebug('draft.persist', {
-          dateISO,
-          mode: 'volatile',
-          bodyLength: body.length,
-        });
-        return;
-      }
-      try {
-        const { cryptoKey } = encryption.getMasterKey();
-        const { ciphertext, nonce } = await encryptPayload({
-          key: cryptoKey,
-          cryptoAdapter,
-          payload: { body },
-        });
-        const record: DraftStoragePayload = {
-          version: DRAFT_STORAGE_VERSION,
-          updatedAt: new Date().toISOString(),
-          encrypted: true,
-          ciphertext: encodeBytesToBase64(ciphertext),
-          nonce: encodeBytesToBase64(nonce),
-        };
-        window.localStorage.setItem(getDraftStorageKey(dateISO), JSON.stringify(record));
-        incrementCounter('draftsSaved');
-        logDebug('draft.persist', {
-          dateISO,
-          mode: 'encrypted-storage',
-          bodyLength: body.length,
-        });
-      } catch (error) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.error('Failed to persist diary draft', error);
-        }
-      }
-    },
-    [encryption, incrementCounter, logDebug],
-  );
-
-  const loadDraft = useCallback(
-    async (dateISO: string): Promise<DraftSnapshot | null> => {
-      if (typeof window === 'undefined') {
-        return null;
-      }
-      // Prefer volatile in-memory draft when E2EE is locked (no plaintext persistence).
-      if (encryption.status !== 'ready') {
-        const snap = volatileDraftsRef.current.get(dateISO) ?? null;
-        if (snap) {
-          incrementCounter('draftsLoaded');
-          logDebug('draft.load', {
-            dateISO,
-            source: 'volatile',
-            bodyLength: snap.body.length,
-            updatedAt: snap.updatedAt,
-          });
-        }
-        return snap;
-      }
-      const raw = window.localStorage.getItem(getDraftStorageKey(dateISO));
-      if (!raw) {
-        return null;
-      }
-      try {
-        const parsed = JSON.parse(raw) as DraftStoragePayload;
-        if (parsed.version !== DRAFT_STORAGE_VERSION || typeof parsed.updatedAt !== 'string') {
-          return null;
-        }
-        const updatedAt = Number.isFinite(Date.parse(parsed.updatedAt))
-          ? Date.parse(parsed.updatedAt)
-          : Date.now();
-        if (parsed.encrypted) {
-          if (!parsed.ciphertext || !parsed.nonce) {
-            return null;
-          }
-          if (encryption.status !== 'ready') {
-            // Keep draft for later; user must unlock before we can read it.
-            return null;
-          }
-          const { cryptoKey } = encryption.getMasterKey();
-          const payload = await decryptPayload<{ body: string }>({
-            key: cryptoKey,
-            cryptoAdapter,
-            ciphertext: decodeBase64ToBytes(parsed.ciphertext),
-            nonce: decodeBase64ToBytes(parsed.nonce),
-          });
-          incrementCounter('draftsLoaded');
-          logDebug('draft.load', {
-            dateISO,
-            source: 'encrypted-storage',
-            bodyLength: (payload.body ?? '').length,
-            updatedAt,
-          });
-          return {
-            body: payload.body ?? '',
-            updatedAt,
-          };
-        }
-        if (typeof parsed.body !== 'string') {
-          return null;
-        }
-        return {
-          body: parsed.body,
-          updatedAt,
-        };
-      } catch (error) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('Failed to load diary draft', error);
-        }
-        window.localStorage.removeItem(getDraftStorageKey(dateISO));
-        return null;
-      }
-    },
-    [encryption, incrementCounter, logDebug],
-  );
-
-  useEffect(() => {
-    const targetDate = navigation.currentDate;
-
-    if (!targetDate) {
-      isDirtyRef.current = false;
-      lastLocalEditRef.current = 0;
-      lastRemoteUpdateRef.current = 0;
-      suppressEditorOnChangeRef.current = true;
-      externalChangeOriginRef.current = 'reset';
-      currentBodyRef.current = '';
-      setCurrentBody('');
-      setCurrentEntryId(null);
-      scheduleFlipRefresh();
-      return;
-    }
-
-    getOrInitEditorVersion(targetDate);
-
-    const loadId = loadRequestIdRef.current + 1;
-    loadRequestIdRef.current = loadId;
-    const loadStartedAt = Date.now();
-
-    isDirtyRef.current = false;
-    lastLocalEditRef.current = 0;
-    lastRemoteUpdateRef.current = 0;
-    suppressEditorOnChangeRef.current = true;
-    externalChangeOriginRef.current = 'reset';
-    currentBodyRef.current = '';
-    setCurrentBody('');
-    setCurrentEntryId(null);
-
-    let cancelled = false;
-
-    const load = async () => {
-      logDebug('entry.load.start', { targetDate });
-      let draft: DraftSnapshot | null = null;
-
-      try {
-        draft = await loadDraft(targetDate);
-      } catch (error) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.error('Failed to load diary draft', error);
-        }
-      }
-
-      if (
-        cancelled
-        || navigation.currentDate !== targetDate
-        || loadRequestIdRef.current !== loadId
-      ) {
-        return;
-      }
-
-      if (draft) {
-        currentBodyRef.current = draft.body;
-        setCurrentBody(draft.body);
-        externalChangeOriginRef.current = 'draft';
-        isDirtyRef.current = true;
-        lastLocalEditRef.current = draft.updatedAt;
-        suppressEditorOnChangeRef.current = true;
-        bumpEditorVersion(targetDate, 'draft-load');
-      }
-
-      let entry: Awaited<ReturnType<typeof loadEntryRef.current>> | null = null;
-
-      try {
-        entry = await loadEntryRef.current(targetDate);
-      } catch (error) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.error('Failed to load diary entry', error);
-        }
-      }
-
-      if (
-        cancelled
-        || navigation.currentDate !== targetDate
-        || loadRequestIdRef.current !== loadId
-      ) {
-        return;
-      }
-
-      if (!entry) {
-        lastRemoteUpdateRef.current = 0;
-        setCurrentEntryId(null);
-        if (!draft) {
-          suppressEditorOnChangeRef.current = true;
-          externalChangeOriginRef.current = 'reset';
-          currentBodyRef.current = '';
-          setCurrentBody('');
-          bumpEditorVersion(targetDate, 'empty-entry');
-        }
-        logDebug('entry.load.empty', { targetDate });
-        scheduleFlipRefresh();
-        return;
-      }
-
-      setCurrentEntryId(entry.record.id);
-
-      const remoteTimestampRaw = Date.parse(entry.content.updatedAtISO ?? '');
-      const remoteTimestamp = Number.isNaN(remoteTimestampRaw)
-        ? loadStartedAt
-        : remoteTimestampRaw;
-      const previousLocalEdit = lastLocalEditRef.current;
-      lastRemoteUpdateRef.current = remoteTimestamp;
-
-      if (draft && draft.updatedAt > remoteTimestamp) {
-        isDirtyRef.current = true;
-        suppressEditorOnChangeRef.current = true;
-        externalChangeOriginRef.current = 'draft';
-        scheduleFlipRefresh();
-        return;
-      }
-
-      const nextBody = entry.content.body ?? '';
-      if (
-        navigation.currentDate === targetDate
-        && previousLocalEdit
-        && previousLocalEdit > remoteTimestamp
-        && nextBody !== currentBodyRef.current
-      ) {
-        logDebug('entry.load.stale', {
-          targetDate,
-          remoteTimestamp,
-          previousLocalEdit,
-          incomingLength: nextBody.length,
-          currentLength: currentBodyRef.current.length,
-        });
-        return;
-      }
-
-      if (
-        navigation.currentDate === targetDate
-        && nextBody.length < currentBodyRef.current.length
-      ) {
-        logDebug('entry.load.ignored.shorter', {
-          targetDate,
-          remoteTimestamp,
-          incomingLength: nextBody.length,
-          currentLength: currentBodyRef.current.length,
-        });
-        return;
-      }
-
-      isDirtyRef.current = false;
-      lastLocalEditRef.current = remoteTimestamp;
-      suppressEditorOnChangeRef.current = true;
-      if (nextBody !== currentBodyRef.current) {
-        currentBodyRef.current = nextBody;
-        setCurrentBody(nextBody);
-      }
-      externalChangeOriginRef.current = 'remote';
-      clearDraft(targetDate);
-      logDebug('entry.load.success', {
-        targetDate,
-        remoteTimestamp,
-        bodyLength: nextBody.length,
-      });
-      bumpEditorVersion(targetDate, 'remote-load');
-      scheduleFlipRefresh();
-    };
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [bumpEditorVersion, clearDraft, encryption.status, getOrInitEditorVersion, incrementCounter, loadDraft, logDebug, navigation.currentDate, scheduleFlipRefresh]);
 
   useEffect(() => {
     void data.loadGoals();
@@ -1423,211 +1102,6 @@ export const DiaryViewport = ({
     ensurePassiveTouchHandlers();
   }, [ensurePassiveTouchHandlers, incrementCounter, logDebug, navigation.currentIndex, scheduleFlipRefresh]);
 
-  const handleSaveEntry = useCallback(
-    async (bodyOverride?: string, dateOverride?: string) => {
-      const targetDateISO = dateOverride ?? navigation.currentDate;
-      if (!targetDateISO) {
-        return null;
-      }
-      const bodyToPersist = bodyOverride ?? (targetDateISO === navigation.currentDate
-        ? currentBodyRef.current
-        : bodyOverride ?? '');
-
-      const nowISO = new Date().toISOString();
-
-      logDebug('entry.save.start', {
-        targetDateISO,
-        bodyLength: bodyToPersist.length,
-      });
-
-      let saved: Awaited<ReturnType<typeof data.saveEntry>> | null = null;
-      try {
-        saved = await data.saveEntry({
-          dateISO: targetDateISO,
-          content: {
-            body: bodyToPersist,
-            createdAtISO: nowISO,
-            updatedAtISO: nowISO,
-          },
-          tzAtEntry: data.profile?.timezone ?? null,
-        });
-      } catch (error) {
-        logDebug('entry.save.error', {
-          targetDateISO,
-          message: error instanceof Error ? error.message : String(error),
-        }, true);
-        throw error;
-      }
-
-      if (targetDateISO === navigation.currentDate) {
-        setCurrentEntryId(saved.record.id);
-        const savedTimestamp = Date.parse(saved.content.updatedAtISO ?? '') || Date.now();
-        lastLocalEditRef.current = savedTimestamp;
-        lastRemoteUpdateRef.current = savedTimestamp;
-        if (currentBodyRef.current === bodyToPersist) {
-          isDirtyRef.current = false;
-        }
-        suppressEditorOnChangeRef.current = true;
-      }
-      if (
-        pendingSaveValueRef.current
-        && pendingSaveValueRef.current.dateISO === targetDateISO
-        && pendingSaveValueRef.current.body === bodyToPersist
-      ) {
-        pendingSaveValueRef.current = null;
-      }
-      clearDraft(targetDateISO);
-      incrementCounter('savesFlushed');
-      logDebug('entry.save.success', {
-        targetDateISO,
-        bodyLength: bodyToPersist.length,
-      });
-      return saved;
-    },
-    [clearDraft, data, incrementCounter, logDebug, navigation.currentDate],
-  );
-
-  const enqueueSave = useCallback(
-    (dateISO: string, body: string) => {
-      if (typeof window === 'undefined') {
-        return;
-      }
-      pendingSaveValueRef.current = { dateISO, body };
-      if (pendingSaveTimeoutRef.current !== null) {
-        window.clearTimeout(pendingSaveTimeoutRef.current);
-      }
-      incrementCounter('savesQueued');
-      logDebug('entry.save.enqueue', {
-        dateISO,
-        bodyLength: body.length,
-      });
-      pendingSaveTimeoutRef.current = window.setTimeout(() => {
-        pendingSaveTimeoutRef.current = null;
-        const pending = pendingSaveValueRef.current;
-        if (!pending || pending.dateISO !== dateISO) {
-          return;
-        }
-        pendingSaveValueRef.current = null;
-        void handleSaveEntry(pending.body, pending.dateISO).catch((error) => {
-          if (process.env.NODE_ENV !== 'production') {
-            console.error('Failed to auto-save diary entry', error);
-          }
-          logDebug('entry.save.enqueue.error', {
-            dateISO: pending.dateISO,
-            message: error instanceof Error ? error.message : String(error),
-          });
-          pendingSaveValueRef.current = pending;
-          isDirtyRef.current = true;
-        });
-      }, SAVE_DEBOUNCE_MS);
-    },
-    [handleSaveEntry, incrementCounter, logDebug],
-  );
-
-  const flushPendingSave = useCallback(
-    async (targetDate?: string) => {
-      if (typeof window !== 'undefined' && pendingSaveTimeoutRef.current !== null) {
-        window.clearTimeout(pendingSaveTimeoutRef.current);
-        pendingSaveTimeoutRef.current = null;
-      }
-      const pending = pendingSaveValueRef.current;
-      if (pending && (!targetDate || pending.dateISO === targetDate)) {
-        pendingSaveValueRef.current = null;
-        try {
-          await handleSaveEntry(pending.body, pending.dateISO);
-          incrementCounter('savesFlushed');
-          logDebug('entry.save.flush.success', {
-            dateISO: pending.dateISO,
-            bodyLength: pending.body.length,
-          });
-        } catch (error) {
-          if (process.env.NODE_ENV !== 'production') {
-            console.error('Failed to flush diary entry', error);
-          }
-          pendingSaveValueRef.current = pending;
-          isDirtyRef.current = true;
-          logDebug('entry.save.flush.error', {
-            dateISO: pending.dateISO,
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-        return;
-      }
-      if (targetDate && targetDate !== navigation.currentDate) {
-        return;
-      }
-      if (!navigation.currentDate || !isDirtyRef.current) {
-        return;
-      }
-      try {
-        await handleSaveEntry(currentBodyRef.current, navigation.currentDate);
-        incrementCounter('savesFlushed');
-        logDebug('entry.save.flush.success', {
-          dateISO: navigation.currentDate,
-          bodyLength: currentBodyRef.current.length,
-        });
-      } catch (error) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.error('Failed to flush diary entry', error);
-        }
-        isDirtyRef.current = true;
-        logDebug('entry.save.flush.error', {
-          dateISO: navigation.currentDate,
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
-    },
-    [handleSaveEntry, incrementCounter, logDebug, navigation.currentDate],
-  );
-
-  const hasPendingChanges = useCallback(() => {
-    if (pendingSaveTimeoutRef.current !== null) {
-      return true;
-    }
-    if (pendingSaveValueRef.current) {
-      return true;
-    }
-    return isDirtyRef.current;
-  }, []);
-
-  const handleInsertPrompt = useCallback(
-    (text: string) => {
-      if (!navigation.currentDate || !isCurrentPageEditable) {
-        return;
-      }
-      const trimmed = text.trim();
-      if (trimmed.length === 0) {
-        return;
-      }
-      const next = `${currentBodyRef.current}\n\n${trimmed}`.trim();
-      currentBodyRef.current = next;
-      setCurrentBody(next);
-      lastLocalEditRef.current = Date.now();
-      isDirtyRef.current = true;
-      scheduleFlipRefresh();
-      void persistDraft(navigation.currentDate, next);
-      enqueueSave(navigation.currentDate, next);
-      externalChangeOriginRef.current = null;
-      debugLastUserInputRef.current = Date.now();
-      incrementCounter('editorUser');
-      logDebug('editor.insertPrompt', {
-        bodyLength: next.length,
-        dateISO: navigation.currentDate,
-      });
-      scheduleDebugStuckCheck();
-    },
-    [
-      enqueueSave,
-      isCurrentPageEditable,
-      navigation.currentDate,
-      persistDraft,
-      scheduleFlipRefresh,
-      incrementCounter,
-      logDebug,
-      scheduleDebugStuckCheck,
-    ],
-  );
-
   const handleEditorDebug = useCallback((type: string, payload?: Record<string, unknown>) => {
     if (type === 'setEditable') {
       const nextEditable = Boolean(payload?.editable);
@@ -1690,56 +1164,6 @@ export const DiaryViewport = ({
     }
     logDebug(`editor.${type}`, payload ?? {});
   }, [incrementCounter, logDebug, navigation.currentDate, scheduleDebugStuckCheck, scheduleFlipRefresh]);
-
-  useEffect(() => {
-    const previousDate = previousDateRef.current;
-    if (previousDate && previousDate !== navigation.currentDate) {
-      void flushPendingSave(previousDate);
-    }
-    previousDateRef.current = navigation.currentDate;
-  }, [flushPendingSave, navigation.currentDate]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (!hasPendingChanges()) {
-        return;
-      }
-      event.preventDefault();
-      event.returnValue = '';
-      void flushPendingSave();
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [flushPendingSave, hasPendingChanges]);
-
-  useEffect(() => {
-    if (typeof document === 'undefined') {
-      return;
-    }
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        void flushPendingSave();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [flushPendingSave]);
-
-  useEffect(() => {
-    return () => {
-      if (typeof window !== 'undefined' && pendingSaveTimeoutRef.current !== null) {
-        window.clearTimeout(pendingSaveTimeoutRef.current);
-      }
-      void flushPendingSave();
-    };
-  }, [flushPendingSave]);
 
   const goals = useMemo(() => Array.from(data.goals.values()), [data.goals]);
   const entryMetaMap = data.entryMeta;
@@ -2471,9 +1895,11 @@ export const DiaryViewport = ({
     const hasPersistedEntry = entryMetaMap.has(page.dateISO);
     const showReadonlyLabel = !editable && hasPersistedEntry;
     const textareaPlaceholder = editable ? t.getNamespace('entry').t('placeholder') : undefined;
+    const previewPlaceholder = textareaPlaceholder ?? t.getNamespace('entry').t('placeholder');
     const showEmptyReadOnlyState = !editable && !hasPersistedEntry;
     const hasShareAction = data.professionals.length > 0;
     const hasGoalAction = goals.length > 0;
+    const pageHeading = formatDateLabel(page.dateISO, locale);
 
     if (debugOptions.verbose) {
       logDebug('entry.page.editability', {
@@ -2574,6 +2000,94 @@ export const DiaryViewport = ({
           ? t.getNamespace('entry').t('emptyReadonly')
           : null;
 
+    const previewBody = getPreviewBody(page.dateISO);
+
+    const entryContent = isActivePage
+      ? (
+          <DiaryEntryEditor
+            entryKey={entryKey}
+            initialValue={currentBody}
+            editable={editable}
+            placeholder={textareaPlaceholder ?? ''}
+            heading={pageHeading}
+            statusLabel={statusLabelText}
+            actions={headingActions}
+            side={page.side}
+            suppressOnChangeRef={suppressEditorOnChangeRef}
+            onUserInteraction={handleEditorUserInteraction}
+            onChange={(nextValue, { source }) => {
+              logDebug('editor.onChange', {
+                source,
+                entryKey,
+                isActivePage,
+                editable,
+                bodyLength: nextValue.length,
+              });
+              if (!isActivePage) {
+                logDebug('editor.onChange.suppressed', {
+                  reason: 'inactive-page',
+                  entryKey,
+                  navigationDate: navigation.currentDate,
+                  source,
+                  editable,
+                });
+                ensurePageActive();
+                setIsEditorInteracting(true);
+                incrementCounter('editorSuppressed');
+                return;
+              }
+              if (nextValue === currentBodyRef.current) {
+                return;
+              }
+              updateActiveBody(nextValue);
+              if (source === 'external') {
+                incrementCounter('editorExternal');
+                if (externalChangeOriginRef.current === 'draft') {
+                  isDirtyRef.current = true;
+                } else if (externalChangeOriginRef.current === 'remote') {
+                  isDirtyRef.current = false;
+                }
+                externalChangeOriginRef.current = null;
+                return;
+              }
+              incrementCounter('editorUser');
+              lastLocalEditRef.current = Date.now();
+              debugLastUserInputRef.current = Date.now();
+              if (!editable || !navigation.currentDate) {
+                logDebug('editor.onChange.suppressed', {
+                  reason: !editable ? 'not-editable' : 'missing-navigation-date',
+                  entryKey,
+                  navigationDate: navigation.currentDate,
+                  source,
+                  editable,
+                });
+                incrementCounter('editorSuppressed');
+                return;
+              }
+              isDirtyRef.current = true;
+              scheduleFlipRefresh();
+              void persistDraft(navigation.currentDate, nextValue);
+              enqueueSave(navigation.currentDate, nextValue);
+              externalChangeOriginRef.current = null;
+              scheduleDebugStuckCheck();
+            }}
+            fontClassName={DEFAULT_ENTRY_FONT_CLASS}
+            colorClassName={DEFAULT_ENTRY_COLOR_CLASS}
+            onDebugEvent={handleEditorDebug}
+          />
+        )
+      : (
+          <DiaryEntryPreview
+            heading={pageHeading}
+            statusLabel={statusLabelText}
+            body={previewBody}
+            placeholder={previewPlaceholder}
+            fontClassName={DEFAULT_ENTRY_FONT_CLASS}
+            colorClassName={DEFAULT_ENTRY_COLOR_CLASS}
+            actions={headingActions}
+          />
+        );
+
     return (
       <article
         key={`${page.dateISO}-left`}
@@ -2652,78 +2166,7 @@ export const DiaryViewport = ({
             </div>
           )}
 
-          <DiaryEntryEditor
-            entryKey={entryKey}
-            initialValue={isActivePage ? currentBody : ''}
-            editable={editable}
-            placeholder={textareaPlaceholder ?? ''}
-            heading={formatDateLabel(page.dateISO, locale)}
-            statusLabel={statusLabelText}
-            actions={headingActions}
-            side={page.side}
-            suppressOnChangeRef={suppressEditorOnChangeRef}
-            onUserInteraction={handleEditorUserInteraction}
-            onChange={(nextValue, { source }) => {
-              logDebug('editor.onChange', {
-                source,
-                entryKey,
-                isActivePage,
-                editable,
-                bodyLength: nextValue.length,
-              });
-              if (!isActivePage) {
-                logDebug('editor.onChange.suppressed', {
-                  reason: 'inactive-page',
-                  entryKey,
-                  navigationDate: navigation.currentDate,
-                  source,
-                  editable,
-                });
-                ensurePageActive();
-                setIsEditorInteracting(true);
-                incrementCounter('editorSuppressed');
-                return;
-              }
-              if (nextValue === currentBodyRef.current) {
-                return;
-              }
-              setCurrentBody(nextValue);
-              currentBodyRef.current = nextValue;
-              if (source === 'external') {
-                incrementCounter('editorExternal');
-                if (externalChangeOriginRef.current === 'draft') {
-                  isDirtyRef.current = true;
-                } else if (externalChangeOriginRef.current === 'remote') {
-                  isDirtyRef.current = false;
-                }
-                externalChangeOriginRef.current = null;
-                return;
-              }
-              incrementCounter('editorUser');
-              lastLocalEditRef.current = Date.now();
-              debugLastUserInputRef.current = Date.now();
-              if (!editable || !navigation.currentDate) {
-                logDebug('editor.onChange.suppressed', {
-                  reason: !editable ? 'not-editable' : 'missing-navigation-date',
-                  entryKey,
-                  navigationDate: navigation.currentDate,
-                  source,
-                  editable,
-                });
-                incrementCounter('editorSuppressed');
-                return;
-              }
-              isDirtyRef.current = true;
-              scheduleFlipRefresh();
-              void persistDraft(navigation.currentDate, nextValue);
-              enqueueSave(navigation.currentDate, nextValue);
-              externalChangeOriginRef.current = null;
-              scheduleDebugStuckCheck();
-            }}
-            fontClassName={DEFAULT_ENTRY_FONT_CLASS}
-            colorClassName={DEFAULT_ENTRY_COLOR_CLASS}
-            onDebugEvent={handleEditorDebug}
-          />
+          {entryContent}
 
         </div>
       </article>

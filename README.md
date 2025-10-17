@@ -123,6 +123,9 @@ DATABASE_URL=postgresql://...neon.tech/...?...sslmode=require
 AUTH_TRUST_HOST=true
 DEFAULT_LOCALE=it
 SUPPORTED_LOCALES=it,en
+- (Opzionale) Per l'E2E del diario, definisci `E2E_DIARY_EMAIL`, `E2E_DIARY_PASSWORD` e
+  `E2E_DIARY_PASSPHRASE` (se diversa dalla password) per consentire al test Playwright di sbloccare la
+  vista protetta.
 ```
 
 - Usa il template `.env.example` come base: copia il file in `.env.local` e compila i valori necessari (crea `.env.production.local` per i deploy).
