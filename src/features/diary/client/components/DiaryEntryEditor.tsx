@@ -24,6 +24,12 @@ import {
   useRef,
 } from 'react';
 
+type EditorInteractionEvent = 'pointer' | 'focus' | 'blur';
+
+type EditorInteractionDetails = {
+  restorePlanned?: boolean;
+};
+
 type DiaryEntryEditorProps = {
   entryKey: string;
   initialValue: string;
@@ -38,7 +44,7 @@ type DiaryEntryEditorProps = {
   actions?: ReactNode;
   side: 'left' | 'right';
   onDebugEvent?: (type: string, payload?: Record<string, unknown>) => void;
-  onUserInteraction?: (event: 'pointer' | 'focus' | 'blur') => void;
+  onUserInteraction?: (event: EditorInteractionEvent, details?: EditorInteractionDetails) => void;
 };
 
 const theme: EditorThemeClasses = {
@@ -201,21 +207,35 @@ const DiaryEntryEditor = ({
     };
 
     const handleFocusBlur = (type: 'focus' | 'blur') => (event: FocusEvent) => {
-      onDebugEvent(`dom.${type}`);
+      const hostNode = contentEditableRef.current;
+      let relatedTarget: HTMLElement | null = null;
+      let restorePlanned = false;
+
+      if (type === 'blur') {
+        relatedTarget = (event.relatedTarget as HTMLElement | null) ?? null;
+        restorePlanned = Boolean(
+          shouldRestoreFocusRef.current
+          && hostNode
+          && (!relatedTarget || !hostNode.contains(relatedTarget)),
+        );
+        onDebugEvent?.('dom.blur', {
+          restorePlanned,
+          relatedTagName: relatedTarget?.tagName ?? null,
+          relatedId: relatedTarget?.id ?? null,
+        });
+      } else {
+        onDebugEvent?.('dom.focus');
+      }
+
       if (type === 'focus') {
         shouldRestoreFocusRef.current = true;
         onUserInteraction?.('focus');
         return;
       }
 
-      onUserInteraction?.('blur');
+      onUserInteraction?.('blur', { restorePlanned });
 
-      if (!shouldRestoreFocusRef.current || !contentEditableRef.current) {
-        return;
-      }
-
-      const relatedTarget = (event.relatedTarget as HTMLElement | null) ?? null;
-      if (relatedTarget && contentEditableRef.current.contains(relatedTarget)) {
+      if (!restorePlanned || !hostNode) {
         return;
       }
 

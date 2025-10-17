@@ -399,6 +399,7 @@ export const DiaryViewport = ({
   const [debugActionMessage, setDebugActionMessage] = useState<{ text: string; tone: 'info' | 'success' | 'error' } | null>(null);
   const compositionActiveRef = useRef(false);
   const editorHasFocusRef = useRef(false);
+  const transientBlurRef = useRef(false);
   const pendingFlipRefreshRef = useRef(false);
   const editorEditableStateRef = useRef<boolean | null>(null);
   const editabilityLogCacheRef = useRef<Map<string, { result: boolean; reason: string; diffMinutes: number | null; graceMinutes: number | null; ts: number }>>(new Map());
@@ -1131,17 +1132,29 @@ export const DiaryViewport = ({
       logDebug('editor.dom.focus.inferred', payload ?? {});
     }
     if (type === 'dom.focus') {
+      transientBlurRef.current = false;
       editorHasFocusRef.current = true;
       setIsEditorInteracting(true);
       logDebug('editor.dom.focus', payload ?? {});
       return;
     }
     if (type === 'dom.blur') {
+      const restorePlanned = Boolean(
+        payload && typeof payload === 'object' && 'restorePlanned' in payload
+          ? (payload as { restorePlanned?: boolean }).restorePlanned
+          : false,
+      );
       editorHasFocusRef.current = false;
-      setIsEditorInteracting(false);
-      logDebug('editor.dom.blur', payload ?? {});
-      if (pendingFlipRefreshRef.current) {
-        scheduleFlipRefresh();
+      transientBlurRef.current = restorePlanned;
+      logDebug('editor.dom.blur', {
+        ...(payload ?? {}),
+        restorePlanned,
+      });
+      if (!restorePlanned) {
+        setIsEditorInteracting(false);
+        if (pendingFlipRefreshRef.current) {
+          scheduleFlipRefresh();
+        }
       }
       return;
     }
@@ -1824,10 +1837,19 @@ export const DiaryViewport = ({
       }
     };
 
-    const handleEditorUserInteraction = (event: 'pointer' | 'focus' | 'blur') => {
+    const handleEditorUserInteraction = (
+      event: 'pointer' | 'focus' | 'blur',
+      details?: { restorePlanned?: boolean },
+    ) => {
       if (event === 'blur') {
+        if (details?.restorePlanned || transientBlurRef.current) {
+          return;
+        }
         setIsEditorInteracting(false);
         return;
+      }
+      if (event === 'focus' || event === 'pointer') {
+        transientBlurRef.current = false;
       }
       if (!isEditorInteracting) {
         setIsEditorInteracting(true);
