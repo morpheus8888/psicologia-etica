@@ -1806,8 +1806,20 @@ export const DiaryViewport = ({
       if (!isActivePage) {
         logDebug('navigation.ensureActive', { action: 'setDate', targetDate: page.dateISO });
         navigation.setDate(page.dateISO);
-      } else if (navigation.currentIndex !== page.index) {
-        logDebug('navigation.ensureActive', { action: 'setIndex', targetIndex: page.index });
+        return;
+      }
+
+      const currentSpread = Math.floor(navigation.currentIndex / 2);
+      const targetSpread = Math.floor(page.index / 2);
+
+      if (currentSpread !== targetSpread) {
+        logDebug('navigation.ensureActive', {
+          action: 'setIndex',
+          targetIndex: page.index,
+          currentIndex: navigation.currentIndex,
+          currentSpread,
+          targetSpread,
+        });
         navigation.setIndex(page.index);
       }
     };
