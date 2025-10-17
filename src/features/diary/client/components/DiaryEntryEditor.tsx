@@ -151,6 +151,8 @@ const DiaryEntryEditor = ({
 
   const sideClass = side === 'left' ? 'diary-entry-sheet--left' : 'diary-entry-sheet--right';
   const contentEditableRef = useRef<HTMLDivElement | null>(null);
+  const shouldRestoreFocusRef = useRef(false);
+  const lastForcedFocusRef = useRef(0);
 
   useEffect(() => {
     onDebugEvent?.('mount', { entryKey, editable });
@@ -198,12 +200,51 @@ const DiaryEntryEditor = ({
       });
     };
 
-    const handleFocusBlur = (type: string) => () => {
+    const handleFocusBlur = (type: 'focus' | 'blur') => (event: FocusEvent) => {
       onDebugEvent(`dom.${type}`);
       if (type === 'focus') {
+        shouldRestoreFocusRef.current = true;
         onUserInteraction?.('focus');
-      } else if (type === 'blur') {
-        onUserInteraction?.('blur');
+        return;
+      }
+
+      onUserInteraction?.('blur');
+
+      if (!shouldRestoreFocusRef.current || !contentEditableRef.current) {
+        return;
+      }
+
+      const relatedTarget = (event.relatedTarget as HTMLElement | null) ?? null;
+      if (relatedTarget && contentEditableRef.current.contains(relatedTarget)) {
+        return;
+      }
+
+      const now = (typeof performance !== 'undefined' && performance.now)
+        ? performance.now()
+        : Date.now();
+      if (now - lastForcedFocusRef.current < 500) {
+        return;
+      }
+
+      lastForcedFocusRef.current = now;
+
+      const restore = () => {
+        const editableNode = contentEditableRef.current;
+        if (!editableNode) {
+          return;
+        }
+        const ownerDocument = editableNode.ownerDocument ?? document;
+        const active = ownerDocument.activeElement;
+        if (!active || active === ownerDocument.body) {
+          editableNode.focus({ preventScroll: true });
+          onDebugEvent?.('focus.restore', { reason: 'blur-without-target' });
+        }
+      };
+
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(restore);
+      } else {
+        restore();
       }
     };
 
@@ -215,6 +256,7 @@ const DiaryEntryEditor = ({
     const focusHandler = handleFocusBlur('focus');
     const blurHandler = handleFocusBlur('blur');
     const pointerDownHandler = () => {
+      shouldRestoreFocusRef.current = true;
       onUserInteraction?.('pointer');
     };
 
@@ -242,6 +284,20 @@ const DiaryEntryEditor = ({
       node.removeEventListener('pointerdown', pointerDownHandler);
     };
   }, [onDebugEvent, onUserInteraction]);
+
+  useEffect(() => {
+    const handleGlobalPointerDown = (event: PointerEvent) => {
+      if (!contentEditableRef.current) {
+        return;
+      }
+      const target = event.target as Node | null;
+      shouldRestoreFocusRef.current = Boolean(target && contentEditableRef.current.contains(target));
+    };
+    document.addEventListener('pointerdown', handleGlobalPointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', handleGlobalPointerDown, true);
+    };
+  }, []);
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
