@@ -37,6 +37,7 @@ const DiaryEntryPreviewComponent = ({
   actions,
 }: DiaryEntryPreviewProps) => {
   const previewLines = takePreviewLines(body, placeholder);
+  const lineOccurrences = new Map<string, number>();
 
   return (
     <div
@@ -65,11 +66,19 @@ const DiaryEntryPreviewComponent = ({
       <div className="diary-entry-lines">
         <div className={`diary-entry-text ${fontClassName} ${colorClassName}`}>
           <div className="diary-entry-content whitespace-pre-wrap break-words leading-relaxed">
-            {previewLines.map((line, index) => (
-              <p key={`${heading}-preview-${index}`} className="mb-2 text-sm text-foreground/90 last:mb-0">
-                {line.length === 0 ? '\u00A0' : line}
-              </p>
-            ))}
+            {previewLines.map((line) => {
+              const occurrence = (lineOccurrences.get(line) ?? 0) + 1;
+              lineOccurrences.set(line, occurrence);
+              const key = `${heading}-preview-${line}-${occurrence}`;
+              return (
+                <p
+                  key={key}
+                  className="mb-2 text-sm text-foreground/90 last:mb-0"
+                >
+                  {line.length === 0 ? '\u00A0' : line}
+                </p>
+              );
+            })}
           </div>
         </div>
       </div>
