@@ -162,6 +162,14 @@ type FlipBookHandle = {
   pageFlip: () => (PageFlipApi & { ui?: unknown }) | undefined;
 };
 
+type ManualFlipState = {
+  direction: 'prev' | 'next';
+  targetIndex: number;
+  method: 'flipPrev' | 'flipNext' | 'flip' | 'turnToPage' | null;
+  startedAt: number;
+  sawStateChange: boolean;
+};
+
 const normalizeDate = (dateISO: string) => dateISO.slice(0, 10);
 
 const toISODate = (value: Date) => {
@@ -412,6 +420,8 @@ export const DiaryViewport = ({
   const editorHasFocusRef = useRef(false);
   const pendingFlipRefreshRef = useRef(false);
   const manualFlipFallbackTimeoutRef = useRef<number | null>(null);
+  const manualFlipStateRef = useRef<ManualFlipState | null>(null);
+  const manualFlipGuardRef = useRef(false);
   const editorEditableStateRef = useRef<boolean | null>(null);
   const editabilityLogCacheRef = useRef<Map<string, { result: boolean; reason: string; diffMinutes: number | null; graceMinutes: number | null; ts: number }>>(new Map());
   const debugSuppressLogsRef = useRef(false);
@@ -846,6 +856,11 @@ export const DiaryViewport = ({
       logDebug('flipbook.update.skip', { reason: 'not-ready' });
       return;
     }
+    if (manualFlipGuardRef.current) {
+      incrementCounter('flipUpdatesSkipped');
+      logDebug('flipbook.update.skip', { reason: 'manual-flip-active' });
+      return;
+    }
     if (debugOptionsRef.current.suspendFlipUpdates) {
       incrementCounter('flipUpdatesSkipped');
       logDebug('flipbook.update.skip', { reason: 'suspendFlipUpdates' });
@@ -885,6 +900,12 @@ export const DiaryViewport = ({
         logDebug('flipbook.update.skip', { reason: 'not-ready-late' });
         return;
       }
+      if (manualFlipGuardRef.current) {
+        pendingFlipRefreshRef.current = true;
+        incrementCounter('flipUpdatesSkipped');
+        logDebug('flipbook.update.skip', { reason: 'manual-flip-active-late' });
+        return;
+      }
       if (debugOptionsRef.current.suspendFlipUpdates) {
         pendingFlipRefreshRef.current = true;
         incrementCounter('flipUpdatesSkipped');
@@ -919,6 +940,156 @@ export const DiaryViewport = ({
       ensurePassiveTouchHandlers();
     });
   }, [ensurePassiveTouchHandlers, incrementCounter, logDebug]);
+
+  const clearManualFlipFallback = useCallback(() => {
+    if (manualFlipFallbackTimeoutRef.current !== null && typeof window !== 'undefined') {
+      window.clearTimeout(manualFlipFallbackTimeoutRef.current);
+      manualFlipFallbackTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleManualFlipCheck = useCallback(
+    (attempt: 'initial' | 'post-state' | 'post-fallback') => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+      clearManualFlipFallback();
+      const delay = attempt === 'initial'
+        ? MANUAL_FLIP_FALLBACK_DELAY_MS
+        : MANUAL_FLIP_FALLBACK_DELAY_MS * 2;
+      manualFlipFallbackTimeoutRef.current = window.setTimeout(() => {
+        manualFlipFallbackTimeoutRef.current = null;
+        const manualState = manualFlipStateRef.current;
+        const pageFlipInstance = flipRef.current?.pageFlip?.();
+        if (!manualState) {
+          logDebug('flipbook.manual.fallback.skip', {
+            attempt,
+            reason: 'no-manual-state',
+            fallbackDelay: delay,
+          });
+          manualFlipGuardRef.current = false;
+          return;
+        }
+        if (!pageFlipInstance) {
+          logDebug('flipbook.manual.fallback.skip', {
+            direction: manualState.direction,
+            attempt,
+            reason: 'no-instance-after-delay',
+            targetIndex: manualState.targetIndex,
+            fallbackDelay: delay,
+          });
+          manualFlipGuardRef.current = false;
+          manualFlipStateRef.current = null;
+          return;
+        }
+
+        const followupState = typeof pageFlipInstance.getState === 'function'
+          ? pageFlipInstance.getState()
+          : null;
+        const followupIndex = typeof pageFlipInstance.getCurrentPageIndex === 'function'
+          ? pageFlipInstance.getCurrentPageIndex()
+          : null;
+        const elapsed = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+          - manualState.startedAt;
+
+        if (followupIndex === manualState.targetIndex) {
+          logDebug('flipbook.manual.followup', {
+            direction: manualState.direction,
+            state: followupState,
+            currentIndex: followupIndex,
+            targetIndex: manualState.targetIndex,
+            elapsed,
+            attempt,
+          });
+          manualFlipGuardRef.current = false;
+          manualFlipStateRef.current = null;
+          return;
+        }
+
+        const sawFlipping = manualState.sawStateChange || followupState === 'flipping';
+        if (attempt === 'initial' && sawFlipping) {
+          logDebug('flipbook.manual.followup', {
+            direction: manualState.direction,
+            state: followupState,
+            currentIndex: followupIndex,
+            targetIndex: manualState.targetIndex,
+            elapsed,
+            attempt: 'post-state',
+          });
+          scheduleManualFlipCheck('post-state');
+          return;
+        }
+        if (attempt === 'post-state' && followupState === 'flipping') {
+          logDebug('flipbook.manual.followup', {
+            direction: manualState.direction,
+            state: followupState,
+            currentIndex: followupIndex,
+            targetIndex: manualState.targetIndex,
+            elapsed,
+            attempt,
+          });
+          scheduleManualFlipCheck('post-state');
+          return;
+        }
+
+        const fallbackMethod = typeof pageFlipInstance.flip === 'function'
+          ? 'flip'
+          : typeof pageFlipInstance.turnToPage === 'function'
+            ? 'turnToPage'
+            : null;
+
+        if (!fallbackMethod) {
+          logDebug('flipbook.manual.fallback.skip', {
+            direction: manualState.direction,
+            attempt,
+            reason: 'no-fallback-method',
+            state: followupState,
+            currentIndex: followupIndex,
+            targetIndex: manualState.targetIndex,
+            elapsed,
+          });
+          manualFlipGuardRef.current = false;
+          manualFlipStateRef.current = null;
+          return;
+        }
+
+        if (attempt === 'post-fallback') {
+          logDebug('flipbook.manual.fallback.skip', {
+            direction: manualState.direction,
+            attempt,
+            reason: 'post-fallback-unsatisfied',
+            state: followupState,
+            currentIndex: followupIndex,
+            targetIndex: manualState.targetIndex,
+            elapsed,
+          });
+          manualFlipGuardRef.current = false;
+          manualFlipStateRef.current = null;
+          return;
+        }
+
+        if (fallbackMethod === 'flip') {
+          const corner: 'top' | 'bottom' = manualState.direction === 'prev' ? 'bottom' : 'top';
+          pageFlipInstance.flip(manualState.targetIndex, corner);
+        } else {
+          pageFlipInstance.turnToPage(manualState.targetIndex);
+        }
+
+        logDebug('flipbook.manual.fallback', {
+          direction: manualState.direction,
+          method: fallbackMethod,
+          currentIndex: followupIndex,
+          targetIndex: manualState.targetIndex,
+          state: followupState,
+          elapsed,
+          attempt,
+        });
+
+        scheduleManualFlipCheck('post-fallback');
+      }, delay);
+    },
+    [clearManualFlipFallback, logDebug],
+  );
 
   const handleManualFlip = useCallback((direction: 'prev' | 'next') => {
     const book = flipRef.current?.pageFlip?.();
@@ -1056,106 +1227,37 @@ export const DiaryViewport = ({
       rawCurrentAfter,
     });
 
-    if (manualFlipFallbackTimeoutRef.current !== null) {
-      if (typeof window !== 'undefined') {
-        window.clearTimeout(manualFlipFallbackTimeoutRef.current);
-      }
-      manualFlipFallbackTimeoutRef.current = null;
-    }
+    clearManualFlipFallback();
 
     if (method === 'flipPrev' || method === 'flipNext') {
-      const scheduleFallbackCheck = (attempt: 'initial' | 'post-flip') => {
-        if (manualFlipFallbackTimeoutRef.current !== null && typeof window !== 'undefined') {
-          window.clearTimeout(manualFlipFallbackTimeoutRef.current);
-        }
-        if (typeof window === 'undefined') {
-          return;
-        }
-        const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
-        manualFlipFallbackTimeoutRef.current = window.setTimeout(() => {
-          manualFlipFallbackTimeoutRef.current = null;
-          const instance = flipRef.current?.pageFlip?.();
-          if (!instance) {
-            logDebug('flipbook.manual.fallback.skip', {
-              direction,
-              reason: 'no-instance-after-delay',
-              targetIndex,
-              attempt,
-              fallbackDelay: MANUAL_FLIP_FALLBACK_DELAY_MS,
-            });
-            return;
-          }
-          const followupState = typeof instance.getState === 'function' ? instance.getState() : null;
-          const followupIndex = typeof instance.getCurrentPageIndex === 'function'
-            ? instance.getCurrentPageIndex()
-            : rawCurrentAfter;
-          const elapsed = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt;
-          if (followupState === 'flipping' || followupIndex !== rawCurrentIndex) {
-            logDebug('flipbook.manual.followup', {
-              direction,
-              state: followupState,
-              currentIndex: followupIndex,
-              targetIndex,
-              elapsed,
-              attempt,
-            });
-            return;
-          }
-
-          if (attempt === 'initial' && typeof instance.flip === 'function' && followupIndex !== targetIndex) {
-            const corner: 'top' | 'bottom' = direction === 'prev' ? 'bottom' : 'top';
-            instance.flip(targetIndex, corner);
-            logDebug('flipbook.manual.fallback', {
-              direction,
-              method: 'flip',
-              currentIndex: followupIndex,
-              targetIndex,
-              state: followupState,
-              elapsed,
-            });
-            scheduleFallbackCheck('post-flip');
-            return;
-          }
-
-          if (typeof instance.turnToPage === 'function' && followupIndex !== targetIndex) {
-            instance.turnToPage(targetIndex);
-            logDebug('flipbook.manual.fallback', {
-              direction,
-              method: 'turnToPage',
-              currentIndex: followupIndex,
-              targetIndex,
-              state: followupState,
-              elapsed,
-            });
-            return;
-          }
-
-          logDebug('flipbook.manual.fallback.skip', {
-            direction,
-            reason: followupIndex === targetIndex ? 'already-on-target' : 'no-fallback-method',
-            currentIndex: followupIndex,
-            targetIndex,
-            state: followupState,
-            elapsed,
-            attempt,
-          });
-        }, MANUAL_FLIP_FALLBACK_DELAY_MS);
+      manualFlipGuardRef.current = true;
+      const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      manualFlipStateRef.current = {
+        direction,
+        targetIndex,
+        method,
+        startedAt,
+        sawStateChange: flipState === 'flipping',
       };
-
-      scheduleFallbackCheck('initial');
+      if (flipState === 'flipping') {
+        scheduleManualFlipCheck('post-state');
+      } else {
+        scheduleManualFlipCheck('initial');
+      }
+    } else {
+      manualFlipGuardRef.current = false;
+      manualFlipStateRef.current = null;
     }
-  }, [flipState, logDebug, navigation.currentIndex, navigation.pages]);
+  }, [clearManualFlipFallback, flipState, logDebug, navigation.currentIndex, navigation.pages, scheduleManualFlipCheck]);
 
   useEffect(() => {
     return () => {
       if (flipRefreshFrameRef.current !== null) {
         window.cancelAnimationFrame(flipRefreshFrameRef.current);
       }
-      if (manualFlipFallbackTimeoutRef.current !== null) {
-        window.clearTimeout(manualFlipFallbackTimeoutRef.current);
-      }
+      clearManualFlipFallback();
     };
-  }, []);
+  }, [clearManualFlipFallback]);
 
   const isDesktop = ui.isDesktop();
   const encryption = useDiaryEncryption();
@@ -1248,6 +1350,16 @@ export const DiaryViewport = ({
 
     const currentPage = book.getCurrentPageIndex();
     const bookState = typeof book.getState === 'function' ? book.getState() : null;
+    if (manualFlipGuardRef.current) {
+      logDebug('flipbook.syncNavigation.skip', {
+        reason: 'manual-flip-active',
+        currentPage,
+        targetIndex: navigation.currentIndex,
+        flipState,
+        bookState,
+      });
+      return;
+    }
     const flipStateBusy = flipState && flipState !== 'read';
     if (flipStateBusy) {
       logDebug('flipbook.syncNavigation.skip', {
@@ -1337,12 +1449,23 @@ export const DiaryViewport = ({
         previousIndex,
         nextIndex,
       }, true);
+      const manualState = manualFlipStateRef.current;
+      if (manualState && manualState.targetIndex === nextIndex) {
+        manualFlipGuardRef.current = false;
+        manualFlipStateRef.current = null;
+        clearManualFlipFallback();
+        logDebug('flipbook.manual.complete', {
+          reason: 'flip-event',
+          direction: manualState.direction,
+          targetIndex: nextIndex,
+        });
+      }
       if (previousIndex !== nextIndex) {
         navigation.setIndex(nextIndex);
       }
       scheduleFlipRefresh();
     },
-    [incrementCounter, logDebug, navigation, scheduleFlipRefresh],
+    [clearManualFlipFallback, incrementCounter, logDebug, navigation, scheduleFlipRefresh],
   );
 
   const handleOrientationChange = useCallback((event: { data: string }) => {
@@ -1376,8 +1499,41 @@ export const DiaryViewport = ({
       currentPageIndex,
       timestamp: nowTs,
     }, true);
+    if (state === 'flipping' && manualFlipStateRef.current) {
+      manualFlipGuardRef.current = true;
+      manualFlipStateRef.current = {
+        ...manualFlipStateRef.current,
+        sawStateChange: true,
+      };
+      clearManualFlipFallback();
+      scheduleManualFlipCheck('post-state');
+      logDebug('flipbook.manual.progress', {
+        stage: 'flipping',
+        direction: manualFlipStateRef.current.direction,
+        targetIndex: manualFlipStateRef.current.targetIndex,
+      });
+    }
+    if (state === 'read' && manualFlipStateRef.current) {
+      const manualState = manualFlipStateRef.current;
+      const effectiveIndex = typeof book?.getCurrentPageIndex === 'function'
+        ? book.getCurrentPageIndex()
+        : currentPageIndex;
+      if (effectiveIndex === manualState.targetIndex) {
+        manualFlipGuardRef.current = false;
+        manualFlipStateRef.current = null;
+        clearManualFlipFallback();
+        logDebug('flipbook.manual.complete', {
+          reason: 'state-read',
+          direction: manualState.direction,
+          targetIndex: manualState.targetIndex,
+          sawStateChange: manualState.sawStateChange,
+        });
+      } else {
+        scheduleManualFlipCheck('post-fallback');
+      }
+    }
     setFlipState(state as 'user_fold' | 'fold_corner' | 'flipping' | 'read');
-  }, [flipState, logDebug, navigation.currentIndex]);
+  }, [clearManualFlipFallback, flipState, logDebug, navigation.currentIndex, scheduleManualFlipCheck]);
 
   const goToIndex = useCallback(
     (index: number) => {
