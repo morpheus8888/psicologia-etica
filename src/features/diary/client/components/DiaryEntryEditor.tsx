@@ -164,6 +164,7 @@ const DiaryEntryEditor = ({
   const shouldRestoreFocusRef = useRef(false);
   const lastForcedFocusRef = useRef(0);
   const forcedFocusAttemptsRef = useRef(0);
+  const restoringFocusRef = useRef(false);
 
   useEffect(() => {
     onDebugEvent?.('mount', { entryKey, editable });
@@ -221,7 +222,12 @@ const DiaryEntryEditor = ({
         : Date.now();
 
       if (type === 'focus') {
-        shouldRestoreFocusRef.current = true;
+        if (restoringFocusRef.current) {
+          restoringFocusRef.current = false;
+          shouldRestoreFocusRef.current = false;
+        } else {
+          shouldRestoreFocusRef.current = true;
+        }
         forcedFocusAttemptsRef.current = 0;
         lastForcedFocusRef.current = now;
         onDebugEvent?.('dom.focus', {
@@ -299,6 +305,7 @@ const DiaryEntryEditor = ({
         const latestOwnerDocument = editableNode.ownerDocument ?? document;
         const latestActive = latestOwnerDocument.activeElement;
         if (!latestActive || latestActive === latestOwnerDocument.body) {
+          restoringFocusRef.current = true;
           editableNode.focus({ preventScroll: true });
           const selection = latestOwnerDocument.getSelection();
           if (selection) {
