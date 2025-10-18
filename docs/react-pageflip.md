@@ -126,3 +126,4 @@ These notes are the single source of truth for working with the flip-book; keep 
 - Nel diario i pulsanti freccia richiamano direttamente `flipPrev` / `flipNext`, così ogni click avanza o torna indietro di un solo giorno (una coppia di pagine).
 - Non aggiornare lo stato di navigazione dell’app mentre il flip è in corso: forzare l’indice provoca una chiamata immediata a `flip()`/`turnToPage()` da parte del watcher di sincronizzazione e la transizione scompare.
 - Evita di chiamare `flip()` / `turnToPage()` mentre lo stato riportato da `changeState` è `'flipping'`; attendi il ritorno a `'read'` prima di riallineare manualmente l’indice.
+- Per il debug abbiamo eventi `flipbook.manual.request` / `flipbook.manual` e `flipbook.state` che includono spread calcolati, metodo usato e stato corrente: cattura l’output quando il flip non anima correttamente.
