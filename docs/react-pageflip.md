@@ -123,3 +123,6 @@ These notes are the single source of truth for working with the flip-book; keep 
 - Normalizza sempre l’indice corrente alla pagina sinistra della coppia (`index` pari) prima di eseguire flip programmatici. Chiedere alla libreria di andare alla pagina destra dello stesso spread non produce animazioni né cambi di stato visibili.
 - Usa prima `flipPrev` / `flipNext` per lasciare che il controller gestisca direzione e animazioni; ripiega su `flip(targetIndex)` o `turnToPage(targetIndex)` solo se la coppia successiva è fuori range (es. ultima pagina singola).
 - Dopo un flip manuale sincronizza la navigazione ascoltando l’evento `flip`. Se devi forzare l’indice, allinealo comunque al valore normalizzato per evitare che `update()` o `turnToPage` interrompano l’animazione.
+- Nel diario i pulsanti freccia richiamano direttamente `flipPrev` / `flipNext`, così ogni click avanza o torna indietro di un solo giorno (una coppia di pagine).
+- Non aggiornare lo stato di navigazione dell’app mentre il flip è in corso: forzare l’indice provoca una chiamata immediata a `flip()`/`turnToPage()` da parte del watcher di sincronizzazione e la transizione scompare.
+- Evita di chiamare `flip()` / `turnToPage()` mentre lo stato riportato da `changeState` è `'flipping'`; attendi il ritorno a `'read'` prima di riallineare manualmente l’indice.

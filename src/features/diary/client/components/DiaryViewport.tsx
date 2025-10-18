@@ -347,8 +347,6 @@ export const DiaryViewport = ({
   const coverBrand = tCover.t('brand');
   const data = useDiaryData();
   const navigation = useDiaryNavigation();
-  const setNavigationIndex = navigation.setIndex;
-
   const flipRef = useRef<FlipBookHandle | null>(null);
   const flipRefreshFrameRef = useRef<number | null>(null);
   const flipBookReadyRef = useRef(false);
@@ -412,6 +410,7 @@ export const DiaryViewport = ({
   const lastFlipStateTsRef = useRef<number>(0);
   const lastFlipUpdateTimeRef = useRef(0);
   const [isFlipbookReady, setIsFlipbookReady] = useState(false);
+  const [flipState, setFlipState] = useState<'user_fold' | 'fold_corner' | 'flipping' | 'read' | null>(null);
   const clientTodayISORef = useRef(toISODate(new Date()));
   const clientNowRef = useRef(Date.now());
 
@@ -913,30 +912,14 @@ export const DiaryViewport = ({
       ? lastBookIndex
       : null;
 
-    const computeTargetIndex = () => {
-      if (direction === 'prev') {
-        if (normalizedCurrentIndex <= 0) {
-          return null;
-        }
-        return Math.max(0, normalizedCurrentIndex - 2);
-      }
+    const hasPrevSpread = normalizedCurrentIndex > 0;
+    const hasNextSpread = normalizedCurrentIndex < normalizedMaxIndex
+      || (trailingSinglePageIndex !== null && normalizedCurrentIndex < trailingSinglePageIndex);
 
-      if (normalizedCurrentIndex < normalizedMaxIndex) {
-        return Math.min(normalizedMaxIndex, normalizedCurrentIndex + 2);
-      }
-
-      if (trailingSinglePageIndex && trailingSinglePageIndex > normalizedCurrentIndex) {
-        return trailingSinglePageIndex;
-      }
-
-      return null;
-    };
-
-    const targetIndex = computeTargetIndex();
-    if (targetIndex === null || targetIndex === normalizedCurrentIndex) {
+    if ((direction === 'prev' && !hasPrevSpread) || (direction === 'next' && !hasNextSpread)) {
       logDebug('flipbook.manual.skip', {
         direction,
-        reason: targetIndex === null ? 'no-target' : 'no-change',
+        reason: 'no-target',
         currentIndex: rawCurrentIndex,
         normalizedCurrentIndex,
         pageCount,
@@ -946,24 +929,29 @@ export const DiaryViewport = ({
       return;
     }
 
+    const targetIndex = (() => {
+      if (direction === 'prev') {
+        return Math.max(0, normalizedCurrentIndex - 2);
+      }
+      if (normalizedCurrentIndex < normalizedMaxIndex) {
+        return Math.min(normalizedMaxIndex, normalizedCurrentIndex + 2);
+      }
+      return trailingSinglePageIndex ?? normalizedCurrentIndex;
+    })();
+
     let method: 'flipPrev' | 'flipNext' | 'flip' | 'turnToPage' | null = null;
-    if (
-      direction === 'prev'
-      && typeof book.flipPrev === 'function'
-      && targetIndex === normalizedCurrentIndex - 2
-    ) {
-      book.flipPrev('bottom');
+    if (direction === 'prev' && normalizedCurrentIndex > 0 && typeof book.flipPrev === 'function') {
+      book.flipPrev();
       method = 'flipPrev';
     } else if (
       direction === 'next'
+      && normalizedCurrentIndex < normalizedMaxIndex
       && typeof book.flipNext === 'function'
-      && targetIndex <= normalizedCurrentIndex + 2
-      && targetIndex !== trailingSinglePageIndex
     ) {
-      book.flipNext('bottom');
+      book.flipNext();
       method = 'flipNext';
     } else if (typeof book.flip === 'function') {
-      book.flip(targetIndex, 'bottom');
+      book.flip(targetIndex);
       method = 'flip';
     } else if (typeof book.turnToPage === 'function') {
       book.turnToPage(targetIndex);
@@ -982,7 +970,6 @@ export const DiaryViewport = ({
       return;
     }
 
-    setNavigationIndex(targetIndex);
     logDebug('flipbook.manual', {
       direction,
       currentIndex: rawCurrentIndex,
@@ -993,7 +980,7 @@ export const DiaryViewport = ({
       trailingSinglePageIndex,
       method,
     });
-  }, [logDebug, navigation.currentIndex, navigation.pages, setNavigationIndex]);
+  }, [logDebug, navigation.currentIndex, navigation.pages]);
 
   useEffect(() => {
     return () => {
@@ -1093,6 +1080,15 @@ export const DiaryViewport = ({
     }
 
     const currentPage = book.getCurrentPageIndex();
+    if (flipState === 'flipping') {
+      logDebug('flipbook.syncNavigation.skip', {
+        reason: 'flipping-state',
+        currentPage,
+        targetIndex: navigation.currentIndex,
+      });
+      return;
+    }
+
     logDebug('flipbook.syncNavigation', {
       currentPage,
       targetIndex: navigation.currentIndex,
@@ -1118,7 +1114,7 @@ export const DiaryViewport = ({
 
     logDebug('flipbook.syncNavigation.turn', { currentPage, targetIndex: navigation.currentIndex });
     book.turnToPage(navigation.currentIndex);
-  }, [logDebug, navigation.currentIndex]);
+  }, [flipState, logDebug, navigation.currentIndex]);
 
   useEffect(() => {
     if (!hasTouchSupport) {
@@ -1187,6 +1183,7 @@ export const DiaryViewport = ({
     lastFlipStateRef.current = state;
     lastFlipStateTsRef.current = nowTs;
     logDebug('flipbook.state', { state }, true);
+    setFlipState(state as 'user_fold' | 'fold_corner' | 'flipping' | 'read');
   }, [logDebug]);
 
   const goToIndex = useCallback(
