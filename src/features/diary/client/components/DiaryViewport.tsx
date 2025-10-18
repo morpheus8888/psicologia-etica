@@ -925,8 +925,7 @@ export const DiaryViewport = ({
     }
 
     logDebug('flipbook.manual', { direction, currentIndex, pageCount });
-    scheduleFlipRefresh();
-  }, [logDebug, scheduleFlipRefresh]);
+  }, [logDebug]);
 
   useEffect(() => {
     return () => {
@@ -1094,8 +1093,9 @@ export const DiaryViewport = ({
       if (previousIndex !== nextIndex) {
         navigation.setIndex(nextIndex);
       }
+      scheduleFlipRefresh();
     },
-    [incrementCounter, logDebug, navigation],
+    [incrementCounter, logDebug, navigation, scheduleFlipRefresh],
   );
 
   const handleOrientationChange = useCallback((event: { data: string }) => {
