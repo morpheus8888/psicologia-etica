@@ -161,10 +161,6 @@ const DiaryEntryEditor = ({
 
   const sideClass = side === 'left' ? 'diary-entry-sheet--left' : 'diary-entry-sheet--right';
   const contentEditableRef = useRef<HTMLDivElement | null>(null);
-  const shouldRestoreFocusRef = useRef(false);
-  const lastForcedFocusRef = useRef(0);
-  const forcedFocusAttemptsRef = useRef(0);
-  const restoringFocusRef = useRef(false);
 
   useEffect(() => {
     onDebugEvent?.('mount', { entryKey, editable });
@@ -213,114 +209,28 @@ const DiaryEntryEditor = ({
     };
 
     const handleFocusBlur = (type: 'focus' | 'blur') => (event: FocusEvent) => {
-      const hostNode = contentEditableRef.current;
       const relatedTarget = (event.relatedTarget as HTMLElement | null) ?? null;
-      const ownerDocument = hostNode?.ownerDocument ?? document;
+      const ownerDocument = contentEditableRef.current?.ownerDocument ?? document;
       const activeElement = ownerDocument.activeElement;
-      const now = (typeof performance !== 'undefined' && performance.now)
-        ? performance.now()
-        : Date.now();
 
       if (type === 'focus') {
-        if (restoringFocusRef.current) {
-          restoringFocusRef.current = false;
-          shouldRestoreFocusRef.current = false;
-        }
-        forcedFocusAttemptsRef.current = 0;
-        lastForcedFocusRef.current = now;
         onDebugEvent?.('dom.focus', {
           relatedTagName: relatedTarget?.tagName ?? null,
           relatedId: relatedTarget?.id ?? null,
           activeTagName: activeElement?.tagName ?? null,
         });
         onUserInteraction?.('focus');
-        return;
-      }
-
-      const hostContainsTarget = Boolean(hostNode && relatedTarget && hostNode.contains(relatedTarget));
-      const restorePlanned = Boolean(
-        shouldRestoreFocusRef.current
-        && hostNode
-        && !hostContainsTarget,
-      );
-      const deltaSinceLast = lastForcedFocusRef.current === 0 ? null : now - lastForcedFocusRef.current;
-      const throttled = Boolean(
-        restorePlanned
-        && deltaSinceLast !== null
-        && deltaSinceLast < 150
-        && forcedFocusAttemptsRef.current >= 2,
-      );
-
-      onDebugEvent?.('dom.blur', {
-        restorePlanned,
-        relatedTagName: relatedTarget?.tagName ?? null,
-        relatedId: relatedTarget?.id ?? null,
-        hostContainsTarget,
-        deltaSinceRestore: deltaSinceLast,
-        attempts: forcedFocusAttemptsRef.current,
-        throttled,
-      });
-
-      onUserInteraction?.('blur', {
-        restorePlanned,
-        throttled,
-        deltaSinceRestore: deltaSinceLast,
-        attempts: forcedFocusAttemptsRef.current,
-      });
-
-      if (!restorePlanned || !hostNode) {
-        shouldRestoreFocusRef.current = false;
-        forcedFocusAttemptsRef.current = 0;
-        return;
-      }
-
-      shouldRestoreFocusRef.current = false;
-
-      if (throttled) {
-        onDebugEvent?.('focus.restore.skip', {
-          reason: 'throttled',
-          attempts: forcedFocusAttemptsRef.current,
-          deltaSinceRestore: deltaSinceLast,
-        });
-        return;
-      }
-
-      if (!deltaSinceLast || deltaSinceLast >= 150) {
-        forcedFocusAttemptsRef.current = 0;
-      }
-
-      forcedFocusAttemptsRef.current += 1;
-      const attempt = forcedFocusAttemptsRef.current;
-      lastForcedFocusRef.current = now;
-
-      const restore = () => {
-        const editableNode = contentEditableRef.current;
-        if (!editableNode) {
-          onDebugEvent?.('focus.restore.skip', { reason: 'missing-node', attempt });
-          forcedFocusAttemptsRef.current = 0;
-          return;
-        }
-        const latestOwnerDocument = editableNode.ownerDocument ?? document;
-        const latestActive = latestOwnerDocument.activeElement;
-        if (!latestActive || latestActive === latestOwnerDocument.body) {
-          restoringFocusRef.current = true;
-          editableNode.focus({ preventScroll: true });
-          onDebugEvent?.('focus.restore', { reason: 'blur-without-target', attempt, selection: 'end' });
-          forcedFocusAttemptsRef.current = 0;
-        } else {
-          onDebugEvent?.('focus.restore.skip', {
-            reason: 'active-preserved',
-            attempt,
-            activeTagName: latestActive.tagName,
-          });
-          forcedFocusAttemptsRef.current = 0;
-        }
-      };
-
-      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-        window.requestAnimationFrame(restore);
       } else {
-        restore();
+        onDebugEvent?.('dom.blur', {
+          relatedTagName: relatedTarget?.tagName ?? null,
+          relatedId: relatedTarget?.id ?? null,
+          hostContainsTarget: Boolean(
+            contentEditableRef.current
+            && relatedTarget
+            && contentEditableRef.current.contains(relatedTarget),
+          ),
+        });
+        onUserInteraction?.('blur');
       }
     };
 
@@ -332,7 +242,6 @@ const DiaryEntryEditor = ({
     const focusHandler = handleFocusBlur('focus');
     const blurHandler = handleFocusBlur('blur');
     const pointerDownHandler = (event: PointerEvent) => {
-      shouldRestoreFocusRef.current = true;
       const target = event.target as HTMLElement | null;
       onUserInteraction?.('pointer', {
         targetTagName: target?.tagName ?? null,
@@ -378,10 +287,6 @@ const DiaryEntryEditor = ({
       }
       const targetNode = event.target as Node | null;
       const inside = Boolean(targetNode && hostNode.contains(targetNode));
-      if (!inside) {
-        shouldRestoreFocusRef.current = false;
-        forcedFocusAttemptsRef.current = 0;
-      }
       if (onDebugEvent) {
         const element = targetNode instanceof HTMLElement ? targetNode : null;
         onDebugEvent('dom.pointerdown.global', {
@@ -414,9 +319,6 @@ const DiaryEntryEditor = ({
             const source = wasSuppressed ? 'external' : 'user';
             const textContent = root.getTextContent();
             onChange(textContent, { source });
-            if (source === 'user') {
-              shouldRestoreFocusRef.current = true;
-            }
             if (wasSuppressed) {
               suppressOnChangeRef.current = false;
             }
