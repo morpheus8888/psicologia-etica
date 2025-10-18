@@ -28,6 +28,10 @@ type EditorInteractionEvent = 'pointer' | 'focus' | 'blur';
 
 type EditorInteractionDetails = {
   restorePlanned?: boolean;
+  throttled?: boolean;
+  deltaSinceRestore?: number | null;
+  attempts?: number;
+  targetTagName?: string | null;
 };
 
 type DiaryEntryEditorProps = {
@@ -159,6 +163,7 @@ const DiaryEntryEditor = ({
   const contentEditableRef = useRef<HTMLDivElement | null>(null);
   const shouldRestoreFocusRef = useRef(false);
   const lastForcedFocusRef = useRef(0);
+  const forcedFocusAttemptsRef = useRef(0);
 
   useEffect(() => {
     onDebugEvent?.('mount', { entryKey, editable });
@@ -208,56 +213,96 @@ const DiaryEntryEditor = ({
 
     const handleFocusBlur = (type: 'focus' | 'blur') => (event: FocusEvent) => {
       const hostNode = contentEditableRef.current;
-      let relatedTarget: HTMLElement | null = null;
-      let restorePlanned = false;
-
-      if (type === 'blur') {
-        relatedTarget = (event.relatedTarget as HTMLElement | null) ?? null;
-        restorePlanned = Boolean(
-          shouldRestoreFocusRef.current
-          && hostNode
-          && (!relatedTarget || !hostNode.contains(relatedTarget)),
-        );
-        onDebugEvent?.('dom.blur', {
-          restorePlanned,
-          relatedTagName: relatedTarget?.tagName ?? null,
-          relatedId: relatedTarget?.id ?? null,
-        });
-      } else {
-        onDebugEvent?.('dom.focus');
-      }
+      const relatedTarget = (event.relatedTarget as HTMLElement | null) ?? null;
+      const ownerDocument = hostNode?.ownerDocument ?? document;
+      const activeElement = ownerDocument.activeElement;
+      const now = (typeof performance !== 'undefined' && performance.now)
+        ? performance.now()
+        : Date.now();
 
       if (type === 'focus') {
         shouldRestoreFocusRef.current = true;
+        forcedFocusAttemptsRef.current = 0;
+        lastForcedFocusRef.current = now;
+        onDebugEvent?.('dom.focus', {
+          relatedTagName: relatedTarget?.tagName ?? null,
+          relatedId: relatedTarget?.id ?? null,
+          activeTagName: activeElement?.tagName ?? null,
+        });
         onUserInteraction?.('focus');
         return;
       }
 
-      onUserInteraction?.('blur', { restorePlanned });
+      const hostContainsTarget = Boolean(hostNode && relatedTarget && hostNode.contains(relatedTarget));
+      const restorePlanned = Boolean(
+        shouldRestoreFocusRef.current
+        && hostNode
+        && !hostContainsTarget,
+      );
+      const deltaSinceLast = lastForcedFocusRef.current === 0 ? null : now - lastForcedFocusRef.current;
+      const throttled = Boolean(
+        restorePlanned
+        && deltaSinceLast !== null
+        && deltaSinceLast < 150
+        && forcedFocusAttemptsRef.current >= 2,
+      );
+
+      onDebugEvent?.('dom.blur', {
+        restorePlanned,
+        relatedTagName: relatedTarget?.tagName ?? null,
+        relatedId: relatedTarget?.id ?? null,
+        hostContainsTarget,
+        deltaSinceRestore: deltaSinceLast,
+        attempts: forcedFocusAttemptsRef.current,
+        throttled,
+      });
+
+      onUserInteraction?.('blur', {
+        restorePlanned,
+        throttled,
+        deltaSinceRestore: deltaSinceLast,
+        attempts: forcedFocusAttemptsRef.current,
+      });
 
       if (!restorePlanned || !hostNode) {
+        forcedFocusAttemptsRef.current = 0;
         return;
       }
 
-      const now = (typeof performance !== 'undefined' && performance.now)
-        ? performance.now()
-        : Date.now();
-      if (now - lastForcedFocusRef.current < 500) {
+      if (throttled) {
+        onDebugEvent?.('focus.restore.skip', {
+          reason: 'throttled',
+          attempts: forcedFocusAttemptsRef.current,
+          deltaSinceRestore: deltaSinceLast,
+        });
         return;
       }
 
+      if (!deltaSinceLast || deltaSinceLast >= 150) {
+        forcedFocusAttemptsRef.current = 0;
+      }
+
+      forcedFocusAttemptsRef.current += 1;
+      const attempt = forcedFocusAttemptsRef.current;
       lastForcedFocusRef.current = now;
 
       const restore = () => {
         const editableNode = contentEditableRef.current;
         if (!editableNode) {
+          onDebugEvent?.('focus.restore.skip', { reason: 'missing-node', attempt });
           return;
         }
-        const ownerDocument = editableNode.ownerDocument ?? document;
-        const active = ownerDocument.activeElement;
-        if (!active || active === ownerDocument.body) {
+        const latestOwnerDocument = editableNode.ownerDocument ?? document;
+        const latestActive = latestOwnerDocument.activeElement;
+        if (!latestActive || latestActive === latestOwnerDocument.body) {
           editableNode.focus({ preventScroll: true });
-          onDebugEvent?.('focus.restore', { reason: 'blur-without-target' });
+          onDebugEvent?.('focus.restore', { reason: 'blur-without-target', attempt });
+        } else {
+          onDebugEvent?.('focus.restore.skip', {
+            reason: 'active-preserved',
+            attempt,
+            activeTagName: latestActive.tagName,
+          });
         }
       };
 
@@ -275,9 +320,18 @@ const DiaryEntryEditor = ({
     const keyUpHandler = handleKey('keyup');
     const focusHandler = handleFocusBlur('focus');
     const blurHandler = handleFocusBlur('blur');
-    const pointerDownHandler = () => {
+    const pointerDownHandler = (event: PointerEvent) => {
       shouldRestoreFocusRef.current = true;
-      onUserInteraction?.('pointer');
+      const target = event.target as HTMLElement | null;
+      onUserInteraction?.('pointer', {
+        targetTagName: target?.tagName ?? null,
+      });
+      if (onDebugEvent) {
+        onDebugEvent('dom.pointerdown', {
+          targetTagName: target?.tagName ?? null,
+          targetId: target?.id ?? null,
+        });
+      }
     };
 
     node.addEventListener('beforeinput', handleBeforeInput);
@@ -307,17 +361,30 @@ const DiaryEntryEditor = ({
 
   useEffect(() => {
     const handleGlobalPointerDown = (event: PointerEvent) => {
-      if (!contentEditableRef.current) {
+      const hostNode = contentEditableRef.current;
+      if (!hostNode) {
         return;
       }
-      const target = event.target as Node | null;
-      shouldRestoreFocusRef.current = Boolean(target && contentEditableRef.current.contains(target));
+      const targetNode = event.target as Node | null;
+      const inside = Boolean(targetNode && hostNode.contains(targetNode));
+      shouldRestoreFocusRef.current = inside;
+      if (!inside) {
+        forcedFocusAttemptsRef.current = 0;
+      }
+      if (onDebugEvent) {
+        const element = targetNode instanceof HTMLElement ? targetNode : null;
+        onDebugEvent('dom.pointerdown.global', {
+          inside,
+          targetTagName: element?.tagName ?? null,
+          targetId: element?.id ?? null,
+        });
+      }
     };
     document.addEventListener('pointerdown', handleGlobalPointerDown, true);
     return () => {
       document.removeEventListener('pointerdown', handleGlobalPointerDown, true);
     };
-  }, []);
+  }, [onDebugEvent]);
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
@@ -378,7 +445,10 @@ const DiaryEntryEditor = ({
                   ref={contentEditableRef}
                   onPointerDown={(event) => {
                     event.stopPropagation();
-                    onUserInteraction?.('pointer');
+                    const target = event.target as HTMLElement | null;
+                    onUserInteraction?.('pointer', {
+                      targetTagName: target?.tagName ?? null,
+                    });
                   }}
                 />
               )}

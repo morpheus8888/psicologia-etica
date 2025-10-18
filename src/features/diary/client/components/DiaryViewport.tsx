@@ -1839,10 +1839,34 @@ export const DiaryViewport = ({
 
     const handleEditorUserInteraction = (
       event: 'pointer' | 'focus' | 'blur',
-      details?: { restorePlanned?: boolean },
+      details?: {
+        restorePlanned?: boolean;
+        throttled?: boolean;
+        deltaSinceRestore?: number | null;
+        attempts?: number;
+        targetTagName?: string | null;
+      },
     ) => {
+      logDebug('editor.interaction', {
+        event,
+        restorePlanned: details?.restorePlanned ?? null,
+        throttled: details?.throttled ?? false,
+        deltaSinceRestore: details?.deltaSinceRestore ?? null,
+        attempts: details?.attempts ?? null,
+        targetTagName: details?.targetTagName ?? null,
+        transientBlur: transientBlurRef.current,
+        navigationIndex: navigation.currentIndex,
+        pageIndex: page.index,
+        isActivePage,
+      });
       if (event === 'blur') {
         if (details?.restorePlanned || transientBlurRef.current) {
+          if (details?.throttled) {
+            logDebug('editor.interaction.blur.throttled', {
+              deltaSinceRestore: details.deltaSinceRestore ?? null,
+              attempts: details.attempts ?? null,
+            });
+          }
           return;
         }
         setIsEditorInteracting(false);
