@@ -225,8 +225,6 @@ const DiaryEntryEditor = ({
         if (restoringFocusRef.current) {
           restoringFocusRef.current = false;
           shouldRestoreFocusRef.current = false;
-        } else {
-          shouldRestoreFocusRef.current = true;
         }
         forcedFocusAttemptsRef.current = 0;
         lastForcedFocusRef.current = now;
@@ -425,6 +423,9 @@ const DiaryEntryEditor = ({
             const source = wasSuppressed ? 'external' : 'user';
             const textContent = root.getTextContent();
             onChange(textContent, { source });
+            if (source === 'user') {
+              shouldRestoreFocusRef.current = true;
+            }
             if (wasSuppressed) {
               suppressOnChangeRef.current = false;
             }
