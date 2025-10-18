@@ -1192,14 +1192,14 @@ export const DiaryViewport = ({
           normalizedCurrentIndex,
         });
       }
-      book.flipPrev();
+      book.flipPrev('bottom');
       method = 'flipPrev';
     } else if (
       direction === 'next'
       && normalizedCurrentIndex < normalizedMaxIndex
       && typeof book.flipNext === 'function'
     ) {
-      book.flipNext();
+      book.flipNext('top');
       method = 'flipNext';
     } else if (typeof book.flip === 'function') {
       book.flip(targetIndex);
