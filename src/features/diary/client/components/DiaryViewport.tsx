@@ -888,22 +888,6 @@ export const DiaryViewport = ({
     });
   }, [ensurePassiveTouchHandlers, incrementCounter, logDebug]);
 
-  const refreshFlipContent = useCallback(() => {
-    const book = flipRef.current?.pageFlip?.();
-    if (!book || !flipBookReadyRef.current) {
-      return;
-    }
-    if (typeof book.update === 'function') {
-      try {
-        book.update();
-      } catch (error) {
-        logDebug('flipbook.update.error', {
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-  }, [logDebug]);
-
   const handleManualFlip = useCallback((direction: 'prev' | 'next') => {
     const book = flipRef.current?.pageFlip?.();
     if (!book) {
@@ -914,7 +898,6 @@ export const DiaryViewport = ({
       logDebug('flipbook.manual.skip', { direction, reason: 'not-ready' });
       return;
     }
-    refreshFlipContent();
     const currentIndex = typeof book.getCurrentPageIndex === 'function' ? book.getCurrentPageIndex() : 0;
     const pageCount = typeof book.getPageCount === 'function' ? book.getPageCount() : null;
     if (direction === 'prev') {
@@ -940,7 +923,8 @@ export const DiaryViewport = ({
       }
     }
     logDebug('flipbook.manual', { direction, currentIndex, pageCount });
-  }, [logDebug, refreshFlipContent]);
+    scheduleFlipRefresh();
+  }, [logDebug, scheduleFlipRefresh]);
 
   useEffect(() => {
     return () => {
@@ -2227,13 +2211,11 @@ export const DiaryViewport = ({
               onPointerDown={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                refreshFlipContent();
                 ensurePageActive();
               }}
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                refreshFlipContent();
                 ensurePageActive();
               }}
             />
@@ -2245,13 +2227,11 @@ export const DiaryViewport = ({
               onPointerDown={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                refreshFlipContent();
                 ensurePageActive();
               }}
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                refreshFlipContent();
                 ensurePageActive();
               }}
             />
