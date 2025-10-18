@@ -31,7 +31,7 @@ const PAGE_EDGE_WIDTH_CLASS = 'w-16'; // 64px edge activation zones
 const DEBUG_BUFFER_LIMIT = 200;
 const DEBUG_STUCK_TIMEOUT_MS = 1200;
 const FLIP_UPDATE_THROTTLE_MS = 120;
-const MANUAL_FLIP_FALLBACK_DELAY_MS = 600;
+const MANUAL_FLIP_VALIDATION_DELAY_MS = 220;
 const TOUCH_EVENTS = new Set(['touchstart', 'touchmove', 'touchend', 'touchcancel']);
 const VERBOSE_ONLY_DEBUG_EVENTS = new Set<string>([
   'entry.page.editability',
@@ -164,6 +164,7 @@ type FlipBookHandle = {
 
 type ManualFlipState = {
   direction: 'prev' | 'next';
+  originIndex: number;
   targetIndex: number;
   method: 'flipPrev' | 'flipNext' | 'flip' | 'turnToPage' | null;
   startedAt: number;
@@ -971,20 +972,6 @@ export const DiaryViewport = ({
         return;
       }
 
-      if (navigation.currentIndex === manualState.targetIndex) {
-        logDebug('flipbook.manual.followup', {
-          direction: manualState.direction,
-          note: 'navigation-already-on-target',
-          targetIndex: manualState.targetIndex,
-          elapsed: (typeof performance !== 'undefined' ? performance.now() : Date.now())
-            - manualState.startedAt,
-        });
-        manualFlipGuardRef.current = false;
-        manualFlipStateRef.current = null;
-        scheduleFlipRefresh();
-        return;
-      }
-
       const followupState = typeof pageFlipInstance.getState === 'function'
         ? pageFlipInstance.getState()
         : null;
@@ -994,11 +981,13 @@ export const DiaryViewport = ({
       const elapsed = (typeof performance !== 'undefined' ? performance.now() : Date.now())
         - manualState.startedAt;
 
-      if (followupIndex === manualState.targetIndex) {
+      if (followupState === 'flipping' || followupIndex !== manualState.originIndex) {
         logDebug('flipbook.manual.followup', {
           direction: manualState.direction,
+          note: 'animation-progressing',
           state: followupState,
           currentIndex: followupIndex,
+          originIndex: manualState.originIndex,
           targetIndex: manualState.targetIndex,
           elapsed,
         });
@@ -1008,26 +997,7 @@ export const DiaryViewport = ({
         return;
       }
 
-      const awaitingFlip = followupState === 'flipping';
-      if (awaitingFlip && !manualState.sawStateChange) {
-        manualFlipStateRef.current = {
-          ...manualState,
-          sawStateChange: true,
-          startedAt: typeof performance !== 'undefined' ? performance.now() : Date.now(),
-        };
-        logDebug('flipbook.manual.followup', {
-          direction: manualState.direction,
-          state: followupState,
-          currentIndex: followupIndex,
-          targetIndex: manualState.targetIndex,
-          elapsed,
-          note: 'awaiting-flip-state',
-        });
-        scheduleManualFlipCheck();
-        return;
-      }
-
-      if (typeof pageFlipInstance.turnToPage === 'function' && navigation.currentIndex !== manualState.targetIndex) {
+      if (typeof pageFlipInstance.turnToPage === 'function') {
         pageFlipInstance.turnToPage(manualState.targetIndex);
         logDebug('flipbook.manual.fallback', {
           direction: manualState.direction,
@@ -1059,7 +1029,7 @@ export const DiaryViewport = ({
       });
       manualFlipGuardRef.current = false;
       manualFlipStateRef.current = null;
-    }, MANUAL_FLIP_FALLBACK_DELAY_MS);
+    }, MANUAL_FLIP_VALIDATION_DELAY_MS);
   }, [clearManualFlipFallback, logDebug, navigation, scheduleFlipRefresh]);
 
   const handleManualFlip = useCallback((direction: 'prev' | 'next') => {
@@ -1229,6 +1199,7 @@ export const DiaryViewport = ({
       manualFlipGuardRef.current = true;
       manualFlipStateRef.current = {
         direction,
+        originIndex: normalizedCurrentIndex,
         targetIndex,
         method,
         startedAt: typeof performance !== 'undefined' ? performance.now() : Date.now(),
