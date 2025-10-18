@@ -265,9 +265,12 @@ const DiaryEntryEditor = ({
       });
 
       if (!restorePlanned || !hostNode) {
+        shouldRestoreFocusRef.current = false;
         forcedFocusAttemptsRef.current = 0;
         return;
       }
+
+      shouldRestoreFocusRef.current = false;
 
       if (throttled) {
         onDebugEvent?.('focus.restore.skip', {
@@ -290,6 +293,7 @@ const DiaryEntryEditor = ({
         const editableNode = contentEditableRef.current;
         if (!editableNode) {
           onDebugEvent?.('focus.restore.skip', { reason: 'missing-node', attempt });
+          forcedFocusAttemptsRef.current = 0;
           return;
         }
         const latestOwnerDocument = editableNode.ownerDocument ?? document;
@@ -305,12 +309,14 @@ const DiaryEntryEditor = ({
             selection.addRange(range);
           }
           onDebugEvent?.('focus.restore', { reason: 'blur-without-target', attempt, selection: 'end' });
+          forcedFocusAttemptsRef.current = 0;
         } else {
           onDebugEvent?.('focus.restore.skip', {
             reason: 'active-preserved',
             attempt,
             activeTagName: latestActive.tagName,
           });
+          forcedFocusAttemptsRef.current = 0;
         }
       };
 
