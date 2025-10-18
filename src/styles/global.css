@@ -257,11 +257,11 @@
 }
 
 .diary-entry-sheet--right::before {
-  left: calc(var(--sheet-leading-pad) - 3.4rem);
+  left: calc(var(--sheet-leading-pad) - 1.6rem);
 }
 
 .diary-entry-sheet--left::before {
-  right: calc(var(--sheet-trailing-pad) - 3.4rem);
+  right: calc(var(--sheet-trailing-pad) - 1.6rem);
 }
 
 .dark .diary-entry-sheet::before {
