@@ -31,6 +31,7 @@ const PAGE_EDGE_WIDTH_CLASS = 'w-16'; // 64px edge activation zones
 const DEBUG_BUFFER_LIMIT = 200;
 const DEBUG_STUCK_TIMEOUT_MS = 1200;
 const FLIP_UPDATE_THROTTLE_MS = 120;
+const MANUAL_FLIP_FALLBACK_DELAY_MS = 140;
 const TOUCH_EVENTS = new Set(['touchstart', 'touchmove', 'touchend', 'touchcancel']);
 const VERBOSE_ONLY_DEBUG_EVENTS = new Set<string>([
   'entry.page.editability',
@@ -410,6 +411,7 @@ export const DiaryViewport = ({
   const compositionActiveRef = useRef(false);
   const editorHasFocusRef = useRef(false);
   const pendingFlipRefreshRef = useRef(false);
+  const manualFlipFallbackTimeoutRef = useRef<number | null>(null);
   const editorEditableStateRef = useRef<boolean | null>(null);
   const editabilityLogCacheRef = useRef<Map<string, { result: boolean; reason: string; diffMinutes: number | null; graceMinutes: number | null; ts: number }>>(new Map());
   const debugSuppressLogsRef = useRef(false);
@@ -1053,12 +1055,92 @@ export const DiaryViewport = ({
       bookStateAfter,
       rawCurrentAfter,
     });
+
+    if (manualFlipFallbackTimeoutRef.current !== null) {
+      if (typeof window !== 'undefined') {
+        window.clearTimeout(manualFlipFallbackTimeoutRef.current);
+      }
+      manualFlipFallbackTimeoutRef.current = null;
+    }
+
+    if (
+      (method === 'flipPrev' || method === 'flipNext')
+      && typeof window !== 'undefined'
+    ) {
+      const fallbackStartTs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      manualFlipFallbackTimeoutRef.current = window.setTimeout(() => {
+        manualFlipFallbackTimeoutRef.current = null;
+        const instance = flipRef.current?.pageFlip?.();
+        if (!instance) {
+          logDebug('flipbook.manual.fallback.skip', {
+            direction,
+            reason: 'no-instance-after-delay',
+            targetIndex,
+            fallbackDelay: MANUAL_FLIP_FALLBACK_DELAY_MS,
+          });
+          return;
+        }
+        const followupState = typeof instance.getState === 'function' ? instance.getState() : null;
+        const followupIndex = typeof instance.getCurrentPageIndex === 'function'
+          ? instance.getCurrentPageIndex()
+          : rawCurrentAfter;
+        const elapsed = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - fallbackStartTs;
+        if (followupState === 'flipping' || followupIndex !== rawCurrentIndex) {
+          logDebug('flipbook.manual.followup', {
+            direction,
+            state: followupState,
+            currentIndex: followupIndex,
+            targetIndex,
+            elapsed,
+          });
+          return;
+        }
+
+        if (typeof instance.flip === 'function' && followupIndex !== targetIndex) {
+          instance.flip(targetIndex, 'top');
+          logDebug('flipbook.manual.fallback', {
+            direction,
+            method: 'flip',
+            currentIndex: followupIndex,
+            targetIndex,
+            state: followupState,
+            elapsed,
+          });
+          return;
+        }
+
+        if (typeof instance.turnToPage === 'function' && followupIndex !== targetIndex) {
+          instance.turnToPage(targetIndex);
+          logDebug('flipbook.manual.fallback', {
+            direction,
+            method: 'turnToPage',
+            currentIndex: followupIndex,
+            targetIndex,
+            state: followupState,
+            elapsed,
+          });
+          return;
+        }
+
+        logDebug('flipbook.manual.fallback.skip', {
+          direction,
+          reason: followupIndex === targetIndex ? 'already-on-target' : 'no-fallback-method',
+          currentIndex: followupIndex,
+          targetIndex,
+          state: followupState,
+          elapsed,
+        });
+      }, MANUAL_FLIP_FALLBACK_DELAY_MS);
+    }
   }, [flipState, logDebug, navigation.currentIndex, navigation.pages]);
 
   useEffect(() => {
     return () => {
       if (flipRefreshFrameRef.current !== null) {
         window.cancelAnimationFrame(flipRefreshFrameRef.current);
+      }
+      if (manualFlipFallbackTimeoutRef.current !== null) {
+        window.clearTimeout(manualFlipFallbackTimeoutRef.current);
       }
     };
   }, []);
