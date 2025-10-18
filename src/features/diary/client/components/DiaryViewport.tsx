@@ -32,6 +32,11 @@ const DEBUG_BUFFER_LIMIT = 200;
 const DEBUG_STUCK_TIMEOUT_MS = 1200;
 const FLIP_UPDATE_THROTTLE_MS = 120;
 const TOUCH_EVENTS = new Set(['touchstart', 'touchmove', 'touchend', 'touchcancel']);
+const VERBOSE_ONLY_DEBUG_EVENTS = new Set<string>([
+  'entry.page.editability',
+  'entry.editable.evaluate',
+  'entry.editable.mismatch',
+]);
 
 type DebugCounters = {
   editorUser: number;
@@ -452,6 +457,35 @@ export const DiaryViewport = ({
     [],
   );
 
+  const logDebug = useCallback((
+    label: string,
+    details: Record<string, unknown> = {},
+    includeSnapshot = false,
+  ) => {
+    if (debugSuppressLogsRef.current && label !== 'debug.log.clear') {
+      return;
+    }
+    const verboseOnly = VERBOSE_ONLY_DEBUG_EVENTS.has(label);
+    if (verboseOnly && !debugOptionsRef.current.verbose) {
+      return;
+    }
+
+    const eventDetails = includeSnapshot
+      ? { ...details, snapshot: collectDebugSnapshot(label) }
+      : details;
+
+    debugEventsRef.current.push({
+      ts: typeof performance !== 'undefined' ? performance.now() : Date.now(),
+      label,
+      details: eventDetails,
+    });
+
+    if (debugEventsRef.current.length > DEBUG_BUFFER_LIMIT) {
+      debugEventsRef.current.splice(0, debugEventsRef.current.length - DEBUG_BUFFER_LIMIT);
+    }
+    scheduleDebugRefresh();
+  }, [collectDebugSnapshot, scheduleDebugRefresh]);
+
   useEffect(() => {
     setVisibleDebugEvents([...debugEventsRef.current]);
   }, []);
@@ -459,22 +493,6 @@ export const DiaryViewport = ({
   useEffect(() => {
     debugOptionsRef.current = debugOptions;
   }, [debugOptions]);
-
-  const logDebug = useCallback((label: string, details: Record<string, unknown> = {}, includeSnapshot = false) => {
-    if (debugSuppressLogsRef.current && label !== 'debug.log.clear') {
-      return;
-    }
-    const entry: DebugEvent = {
-      ts: typeof performance !== 'undefined' ? performance.now() : Date.now(),
-      label,
-      details: includeSnapshot ? { ...details, snapshot: collectDebugSnapshot(label) } : details,
-    };
-    debugEventsRef.current.push(entry);
-    if (debugEventsRef.current.length > DEBUG_BUFFER_LIMIT) {
-      debugEventsRef.current.splice(0, debugEventsRef.current.length - DEBUG_BUFFER_LIMIT);
-    }
-    scheduleDebugRefresh();
-  }, [collectDebugSnapshot, scheduleDebugRefresh]);
 
   const incrementCounter = useCallback((key: keyof DebugCounters) => {
     debugCountersRef.current[key] += 1;
