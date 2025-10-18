@@ -131,7 +131,6 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
 
     const flipSettings = useMemo(
       () => ({
-        startPage,
         size,
         width,
         height,
@@ -169,7 +168,6 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
         showCover,
         showPageCorners,
         size,
-        startPage,
         startZIndex,
         swipeDistance,
         useMouseEvents,
@@ -179,6 +177,13 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
     );
 
     const childRefs = useRef<HTMLElement[]>([]);
+    const initialStartPageRef = useRef<number | undefined>(typeof startPage === 'number' ? startPage : undefined);
+
+    useEffect(() => {
+      if (initialStartPageRef.current === undefined && typeof startPage === 'number') {
+        initialStartPageRef.current = startPage;
+      }
+    }, [startPage]);
 
     useEffect(() => {
       if (!children) {
@@ -252,8 +257,10 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
       removeHandlers();
 
       if (!instance && containerRef.current) {
+        const startPageSetting = initialStartPageRef.current;
         pageFlipRef.current = new PageFlip(containerRef.current, {
           ...flipSettings,
+          ...(typeof startPageSetting === 'number' ? { startPage: startPageSetting } : {}),
           renderOnlyPageLengthChange,
         } as Record<string, unknown>);
       }
