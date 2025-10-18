@@ -134,6 +134,8 @@
       "goals": "Obiettivi",
       "calendar": "Calendario",
       "today": "Oggi",
+      "flipPrev": "Sfoglia indietro",
+      "flipNext": "Sfoglia avanti",
       "desktopOnly": "L'esperienza a sfoglio è disponibile solo da desktop. Passa a uno schermo più grande per esplorare il diario."
     },
     "extension": {

@@ -134,6 +134,8 @@
       "goals": "Goals",
       "calendar": "Calendar",
       "today": "Today",
+      "flipPrev": "Previous spread",
+      "flipNext": "Next spread",
       "desktopOnly": "The flip-book experience is currently available on desktop. Switch to a larger screen to explore your diary."
     },
     "extension": {

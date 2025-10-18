@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarDays, Link2, Settings2, Target } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Link2, Settings2, Target } from 'lucide-react';
 import {
   type ComponentType,
   Fragment,
@@ -142,9 +142,12 @@ type PageFlipApi = {
   getUI: () => {
     getDistElement: () => HTMLElement;
   };
+  getPageCount?: () => number;
   getCurrentPageIndex: () => number;
   flip: (pageIndex: number, corner?: unknown) => void;
   turnToPage: (pageIndex: number) => void;
+  flipNext?: () => void;
+  flipPrev?: () => void;
 };
 
 type FlipBookHandle = {
@@ -885,6 +888,43 @@ export const DiaryViewport = ({
     });
   }, [ensurePassiveTouchHandlers, incrementCounter, logDebug]);
 
+  const handleManualFlip = useCallback((direction: 'prev' | 'next') => {
+    const book = flipRef.current?.pageFlip?.();
+    if (!book) {
+      logDebug('flipbook.manual.skip', { direction, reason: 'no-instance' });
+      return;
+    }
+    if (!flipBookReadyRef.current) {
+      logDebug('flipbook.manual.skip', { direction, reason: 'not-ready' });
+      return;
+    }
+    const currentIndex = typeof book.getCurrentPageIndex === 'function' ? book.getCurrentPageIndex() : 0;
+    const pageCount = typeof book.getPageCount === 'function' ? book.getPageCount() : null;
+    if (direction === 'prev') {
+      if (currentIndex <= 0) {
+        logDebug('flipbook.manual.skip', { direction, reason: 'at-start' });
+        return;
+      }
+      if (typeof book.flipPrev === 'function') {
+        book.flipPrev();
+      } else {
+        book.flip(Math.max(0, currentIndex - 1));
+      }
+    } else {
+      if (pageCount !== null && currentIndex >= pageCount - 1) {
+        logDebug('flipbook.manual.skip', { direction, reason: 'at-end' });
+        return;
+      }
+      if (typeof book.flipNext === 'function') {
+        book.flipNext();
+      } else {
+        const target = pageCount !== null ? Math.min(pageCount - 1, currentIndex + 1) : currentIndex + 1;
+        book.flip(target);
+      }
+    }
+    logDebug('flipbook.manual', { direction, currentIndex, pageCount });
+  }, [logDebug]);
+
   useEffect(() => {
     return () => {
       if (flipRefreshFrameRef.current !== null) {
@@ -1238,6 +1278,7 @@ export const DiaryViewport = ({
 
   const calendarYear = calendarMonth.getFullYear();
   const calendarMonthIndex = calendarMonth.getMonth();
+  const manualControlsDisabled = !isFlipbookReady;
 
   const availableYears = useMemo(() => Array.from(entryMonthsByYear.keys()).sort((a, b) => a - b), [entryMonthsByYear]);
 
@@ -2318,6 +2359,29 @@ export const DiaryViewport = ({
                   : t.getNamespace('calendar').t('empty' as never)}
               </span>
             </div>
+          </div>
+        </div>
+
+        <div className="flex justify-center pt-2">
+          <div className="flex items-center gap-6">
+            <button
+              type="button"
+              className="inline-flex size-11 items-center justify-center rounded-full border border-border/70 bg-background/80 text-muted-foreground shadow-sm transition hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => handleManualFlip('prev')}
+              aria-label={t.getNamespace('nav').t('flipPrev')}
+              disabled={manualControlsDisabled}
+            >
+              <ChevronLeft className="size-5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="inline-flex size-11 items-center justify-center rounded-full border border-border/70 bg-background/80 text-muted-foreground shadow-sm transition hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => handleManualFlip('next')}
+              aria-label={t.getNamespace('nav').t('flipNext')}
+              disabled={manualControlsDisabled}
+            >
+              <ChevronRight className="size-5" aria-hidden="true" />
+            </button>
           </div>
         </div>
 
