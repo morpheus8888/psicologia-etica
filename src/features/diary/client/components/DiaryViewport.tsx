@@ -31,7 +31,7 @@ const PAGE_EDGE_WIDTH_CLASS = 'w-16'; // 64px edge activation zones
 const DEBUG_BUFFER_LIMIT = 200;
 const DEBUG_STUCK_TIMEOUT_MS = 1200;
 const FLIP_UPDATE_THROTTLE_MS = 120;
-const MANUAL_FLIP_FALLBACK_DELAY_MS = 140;
+const MANUAL_FLIP_FALLBACK_DELAY_MS = 600;
 const TOUCH_EVENTS = new Set(['touchstart', 'touchmove', 'touchend', 'touchcancel']);
 const VERBOSE_ONLY_DEBUG_EVENTS = new Set<string>([
   'entry.page.editability',
