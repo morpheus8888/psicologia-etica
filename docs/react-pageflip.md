@@ -12,6 +12,11 @@ Version 2.0.0 of `react-pageflip` rewrote the library around React hooks and **c
 - The flip-book renders a single Lexical editor on the active page. Non-active pages use
   `DiaryEntryPreview`, so remember to update previews via `useDiaryEntrySession` before calling
   `pageFlip.update()`.
+- **Do not trigger full HTML reloads while the user digita sul diario.** Imposta sempre la prop
+  `renderOnlyPageLengthChange` su `<HTMLFlipBook>`: in caso contrario la libreria invoca
+  `updateFromHtml` ad ogni render, ricostruisce il nodo `contenteditable` e il cursore torna
+  all'inizio. L’opzione fa sì che il markup venga rigenerato solo quando cambia il numero di
+  pagine, preservando focus e selezione (vedi commit `fix(diary): avoid flipbook html reload while typing`).
 
 ### Installation
 
