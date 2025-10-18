@@ -20,28 +20,25 @@ type PageFlipHandle = {
   pageFlip: () => PageFlip | undefined;
 };
 
-const collectElementChildren = (node: React.ReactNode): React.ReactElement[] => {
-  if (Array.isArray(node)) {
-    const collected: React.ReactElement[] = [];
-    node.forEach((item) => {
-      collectElementChildren(item).forEach(child => collected.push(child));
-    });
-    return collected;
-  }
-
+const collectElementChildren = (
+  node: React.ReactNode,
+  target: React.ReactElement[],
+): void => {
   if (!node || typeof node === 'boolean') {
-    return [];
+    return;
   }
-
+  if (Array.isArray(node)) {
+    node.forEach(child => collectElementChildren(child, target));
+    return;
+  }
   if (!React.isValidElement(node)) {
-    return [];
+    return;
   }
-
   if (node.type === React.Fragment) {
-    return collectElementChildren(node.props.children);
+    collectElementChildren(node.props.children, target);
+    return;
   }
-
-  return [node];
+  target.push(node);
 };
 
 const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBookProps>(
@@ -181,20 +178,22 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
       ],
     );
 
+    const childRefs = useRef<HTMLElement[]>([]);
+
     useEffect(() => {
       if (!children) {
         previousKeysRef.current = null;
-        if (pages.length > 0) {
-          childDomNodesRef.current = [];
-          setPages([]);
-        }
+        childDomNodesRef.current = [];
+        setPages([]);
         return;
       }
 
-      const childElements = collectElementChildren(children);
-      const nextKeys = childElements.map(child => child.key ?? null);
+      const collected: React.ReactElement[] = [];
+      collectElementChildren(children, collected);
+      const childArray = collected;
 
-      const childCount = childElements.length;
+      const nextKeys = childArray.map(child => child.key ?? null);
+      const childCount = childArray.length;
       const keysChanged = () => {
         if (!previousKeysRef.current) {
           return true;
@@ -221,22 +220,27 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
       }
 
       previousKeysRef.current = nextKeys;
-      if (childElements.length < previousLengthRef.current) {
+      if (childCount < previousLengthRef.current) {
         refreshOnPageDelete();
       }
 
-      setPages(childElements);
+      childRefs.current = [];
+
+      const mapped = childArray.map((child) => {
+        const refCallback = (node: HTMLElement | null) => {
+          if (node) {
+            childRefs.current.push(node);
+          }
+        };
+        // eslint-disable-next-line react/no-clone-element
+        return React.cloneElement(child, { ref: refCallback });
+      });
+
+      setPages(mapped);
     }, [children, pages.length, refreshOnPageDelete, renderOnlyPageLengthChange]);
 
     useEffect(() => {
-      if (!containerRef.current) {
-        childDomNodesRef.current = [];
-        return;
-      }
-      const nodes = Array.from(containerRef.current.children).filter(
-        (node): node is HTMLElement => node instanceof HTMLElement,
-      );
-      childDomNodesRef.current = nodes;
+      childDomNodesRef.current = childRefs.current;
     }, [pages]);
 
     useEffect(() => {
