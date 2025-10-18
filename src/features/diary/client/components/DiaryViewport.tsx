@@ -402,7 +402,6 @@ export const DiaryViewport = ({
   const [debugActionMessage, setDebugActionMessage] = useState<{ text: string; tone: 'info' | 'success' | 'error' } | null>(null);
   const compositionActiveRef = useRef(false);
   const editorHasFocusRef = useRef(false);
-  const transientBlurRef = useRef(false);
   const pendingFlipRefreshRef = useRef(false);
   const editorEditableStateRef = useRef<boolean | null>(null);
   const editabilityLogCacheRef = useRef<Map<string, { result: boolean; reason: string; diffMinutes: number | null; graceMinutes: number | null; ts: number }>>(new Map());
@@ -410,7 +409,6 @@ export const DiaryViewport = ({
   const suppressDayPageLogsRef = useRef(false);
   const lastFlipStateRef = useRef<string | null>(null);
   const lastFlipStateTsRef = useRef<number>(0);
-  const [isEditorInteracting, setIsEditorInteracting] = useState(false);
   const lastFlipUpdateTimeRef = useRef(0);
   const [isFlipbookReady, setIsFlipbookReady] = useState(false);
   const clientTodayISORef = useRef(toISODate(new Date()));
@@ -730,10 +728,6 @@ export const DiaryViewport = ({
       window.clearTimeout(timeoutId);
     };
   }, [debugActionMessage]);
-
-  useEffect(() => {
-    setIsEditorInteracting(false);
-  }, [navigation.currentDate]);
 
   const ensurePassiveTouchHandlers = useCallback(() => {
     if (!hasTouchSupport) {
@@ -1161,7 +1155,6 @@ export const DiaryViewport = ({
       });
       if (!nextEditable) {
         editorHasFocusRef.current = false;
-        setIsEditorInteracting(false);
       }
       return;
     }
@@ -1173,29 +1166,15 @@ export const DiaryViewport = ({
       logDebug('editor.dom.focus.inferred', payload ?? {});
     }
     if (type === 'dom.focus') {
-      transientBlurRef.current = false;
       editorHasFocusRef.current = true;
-      setIsEditorInteracting(true);
       logDebug('editor.dom.focus', payload ?? {});
       return;
     }
     if (type === 'dom.blur') {
-      const restorePlanned = Boolean(
-        payload && typeof payload === 'object' && 'restorePlanned' in payload
-          ? (payload as { restorePlanned?: boolean }).restorePlanned
-          : false,
-      );
       editorHasFocusRef.current = false;
-      transientBlurRef.current = restorePlanned;
-      logDebug('editor.dom.blur', {
-        ...(payload ?? {}),
-        restorePlanned,
-      });
-      if (!restorePlanned) {
-        setIsEditorInteracting(false);
-        if (pendingFlipRefreshRef.current) {
-          scheduleFlipRefresh();
-        }
+      logDebug('editor.dom.blur', payload ?? {});
+      if (pendingFlipRefreshRef.current) {
+        scheduleFlipRefresh();
       }
       return;
     }
@@ -1896,29 +1875,12 @@ export const DiaryViewport = ({
         deltaSinceRestore: details?.deltaSinceRestore ?? null,
         attempts: details?.attempts ?? null,
         targetTagName: details?.targetTagName ?? null,
-        transientBlur: transientBlurRef.current,
         navigationIndex: navigation.currentIndex,
         pageIndex: page.index,
         isActivePage,
       });
       if (event === 'blur') {
-        if (details?.restorePlanned || transientBlurRef.current) {
-          if (details?.throttled) {
-            logDebug('editor.interaction.blur.throttled', {
-              deltaSinceRestore: details.deltaSinceRestore ?? null,
-              attempts: details.attempts ?? null,
-            });
-          }
-          return;
-        }
-        setIsEditorInteracting(false);
         return;
-      }
-      if (event === 'focus' || event === 'pointer') {
-        transientBlurRef.current = false;
-      }
-      if (!isEditorInteracting) {
-        setIsEditorInteracting(true);
       }
       if (!isActivePage || navigation.currentIndex !== page.index) {
         ensurePageActive();
@@ -2132,7 +2094,6 @@ export const DiaryViewport = ({
                   editable,
                 });
                 ensurePageActive();
-                setIsEditorInteracting(true);
                 incrementCounter('editorSuppressed');
                 return;
               }
@@ -2404,11 +2365,11 @@ export const DiaryViewport = ({
             onChangeOrientation={handleOrientationChange}
             onChangeState={handleStateChange}
             onInit={handleFlipbookInit}
-            disableFlipByClick={!debugOptions.enableClickFlip || isEditorInteracting}
-            showPageCorners={debugOptions.enableClickFlip && !isEditorInteracting}
+            disableFlipByClick={!debugOptions.enableClickFlip}
+            showPageCorners={debugOptions.enableClickFlip}
             mobileScrollSupport={debugOptions.enableMobileScroll}
             usePortrait={false}
-            useMouseEvents={debugOptions.enableMouseEvents && !isEditorInteracting}
+            useMouseEvents={debugOptions.enableMouseEvents}
             className="w-full"
           >
             {flipPages}
