@@ -135,6 +135,9 @@ export const FlipBook: React.FC<FlipBookProps> = ({
         maxHeight={dims.maxHeight}
         drawShadow={false}
         className="[&_.page-wrapper]:[border-radius:0] [&_.page]:[border-radius:0]"
+        // Per docs/react-pageflip.md: renderOnlyPageLengthChange evita reload completo quando il contenuto cambia,
+        // così non perdiamo il focus durante la scrittura.
+        renderOnlyPageLengthChange
       >
         <PageCover textureUrl={coverTextureUrl}>{coverFront}</PageCover>
         {pages.map((element, index) => {
