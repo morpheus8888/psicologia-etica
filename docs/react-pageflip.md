@@ -2,9 +2,9 @@
 
 ## React PageFlip Notes
 
-> ⚠️ Always re-read `docs/stpageflip/README.md` (local snapshot of the upstream docs) before touching the diary flip-book. It mirrors the authoritative API reference and keeps us aligned with `PageFlip.loadFromHtml` / `updateFromHtml` expectations.
+> ⚠️ Always re-read `docs/stpageflip/README.md` (local snapshot of the upstream docs) before touching the diary flip-book. It mirrors the authoritative API reference and keeps us aligned with `PageFlip.loadFromHTML` / `updateFromHtml` expectations.
 
-Version 2.0.0 of `react-pageflip` rewrote the library around React hooks and **changed several method APIs**. Keep these references handy whenever you touch the diary flip-book:
+The React wrapper proxies the StPageFlip API. Treat StPageFlip as the authoritative source; use the links below as quick references when working on the diary flip-book:
 
 - Live demo with source: https://nodlik.github.io/react-pageflip/
 - StPageFlip docs and examples: https://nodlik.github.io/StPageFlip/
@@ -12,10 +12,10 @@ Version 2.0.0 of `react-pageflip` rewrote the library around React hooks and **c
 - The flip-book renders a single Lexical editor on the active page. Non-active pages use
   `DiaryEntryPreview`, so remember to update previews via `useDiaryEntrySession` before calling
   `pageFlip.update()`.
-- **Do not trigger full HTML reloads while the user digita sul diario.** Imposta sempre la prop
-  `renderOnlyPageLengthChange` su `<HTMLFlipBook>`: in caso contrario la libreria invoca
-  `updateFromHtml` ad ogni render, ricostruisce il nodo `contenteditable` e il cursore torna
-  all'inizio. L’opzione fa sì che il markup venga rigenerato solo quando cambia il numero di
+- **Do not trigger full HTML reloads while the user digita nel diario.** Imposta la prop
+  `renderOnlyPageLengthChange` sul wrapper del progetto `FocusSafeHTMLFlipBook` (non è un’opzione di StPageFlip né dell’HTMLFlipBook ufficiale):
+  in caso contrario la libreria invoca `updateFromHtml` ad ogni render, ricostruisce il nodo `contenteditable`
+  e il cursore torna all'inizio. L’opzione fa sì che il markup venga rigenerato solo quando cambia il numero di
   pagine, preservando focus e selezione (vedi commit `fix(diary): avoid flipbook html reload while typing`).
   Nel diario usiamo il wrapper `FocusSafeHTMLFlipBook` (`src/features/diary/client/components/FocusSafeHTMLFlipBook.tsx`)
   per rispettare questa regola: il componente tiene traccia delle pagine (count + key) e chiama `loadFromHTML`
@@ -91,7 +91,8 @@ function MyBook() {
 - `swipeDistance` (default `30`): minimum swipe length.
 - `clickEventForward` (default `true`): forward click events to child elements (`a`, `button`, etc.).
 - `useMouseEvents` (default `true`): enable mouse/touch flipping.
-- `renderOnlyPageLengthChange` (default `false`): only re-render when page count changes.
+- `showPageCorners` (wrapper-level): toggle visible corner hotspots in some React wrappers.
+- `renderOnlyPageLengthChange` (wrapper-level, default `false`): only re-render when page count changes (proprietary prop of our `FocusSafeHTMLFlipBook`).
 
 ### Events
 
@@ -113,17 +114,18 @@ Get the `PageFlip` instance via `ref.current.pageFlip()` to call helpers:
 - `getBoundsRect()` → layout metrics.
 - `turnToPage(pageNum)` / `turnToNextPage()` / `turnToPrevPage()`: jump without animation.
 - `flip(pageNum, corner?)` / `flipNext(corner?)` / `flipPrev(corner?)`: animate page turns.
-- `loadFromImages(images)` / `loadFromHtml(items)` / `updateFromHtml(items)` / `updateFromImages(images)`: hydrate or refresh content.
+- `loadFromImages(images)` / `loadFromHTML(items)` / `updateFromHtml(items)` / `updateFromImages(images)` / `update()`: hydrate or refresh content or trigger a re-render.
 - `destroy()`: tear down the instance and listeners.
 
-These notes are the single source of truth for working with the flip-book; keep them in sync with upstream releases.
+StPageFlip is the source of truth for the API; keep these notes in sync with the upstream docs.
 
 ### Manual Navigation Notes
 
-- Normalizza sempre l’indice corrente alla pagina sinistra della coppia (`index` pari) prima di eseguire flip programmatici. Chiedere alla libreria di andare alla pagina destra dello stesso spread non produce animazioni né cambi di stato visibili.
-- Usa prima `flipPrev` / `flipNext` per lasciare che il controller gestisca direzione e animazioni; ripiega su `flip(targetIndex)` o `turnToPage(targetIndex)` solo se la coppia successiva è fuori range (es. ultima pagina singola).
+- Normalizza sempre l’indice corrente alla pagina sinistra della coppia (`index` pari) prima di eseguire flip programmatici.
+- Usa i metodi di animazione di StPageFlip (`flipPrev` / `flipNext` / `flip`) in modo coerente con la direzione; ricorri a `turnToPage(targetIndex)` solo per salti senza animazione.
+- Convenzione UI del diario: le frecce usano `flipPrev('bottom')` / `flipNext('top')` (navigazione a passo singolo); il calendario usa `flip(targetIndex, corner?)` verso l’indice calcolato. Mantieni `turnToPage` solo per salti non animati.
+- Pulsanti di navigazione rapida (in alto a destra): navigazione diretta senza animazione. Usa `turnToPage(targetIndex)` (o `turnToNextPage`/`turnToPrevPage` quando applicabile) per saltare velocemente tra sezioni/pagine senza avviare l’effetto di flip.
 - Dopo un flip manuale sincronizza la navigazione ascoltando l’evento `flip`. Se devi forzare l’indice, allinealo comunque al valore normalizzato per evitare che `update()` o `turnToPage` interrompano l’animazione.
-- Nel diario i pulsanti freccia richiamano direttamente `flipPrev` / `flipNext`, così ogni click avanza o torna indietro di un solo giorno (una coppia di pagine).
 - Non aggiornare lo stato di navigazione dell’app mentre il flip è in corso: forzare l’indice provoca una chiamata immediata a `flip()`/`turnToPage()` da parte del watcher di sincronizzazione e la transizione scompare.
 - Evita di chiamare `flip()` / `turnToPage()` mentre lo stato riportato da `changeState` è `'flipping'`; attendi il ritorno a `'read'` prima di riallineare manualmente l’indice.
 - Per il debug abbiamo eventi `flipbook.manual.request` / `flipbook.manual` e `flipbook.state` che includono spread calcolati, metodo usato e stato corrente: cattura l’output quando il flip non anima correttamente.
