@@ -144,10 +144,10 @@ type PageFlipApi = {
   };
   getPageCount?: () => number;
   getCurrentPageIndex: () => number;
-  flip: (pageIndex: number, corner?: unknown) => void;
+  flip: (pageIndex: number, corner?: 'top' | 'bottom') => void;
   turnToPage: (pageIndex: number) => void;
-  flipNext?: () => void;
-  flipPrev?: () => void;
+  flipNext?: (corner?: 'top' | 'bottom') => void;
+  flipPrev?: (corner?: 'top' | 'bottom') => void;
 };
 
 type FlipBookHandle = {
@@ -895,47 +895,36 @@ export const DiaryViewport = ({
     const currentIndex = typeof book.getCurrentPageIndex === 'function' ? book.getCurrentPageIndex() : 0;
     const pageCount = typeof book.getPageCount === 'function' ? book.getPageCount() : null;
 
-    const computeTarget = () => {
-      if (direction === 'prev') {
-        if (currentIndex <= 0) {
-          return null;
-        }
-        const stride = currentIndex % 2 === 0 ? 2 : 1;
-        const target = Math.max(0, currentIndex - stride);
-        return target === currentIndex ? Math.max(0, currentIndex - 1) : target;
+    if (direction === 'prev') {
+      if (currentIndex <= 0) {
+        logDebug('flipbook.manual.skip', { direction, reason: 'at-start', currentIndex });
+        return;
       }
-      if (pageCount === null) {
-        return currentIndex + 1;
+      if (typeof book.flipPrev === 'function') {
+        book.flipPrev('bottom');
+      } else if (typeof book.flip === 'function') {
+        book.flip(Math.max(0, currentIndex - 1), 'bottom');
+      } else {
+        logDebug('flipbook.manual.skip', { direction, reason: 'no-method', currentIndex });
+        return;
       }
-      if (currentIndex >= pageCount - 1) {
-        return null;
-      }
-      const stride = currentIndex % 2 === 0 ? 2 : 1;
-      const target = Math.min(pageCount - 1, currentIndex + stride);
-      return target === currentIndex ? Math.min(pageCount - 1, currentIndex + 1) : target;
-    };
-
-    const targetIndex = computeTarget();
-    if (targetIndex === null || targetIndex === currentIndex) {
-      logDebug('flipbook.manual.skip', {
-        direction,
-        reason: targetIndex === null ? 'no-target' : 'no-change',
-        currentIndex,
-        pageCount,
-      });
-      return;
-    }
-
-    if (typeof book.flip === 'function') {
-      book.flip(targetIndex);
-    } else if (typeof book.turnToPage === 'function') {
-      book.turnToPage(targetIndex);
     } else {
-      logDebug('flipbook.manual.skip', { direction, reason: 'no-method', currentIndex, targetIndex });
-      return;
+      if (pageCount !== null && currentIndex >= pageCount - 1) {
+        logDebug('flipbook.manual.skip', { direction, reason: 'at-end', currentIndex, pageCount });
+        return;
+      }
+      if (typeof book.flipNext === 'function') {
+        book.flipNext('bottom');
+      } else if (typeof book.flip === 'function') {
+        const target = pageCount !== null ? Math.min(pageCount - 1, currentIndex + 1) : currentIndex + 1;
+        book.flip(target, 'bottom');
+      } else {
+        logDebug('flipbook.manual.skip', { direction, reason: 'no-method', currentIndex, pageCount });
+        return;
+      }
     }
 
-    logDebug('flipbook.manual', { direction, currentIndex, targetIndex, pageCount });
+    logDebug('flipbook.manual', { direction, currentIndex, pageCount });
     scheduleFlipRefresh();
   }, [logDebug, scheduleFlipRefresh]);
 
