@@ -474,6 +474,11 @@ export const DiaryViewport = ({
       ? { ...details, snapshot: collectDebugSnapshot(label) }
       : details;
 
+    if (debugOptionsRef.current.verbose && typeof window !== 'undefined') {
+      // eslint-disable-next-line no-console
+      console.info('[DiaryDebug]', label, eventDetails);
+    }
+
     debugEventsRef.current.push({
       ts: typeof performance !== 'undefined' ? performance.now() : Date.now(),
       label,
@@ -489,6 +494,13 @@ export const DiaryViewport = ({
   useEffect(() => {
     setVisibleDebugEvents([...debugEventsRef.current]);
   }, []);
+
+  useEffect(() => {
+    logDebug('debug.lifecycle.mount', { navigationIndex: navigation.currentIndex });
+    return () => {
+      logDebug('debug.lifecycle.unmount', { navigationIndex: navigation.currentIndex });
+    };
+  }, [logDebug, navigation.currentIndex]);
 
   useEffect(() => {
     debugOptionsRef.current = debugOptions;
@@ -2463,7 +2475,15 @@ export const DiaryViewport = ({
             <button
               type="button"
               className="inline-flex size-11 items-center justify-center rounded-full border border-border/70 bg-background/80 text-muted-foreground shadow-sm transition hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-40"
-              onClick={() => handleManualFlip('prev')}
+              onClick={() => {
+                logDebug('flipbook.button.click', {
+                  direction: 'prev',
+                  disabled: manualControlsDisabled,
+                  flipState,
+                  navigationIndex: navigation.currentIndex,
+                });
+                handleManualFlip('prev');
+              }}
               aria-label={t.getNamespace('nav').t('flipPrev')}
               disabled={manualControlsDisabled}
             >
@@ -2472,7 +2492,15 @@ export const DiaryViewport = ({
             <button
               type="button"
               className="inline-flex size-11 items-center justify-center rounded-full border border-border/70 bg-background/80 text-muted-foreground shadow-sm transition hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:cursor-not-allowed disabled:opacity-40"
-              onClick={() => handleManualFlip('next')}
+              onClick={() => {
+                logDebug('flipbook.button.click', {
+                  direction: 'next',
+                  disabled: manualControlsDisabled,
+                  flipState,
+                  navigationIndex: navigation.currentIndex,
+                });
+                handleManualFlip('next');
+              }}
               aria-label={t.getNamespace('nav').t('flipNext')}
               disabled={manualControlsDisabled}
             >
