@@ -168,7 +168,6 @@ type ManualFlipState = {
   method: 'flipPrev' | 'flipNext' | 'flip' | 'turnToPage' | null;
   startedAt: number;
   sawStateChange: boolean;
-  fallbackStage: 'none' | 'flip' | 'turn';
 };
 
 const normalizeDate = (dateISO: string) => dateISO.slice(0, 10);
@@ -949,139 +948,36 @@ export const DiaryViewport = ({
     }
   }, []);
 
-  const scheduleManualFlipCheck = useCallback(
-    (attempt: 'initial' | 'post-state' | 'post-fallback') => {
-      if (typeof window === 'undefined') {
+  const scheduleManualFlipCheck = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    clearManualFlipFallback();
+    manualFlipFallbackTimeoutRef.current = window.setTimeout(() => {
+      manualFlipFallbackTimeoutRef.current = null;
+      const manualState = manualFlipStateRef.current;
+      const pageFlipInstance = flipRef.current?.pageFlip?.();
+      if (!manualState || !pageFlipInstance) {
+        logDebug('flipbook.manual.fallback.skip', {
+          reason: manualState ? 'no-instance-after-delay' : 'no-manual-state',
+        });
+        manualFlipGuardRef.current = false;
+        manualFlipStateRef.current = null;
         return;
       }
-      clearManualFlipFallback();
-      const delay = attempt === 'initial'
-        ? MANUAL_FLIP_FALLBACK_DELAY_MS
-        : MANUAL_FLIP_FALLBACK_DELAY_MS * 2;
-      manualFlipFallbackTimeoutRef.current = window.setTimeout(() => {
-        manualFlipFallbackTimeoutRef.current = null;
-        const manualState = manualFlipStateRef.current;
-        const pageFlipInstance = flipRef.current?.pageFlip?.();
-        if (!manualState) {
-          logDebug('flipbook.manual.fallback.skip', {
-            attempt,
-            reason: 'no-manual-state',
-            fallbackDelay: delay,
-          });
-          manualFlipGuardRef.current = false;
-          return;
-        }
-        if (!pageFlipInstance) {
-          logDebug('flipbook.manual.fallback.skip', {
-            direction: manualState.direction,
-            attempt,
-            reason: 'no-instance-after-delay',
-            targetIndex: manualState.targetIndex,
-            fallbackDelay: delay,
-          });
-          manualFlipGuardRef.current = false;
-          manualFlipStateRef.current = null;
-          return;
-        }
 
-        const followupState = typeof pageFlipInstance.getState === 'function'
-          ? pageFlipInstance.getState()
-          : null;
-        const followupIndex = typeof pageFlipInstance.getCurrentPageIndex === 'function'
-          ? pageFlipInstance.getCurrentPageIndex()
-          : null;
-        const nowTs = typeof performance !== 'undefined' ? performance.now() : Date.now();
-        const elapsed = nowTs - manualState.startedAt;
+      const followupState = typeof pageFlipInstance.getState === 'function'
+        ? pageFlipInstance.getState()
+        : null;
+      const followupIndex = typeof pageFlipInstance.getCurrentPageIndex === 'function'
+        ? pageFlipInstance.getCurrentPageIndex()
+        : null;
+      const elapsed = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+        - manualState.startedAt;
 
-        if (followupIndex === manualState.targetIndex) {
-          logDebug('flipbook.manual.followup', {
-            direction: manualState.direction,
-            state: followupState,
-            currentIndex: followupIndex,
-            targetIndex: manualState.targetIndex,
-            elapsed,
-            attempt,
-          });
-          manualFlipGuardRef.current = false;
-          manualFlipStateRef.current = null;
-          scheduleFlipRefresh();
-          return;
-        }
-
-        const awaitingFlip = followupState === 'flipping';
-        if (awaitingFlip) {
-          manualFlipStateRef.current = {
-            ...manualState,
-            sawStateChange: true,
-            startedAt: nowTs,
-          };
-          logDebug('flipbook.manual.followup', {
-            direction: manualState.direction,
-            state: followupState,
-            currentIndex: followupIndex,
-            targetIndex: manualState.targetIndex,
-            elapsed,
-            attempt: 'post-state',
-          });
-          scheduleManualFlipCheck('post-state');
-          return;
-        }
-
-        if (manualState.fallbackStage === 'none') {
-          if (manualState.sawStateChange) {
-            scheduleManualFlipCheck('post-state');
-            return;
-          }
-          if (typeof pageFlipInstance.flip === 'function') {
-            const corner: 'top' | 'bottom' = manualState.direction === 'prev' ? 'bottom' : 'top';
-            pageFlipInstance.flip(manualState.targetIndex, corner);
-            manualFlipStateRef.current = {
-              ...manualState,
-              fallbackStage: 'flip',
-              startedAt: nowTs,
-            };
-            logDebug('flipbook.manual.fallback', {
-              direction: manualState.direction,
-              method: 'flip',
-              currentIndex: followupIndex,
-              targetIndex: manualState.targetIndex,
-              state: followupState,
-              elapsed,
-              attempt,
-            });
-            scheduleManualFlipCheck('post-fallback');
-            return;
-          }
-        }
-
-        const canTurn = typeof pageFlipInstance.turnToPage === 'function';
-        if (manualState.fallbackStage !== 'turn' && canTurn) {
-          pageFlipInstance.turnToPage(manualState.targetIndex);
-          logDebug('flipbook.manual.fallback', {
-            direction: manualState.direction,
-            method: 'turnToPage',
-            currentIndex: followupIndex,
-            targetIndex: manualState.targetIndex,
-            state: followupState,
-            elapsed,
-            attempt,
-          });
-          manualFlipGuardRef.current = false;
-          manualFlipStateRef.current = null;
-          navigation.setIndex(manualState.targetIndex);
-          scheduleFlipRefresh();
-          logDebug('flipbook.manual.complete', {
-            reason: 'fallback-turn',
-            direction: manualState.direction,
-            targetIndex: manualState.targetIndex,
-          });
-          return;
-        }
-
-        logDebug('flipbook.manual.fallback.skip', {
+      if (followupIndex === manualState.targetIndex) {
+        logDebug('flipbook.manual.followup', {
           direction: manualState.direction,
-          attempt,
-          reason: canTurn ? 'fallback-turn-pending' : 'no-fallback-method',
           state: followupState,
           currentIndex: followupIndex,
           targetIndex: manualState.targetIndex,
@@ -1089,10 +985,63 @@ export const DiaryViewport = ({
         });
         manualFlipGuardRef.current = false;
         manualFlipStateRef.current = null;
-      }, delay);
-    },
-    [clearManualFlipFallback, logDebug, navigation, scheduleFlipRefresh],
-  );
+        scheduleFlipRefresh();
+        return;
+      }
+
+      const awaitingFlip = followupState === 'flipping';
+      if (awaitingFlip && !manualState.sawStateChange) {
+        manualFlipStateRef.current = {
+          ...manualState,
+          sawStateChange: true,
+          startedAt: typeof performance !== 'undefined' ? performance.now() : Date.now(),
+        };
+        logDebug('flipbook.manual.followup', {
+          direction: manualState.direction,
+          state: followupState,
+          currentIndex: followupIndex,
+          targetIndex: manualState.targetIndex,
+          elapsed,
+          note: 'awaiting-flip-state',
+        });
+        scheduleManualFlipCheck();
+        return;
+      }
+
+      if (typeof pageFlipInstance.turnToPage === 'function') {
+        pageFlipInstance.turnToPage(manualState.targetIndex);
+        logDebug('flipbook.manual.fallback', {
+          direction: manualState.direction,
+          method: 'turnToPage',
+          currentIndex: followupIndex,
+          targetIndex: manualState.targetIndex,
+          state: followupState,
+          elapsed,
+        });
+        manualFlipGuardRef.current = false;
+        manualFlipStateRef.current = null;
+        navigation.setIndex(manualState.targetIndex);
+        scheduleFlipRefresh();
+        logDebug('flipbook.manual.complete', {
+          reason: 'fallback-turn',
+          direction: manualState.direction,
+          targetIndex: manualState.targetIndex,
+        });
+        return;
+      }
+
+      logDebug('flipbook.manual.fallback.skip', {
+        direction: manualState.direction,
+        reason: 'no-fallback-method',
+        state: followupState,
+        currentIndex: followupIndex,
+        targetIndex: manualState.targetIndex,
+        elapsed,
+      });
+      manualFlipGuardRef.current = false;
+      manualFlipStateRef.current = null;
+    }, MANUAL_FLIP_FALLBACK_DELAY_MS);
+  }, [clearManualFlipFallback, logDebug, navigation, scheduleFlipRefresh]);
 
   const handleManualFlip = useCallback((direction: 'prev' | 'next') => {
     const book = flipRef.current?.pageFlip?.();
@@ -1183,7 +1132,19 @@ export const DiaryViewport = ({
       ? book.getCurrentPageIndex()
       : rawCurrentIndex;
 
-    if (direction === 'prev' && normalizedCurrentIndex > 0 && typeof book.flipPrev === 'function') {
+    if (typeof book.flip === 'function') {
+      if (controllerIndexBefore !== normalizedCurrentIndex) {
+        book.turnToPage(normalizedCurrentIndex);
+        logDebug('flipbook.manual.debug', {
+          note: 'normalize-controller-before-flip',
+          controllerIndexBefore,
+          normalizedCurrentIndex,
+        });
+      }
+      const corner: 'top' | 'bottom' = direction === 'prev' ? 'bottom' : 'top';
+      book.flip(targetIndex, corner);
+      method = 'flip';
+    } else if (direction === 'prev' && normalizedCurrentIndex > 0 && typeof book.flipPrev === 'function') {
       if (controllerIndexBefore !== normalizedCurrentIndex) {
         book.turnToPage(normalizedCurrentIndex);
         logDebug('flipbook.manual.debug', {
@@ -1201,9 +1162,6 @@ export const DiaryViewport = ({
     ) {
       book.flipNext('top');
       method = 'flipNext';
-    } else if (typeof book.flip === 'function') {
-      book.flip(targetIndex);
-      method = 'flip';
     } else if (typeof book.turnToPage === 'function') {
       book.turnToPage(targetIndex);
       method = 'turnToPage';
@@ -1248,22 +1206,16 @@ export const DiaryViewport = ({
 
     clearManualFlipFallback();
 
-    if (method === 'flipPrev' || method === 'flipNext') {
+    if (method === 'flip' || method === 'flipPrev' || method === 'flipNext') {
       manualFlipGuardRef.current = true;
-      const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
       manualFlipStateRef.current = {
         direction,
         targetIndex,
         method,
-        startedAt,
+        startedAt: typeof performance !== 'undefined' ? performance.now() : Date.now(),
         sawStateChange: flipState === 'flipping',
-        fallbackStage: 'none',
       };
-      if (flipState === 'flipping') {
-        scheduleManualFlipCheck('post-state');
-      } else {
-        scheduleManualFlipCheck('initial');
-      }
+      scheduleManualFlipCheck();
     } else {
       manualFlipGuardRef.current = false;
       manualFlipStateRef.current = null;
@@ -1526,7 +1478,7 @@ export const DiaryViewport = ({
         sawStateChange: true,
       };
       clearManualFlipFallback();
-      scheduleManualFlipCheck('post-state');
+      scheduleManualFlipCheck();
       logDebug('flipbook.manual.progress', {
         stage: 'flipping',
         direction: manualFlipStateRef.current.direction,
@@ -1549,7 +1501,7 @@ export const DiaryViewport = ({
           sawStateChange: manualState.sawStateChange,
         });
       } else {
-        scheduleManualFlipCheck('post-fallback');
+        scheduleManualFlipCheck();
       }
     }
     setFlipState(state as 'user_fold' | 'fold_corner' | 'flipping' | 'read');
