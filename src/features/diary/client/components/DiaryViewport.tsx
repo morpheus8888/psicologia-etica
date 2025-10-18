@@ -2370,6 +2370,8 @@ export const DiaryViewport = ({
             mobileScrollSupport={debugOptions.enableMobileScroll}
             usePortrait={false}
             useMouseEvents={debugOptions.enableMouseEvents}
+            renderOnlyPageLengthChange
+            clickEventForward={false}
             className="w-full"
           >
             {flipPages}
