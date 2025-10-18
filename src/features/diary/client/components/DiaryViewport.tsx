@@ -1133,9 +1133,10 @@ export const DiaryViewport = ({
     }
 
     const currentPage = book.getCurrentPageIndex();
-    if (flipState === 'flipping') {
+    const flipStateBusy = flipState && flipState !== 'read';
+    if (flipStateBusy) {
       logDebug('flipbook.syncNavigation.skip', {
-        reason: 'flipping-state',
+        reason: 'busy-state',
         currentPage,
         targetIndex: navigation.currentIndex,
         flipState,
