@@ -957,12 +957,31 @@ export const DiaryViewport = ({
       manualFlipFallbackTimeoutRef.current = null;
       const manualState = manualFlipStateRef.current;
       const pageFlipInstance = flipRef.current?.pageFlip?.();
-      if (!manualState || !pageFlipInstance) {
+      const guardActive = manualFlipGuardRef.current;
+      if (!manualState || !pageFlipInstance || !guardActive) {
         logDebug('flipbook.manual.fallback.skip', {
-          reason: manualState ? 'no-instance-after-delay' : 'no-manual-state',
+          reason: !manualState
+            ? 'no-manual-state'
+            : !guardActive
+                ? 'guard-cleared'
+                : 'no-instance-after-delay',
         });
         manualFlipGuardRef.current = false;
         manualFlipStateRef.current = null;
+        return;
+      }
+
+      if (navigation.currentIndex === manualState.targetIndex) {
+        logDebug('flipbook.manual.followup', {
+          direction: manualState.direction,
+          note: 'navigation-already-on-target',
+          targetIndex: manualState.targetIndex,
+          elapsed: (typeof performance !== 'undefined' ? performance.now() : Date.now())
+            - manualState.startedAt,
+        });
+        manualFlipGuardRef.current = false;
+        manualFlipStateRef.current = null;
+        scheduleFlipRefresh();
         return;
       }
 
@@ -1008,7 +1027,7 @@ export const DiaryViewport = ({
         return;
       }
 
-      if (typeof pageFlipInstance.turnToPage === 'function') {
+      if (typeof pageFlipInstance.turnToPage === 'function' && navigation.currentIndex !== manualState.targetIndex) {
         pageFlipInstance.turnToPage(manualState.targetIndex);
         logDebug('flipbook.manual.fallback', {
           direction: manualState.direction,
