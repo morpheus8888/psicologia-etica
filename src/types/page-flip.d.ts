@@ -20,5 +20,6 @@ declare module 'page-flip' {
     turnToPrevPage(): void;
     update(): void;
     updateFromHtml(nodes: HTMLElement[]): void;
+    getState(): string;
   }
 }

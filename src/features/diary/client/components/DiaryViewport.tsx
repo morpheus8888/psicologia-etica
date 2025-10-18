@@ -71,6 +71,7 @@ type DebugOptionsState = {
   enableClickFlip: boolean;
   enableMobileScroll: boolean;
   verbose: boolean;
+  filterEditabilityLogs: boolean;
 };
 
 type DebugSnapshot = {
@@ -153,6 +154,7 @@ type PageFlipApi = {
   turnToPage: (pageIndex: number) => void;
   flipNext?: (corner?: 'top' | 'bottom') => void;
   flipPrev?: (corner?: 'top' | 'bottom') => void;
+  getState?: () => string;
 };
 
 type FlipBookHandle = {
@@ -391,6 +393,7 @@ export const DiaryViewport = ({
     enableClickFlip: false,
     enableMobileScroll: false,
     verbose: false,
+    filterEditabilityLogs: false,
   });
   const flipbookSettingsKey = useMemo(
     () => JSON.stringify({
@@ -463,6 +466,9 @@ export const DiaryViewport = ({
     includeSnapshot = false,
   ) => {
     if (debugSuppressLogsRef.current && label !== 'debug.log.clear') {
+      return;
+    }
+    if (label === 'entry.page.editability' && debugOptionsRef.current.filterEditabilityLogs) {
       return;
     }
     const verboseOnly = VERBOSE_ONLY_DEBUG_EVENTS.has(label);
@@ -919,7 +925,8 @@ export const DiaryViewport = ({
       return;
     }
     if (!flipBookReadyRef.current) {
-      logDebug('flipbook.manual.skip', { direction, reason: 'not-ready' });
+      const pendingState = typeof book.getState === 'function' ? book.getState() : null;
+      logDebug('flipbook.manual.skip', { direction, reason: 'not-ready', bookState: pendingState });
       return;
     }
 
@@ -941,6 +948,7 @@ export const DiaryViewport = ({
     const trailingSinglePageIndex = lastBookIndex !== null && lastBookIndex > normalizedMaxIndex
       ? lastBookIndex
       : null;
+    const bookStateBefore = typeof book.getState === 'function' ? book.getState() : null;
 
     logDebug('flipbook.manual.request', {
       direction,
@@ -951,6 +959,7 @@ export const DiaryViewport = ({
       pageCount,
       normalizedMaxIndex,
       trailingSinglePageIndex,
+      bookState: bookStateBefore,
     });
 
     if (flipState === 'flipping') {
@@ -959,6 +968,7 @@ export const DiaryViewport = ({
         reason: 'in-flight-state',
         currentIndex: rawCurrentIndex,
         normalizedCurrentIndex,
+        bookState: bookStateBefore,
       });
     }
 
@@ -976,6 +986,7 @@ export const DiaryViewport = ({
         pageCount,
         normalizedMaxIndex,
         trailingSinglePageIndex,
+        bookState: bookStateBefore,
       });
       return;
     }
@@ -1018,9 +1029,15 @@ export const DiaryViewport = ({
         pageCount,
         normalizedMaxIndex,
         trailingSinglePageIndex,
+        bookState: bookStateBefore,
       });
       return;
     }
+
+    const bookStateAfter = typeof book.getState === 'function' ? book.getState() : null;
+    const rawCurrentAfter = typeof book.getCurrentPageIndex === 'function'
+      ? book.getCurrentPageIndex()
+      : rawCurrentIndex;
 
     logDebug('flipbook.manual', {
       direction,
@@ -1032,6 +1049,9 @@ export const DiaryViewport = ({
       trailingSinglePageIndex,
       method,
       flipState,
+      bookStateBefore,
+      bookStateAfter,
+      rawCurrentAfter,
     });
   }, [flipState, logDebug, navigation.currentIndex, navigation.pages]);
 
@@ -1133,6 +1153,7 @@ export const DiaryViewport = ({
     }
 
     const currentPage = book.getCurrentPageIndex();
+    const bookState = typeof book.getState === 'function' ? book.getState() : null;
     const flipStateBusy = flipState && flipState !== 'read';
     if (flipStateBusy) {
       logDebug('flipbook.syncNavigation.skip', {
@@ -1140,6 +1161,7 @@ export const DiaryViewport = ({
         currentPage,
         targetIndex: navigation.currentIndex,
         flipState,
+        bookState,
       });
       return;
     }
@@ -1148,6 +1170,7 @@ export const DiaryViewport = ({
       currentPage,
       targetIndex: navigation.currentIndex,
       flipState,
+      bookState,
     });
     if (currentPage === navigation.currentIndex) {
       return;
@@ -1167,6 +1190,7 @@ export const DiaryViewport = ({
         currentPage,
         targetIndex: navigation.currentIndex,
         flipState,
+        bookState,
       });
       book.flip(navigation.currentIndex);
       return;
@@ -1176,6 +1200,7 @@ export const DiaryViewport = ({
       currentPage,
       targetIndex: navigation.currentIndex,
       flipState,
+      bookState,
     });
     book.turnToPage(navigation.currentIndex);
   }, [flipState, logDebug, navigation.currentIndex]);
@@ -1939,6 +1964,14 @@ export const DiaryViewport = ({
                   onChange={() => handleDebugToggle('verbose')}
                 />
                 <span>Verbose logging</span>
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={debugOptions.filterEditabilityLogs}
+                  onChange={() => handleDebugToggle('filterEditabilityLogs')}
+                />
+                <span>Filtra entry.page.editability</span>
               </label>
             </div>
           </div>
