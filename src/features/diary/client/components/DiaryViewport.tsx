@@ -2109,7 +2109,7 @@ export const DiaryViewport = ({
     const hasGoalAction = goals.length > 0;
     const pageHeading = formatDateLabel(page.dateISO, locale);
 
-    if (debugOptions.verbose) {
+    if (debugOptions.verbose && (isActivePage || page.index === navigation.currentIndex)) {
       logDebug('entry.page.editability', {
         pageDateISO: page.dateISO,
         todayISO,
