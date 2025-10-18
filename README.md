@@ -144,7 +144,7 @@ SUPPORTED_LOCALES=it,en
 - ✅ Modalità desktop con flip-book (react-pageflip): copertina (pagine 0-1) in stile notebook, pagine 2-3 dedicate agli obiettivi, pagine 4-5 al calendario mensile, dalla pagina 6 in poi le entry giornaliere. I pulsanti "Obiettivi", "Calendario" e "Oggi" portano rapidamente ai rispettivi spread.
 - ✅ Ogni spread giornaliero su desktop mostra la pagina editabile del giorno sulla sinistra e, sulla destra, un’estensione fissa con intestazione "Obiettivi" pronta per le prossime feature.
 - 📚 La UI del flip-book usa [react-pageflip](https://github.com/Nodlik/react-pageflip); attenersi alla documentazione per API/prop avanzate (vedi anche `docs/react-pageflip.md`).
-- ⚙️ Per evitare che `react-pageflip` ricrei l’HTML a ogni render e faccia perdere il focus all’editor, **tenere sempre `renderOnlyPageLengthChange` impostato su `<HTMLFlipBook>`** (vedi commit `fix(diary): avoid flipbook html reload while typing`). Cambia lo `spread` solo se varia il numero di pagine.
+- ⚙️ Per evitare che `react-pageflip` ricrei l’HTML a ogni render e faccia perdere il focus all’editor, usiamo il wrapper `FocusSafeHTMLFlipBook` (`src/features/diary/client/components/FocusSafeHTMLFlipBook.tsx`) che mantiene `renderOnlyPageLengthChange` attivo e richiama `loadFromHTML` / `updateFromHtml` solo quando cambia il numero/ordine delle pagine. Cambia lo spread solo se varia il numero di pagine.
 - ✅ Condivisione E2EE con professionisti: envelope cifrato, audit trail (`diary_share_audits`) e meta sincronizzati lato client.
 - ✅ Pagina impostazioni con cambio password (voce spostata nel menu Impostazioni).
 - ✅ Coach dock con stati ask/sleep e highlight delle scadenze goal direttamente nelle pagine giornaliere.

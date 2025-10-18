@@ -17,6 +17,9 @@ Version 2.0.0 of `react-pageflip` rewrote the library around React hooks and **c
   `updateFromHtml` ad ogni render, ricostruisce il nodo `contenteditable` e il cursore torna
   all'inizio. L’opzione fa sì che il markup venga rigenerato solo quando cambia il numero di
   pagine, preservando focus e selezione (vedi commit `fix(diary): avoid flipbook html reload while typing`).
+  Nel diario usiamo il wrapper `FocusSafeHTMLFlipBook` (`src/features/diary/client/components/FocusSafeHTMLFlipBook.tsx`)
+  per rispettare questa regola: il componente tiene traccia delle pagine (count + key) e chiama `loadFromHTML`
+  / `updateFromHtml` solo quando cambiano, così il flip-book resta montato e l’editor non perde il focus.
 - **Non usare hack di focus restore.** Se il flip-book causa blur, c'è un bug di configurazione: non
   provare a richiamare `focus()` o cambiare le selection manualmente. Sistemare la causa (click
   intercettati, update inutili, ecc.) seguendo la doc, altrimenti il caret salta e il debug si
