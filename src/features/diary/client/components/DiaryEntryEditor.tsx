@@ -305,14 +305,6 @@ const DiaryEntryEditor = ({
         if (!latestActive || latestActive === latestOwnerDocument.body) {
           restoringFocusRef.current = true;
           editableNode.focus({ preventScroll: true });
-          const selection = latestOwnerDocument.getSelection();
-          if (selection) {
-            const range = latestOwnerDocument.createRange();
-            range.selectNodeContents(editableNode);
-            range.collapse(false);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          }
           onDebugEvent?.('focus.restore', { reason: 'blur-without-target', attempt, selection: 'end' });
           forcedFocusAttemptsRef.current = 0;
         } else {
