@@ -386,7 +386,6 @@ const DiaryEntryEditor = ({
       }
       const targetNode = event.target as Node | null;
       const inside = Boolean(targetNode && hostNode.contains(targetNode));
-      shouldRestoreFocusRef.current = inside;
       if (!inside) {
         shouldRestoreFocusRef.current = false;
         forcedFocusAttemptsRef.current = 0;

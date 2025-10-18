@@ -138,6 +138,8 @@ export const FlipBook: React.FC<FlipBookProps> = ({
         // Per docs/react-pageflip.md: renderOnlyPageLengthChange evita reload completo quando il contenuto cambia,
         // così non perdiamo il focus durante la scrittura.
         renderOnlyPageLengthChange
+        // I click devono rimanere al contenuto interattivo (editor Lexical), non essere intercettati da PageFlip.
+        clickEventForward={false}
       >
         <PageCover textureUrl={coverTextureUrl}>{coverFront}</PageCover>
         {pages.map((element, index) => {
