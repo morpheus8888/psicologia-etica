@@ -117,3 +117,9 @@ Get the `PageFlip` instance via `ref.current.pageFlip()` to call helpers:
 - `destroy()`: tear down the instance and listeners.
 
 These notes are the single source of truth for working with the flip-book; keep them in sync with upstream releases.
+
+### Manual Navigation Notes
+
+- Normalizza sempre l’indice corrente alla pagina sinistra della coppia (`index` pari) prima di eseguire flip programmatici. Chiedere alla libreria di andare alla pagina destra dello stesso spread non produce animazioni né cambi di stato visibili.
+- Usa prima `flipPrev` / `flipNext` per lasciare che il controller gestisca direzione e animazioni; ripiega su `flip(targetIndex)` o `turnToPage(targetIndex)` solo se la coppia successiva è fuori range (es. ultima pagina singola).
+- Dopo un flip manuale sincronizza la navigazione ascoltando l’evento `flip`. Se devi forzare l’indice, allinealo comunque al valore normalizzato per evitare che `update()` o `turnToPage` interrompano l’animazione.

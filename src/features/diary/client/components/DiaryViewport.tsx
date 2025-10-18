@@ -893,53 +893,107 @@ export const DiaryViewport = ({
       logDebug('flipbook.manual.skip', { direction, reason: 'not-ready' });
       return;
     }
-    const currentIndex = typeof book.getCurrentPageIndex === 'function' ? book.getCurrentPageIndex() : 0;
+
+    const rawCurrentIndex = typeof book.getCurrentPageIndex === 'function'
+      ? book.getCurrentPageIndex()
+      : navigation.currentIndex;
+    const normalizedCurrentIndex = rawCurrentIndex % 2 === 0 ? rawCurrentIndex : rawCurrentIndex - 1;
     const pageCount = typeof book.getPageCount === 'function' ? book.getPageCount() : null;
+    const lastNavigationIndex = navigation.pages.length > 0
+      ? navigation.pages[navigation.pages.length - 1]?.index ?? 0
+      : 0;
+    const lastBookIndex = pageCount !== null && pageCount > 0 ? pageCount - 1 : null;
+    const maxIndexCandidate = lastBookIndex !== null
+      ? Math.min(lastNavigationIndex, lastBookIndex)
+      : lastNavigationIndex;
+    const normalizedMaxIndex = maxIndexCandidate >= 0
+      ? (maxIndexCandidate % 2 === 0 ? maxIndexCandidate : maxIndexCandidate - 1)
+      : 0;
+    const trailingSinglePageIndex = lastBookIndex !== null && lastBookIndex > normalizedMaxIndex
+      ? lastBookIndex
+      : null;
 
     const computeTargetIndex = () => {
       if (direction === 'prev') {
-        if (currentIndex <= 0) {
+        if (normalizedCurrentIndex <= 0) {
           return null;
         }
-        const stride = currentIndex % 2 === 0 ? 2 : 1;
-        const candidate = currentIndex - stride;
-        return Math.max(0, candidate);
+        return Math.max(0, normalizedCurrentIndex - 2);
       }
 
-      if (pageCount === null) {
-        return currentIndex + 1;
+      if (normalizedCurrentIndex < normalizedMaxIndex) {
+        return Math.min(normalizedMaxIndex, normalizedCurrentIndex + 2);
       }
-      if (currentIndex >= pageCount - 1) {
-        return null;
+
+      if (trailingSinglePageIndex && trailingSinglePageIndex > normalizedCurrentIndex) {
+        return trailingSinglePageIndex;
       }
-      const stride = currentIndex % 2 === 0 ? 2 : 1;
-      const candidate = currentIndex + stride;
-      return Math.min(pageCount - 1, candidate);
+
+      return null;
     };
 
     const targetIndex = computeTargetIndex();
-    if (targetIndex === null || targetIndex === currentIndex) {
+    if (targetIndex === null || targetIndex === normalizedCurrentIndex) {
       logDebug('flipbook.manual.skip', {
         direction,
         reason: targetIndex === null ? 'no-target' : 'no-change',
-        currentIndex,
+        currentIndex: rawCurrentIndex,
+        normalizedCurrentIndex,
         pageCount,
+        normalizedMaxIndex,
+        trailingSinglePageIndex,
       });
       return;
     }
 
-    if (typeof book.flip === 'function') {
+    let method: 'flipPrev' | 'flipNext' | 'flip' | 'turnToPage' | null = null;
+    if (
+      direction === 'prev'
+      && typeof book.flipPrev === 'function'
+      && targetIndex === normalizedCurrentIndex - 2
+    ) {
+      book.flipPrev('bottom');
+      method = 'flipPrev';
+    } else if (
+      direction === 'next'
+      && typeof book.flipNext === 'function'
+      && targetIndex <= normalizedCurrentIndex + 2
+      && targetIndex !== trailingSinglePageIndex
+    ) {
+      book.flipNext('bottom');
+      method = 'flipNext';
+    } else if (typeof book.flip === 'function') {
       book.flip(targetIndex, 'bottom');
+      method = 'flip';
     } else if (typeof book.turnToPage === 'function') {
       book.turnToPage(targetIndex);
+      method = 'turnToPage';
     } else {
-      logDebug('flipbook.manual.skip', { direction, reason: 'no-method', currentIndex, targetIndex, pageCount });
+      logDebug('flipbook.manual.skip', {
+        direction,
+        reason: 'no-method',
+        currentIndex: rawCurrentIndex,
+        normalizedCurrentIndex,
+        targetIndex,
+        pageCount,
+        normalizedMaxIndex,
+        trailingSinglePageIndex,
+      });
       return;
     }
 
     setNavigationIndex(targetIndex);
-    logDebug('flipbook.manual', { direction, currentIndex, targetIndex, pageCount });
-  }, [logDebug, setNavigationIndex]);
+    logDebug('flipbook.manual', {
+      direction,
+      currentIndex: rawCurrentIndex,
+      normalizedCurrentIndex,
+      targetIndex,
+      pageCount,
+      normalizedMaxIndex,
+      trailingSinglePageIndex,
+      method,
+    });
+  }, [logDebug, navigation.currentIndex, navigation.pages, setNavigationIndex]);
 
   useEffect(() => {
     return () => {
