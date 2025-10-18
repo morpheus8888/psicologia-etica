@@ -143,10 +143,12 @@ export const useDiaryEntrySession = ({
   const lastLocalEditRef = useRef(0);
   const lastRemoteUpdateRef = useRef(0);
   const loadRequestIdRef = useRef(0);
+  const lastQueuedBodyRef = useRef<{ dateISO: string; body: string } | null>(null);
   const previousDateRef = useRef<string | null>(null);
   const volatileDraftsRef = useRef<Map<string, DraftSnapshot>>(new Map());
   const editorVersionRef = useRef<Map<string, number>>(new Map());
   const sessionBodiesRef = useRef<Map<string, string>>(new Map());
+  const persistedBodiesRef = useRef<Map<string, string>>(new Map());
   const loadEntryRef = useRef(data.loadEntry);
 
   useEffect(() => {
@@ -369,11 +371,43 @@ export const useDiaryEntrySession = ({
       targetDateISO,
       bodyLength: bodyToPersist.length,
     });
+    persistedBodiesRef.current.set(targetDateISO, bodyToPersist);
+    lastQueuedBodyRef.current = null;
     return saved;
   }, [clearDraft, data, incrementCounter, logDebug, navigation.currentDate, setBodyForDate]);
 
   const enqueueSave = useCallback((dateISO: string, body: string) => {
     if (typeof window === 'undefined') {
+      return;
+    }
+    const persisted = persistedBodiesRef.current.get(dateISO) ?? '';
+    if (body === persisted) {
+      if (pendingSaveTimeoutRef.current !== null) {
+        window.clearTimeout(pendingSaveTimeoutRef.current);
+        pendingSaveTimeoutRef.current = null;
+      }
+      if (pendingSaveValueRef.current?.dateISO === dateISO) {
+        pendingSaveValueRef.current = null;
+      }
+      lastQueuedBodyRef.current = null;
+      isDirtyRef.current = false;
+      logDebug('entry.save.skip', {
+        dateISO,
+        bodyLength: body.length,
+        reason: 'no-change',
+      });
+      return;
+    }
+    if (
+      lastQueuedBodyRef.current
+      && lastQueuedBodyRef.current.dateISO === dateISO
+      && lastQueuedBodyRef.current.body === body
+    ) {
+      logDebug('entry.save.skip', {
+        dateISO,
+        bodyLength: body.length,
+        reason: 'already-queued',
+      });
       return;
     }
     pendingSaveValueRef.current = { dateISO, body };
@@ -385,6 +419,7 @@ export const useDiaryEntrySession = ({
       dateISO,
       bodyLength: body.length,
     });
+    lastQueuedBodyRef.current = { dateISO, body };
     pendingSaveTimeoutRef.current = window.setTimeout(() => {
       pendingSaveTimeoutRef.current = null;
       const pending = pendingSaveValueRef.current;
@@ -403,6 +438,7 @@ export const useDiaryEntrySession = ({
         pendingSaveValueRef.current = pending;
         isDirtyRef.current = true;
       });
+      lastQueuedBodyRef.current = null;
     }, SAVE_DEBOUNCE_MS);
   }, [handleSaveEntry, incrementCounter, logDebug]);
 
@@ -618,6 +654,7 @@ export const useDiaryEntrySession = ({
           setCurrentBodyState('');
           bumpEditorVersion(targetDate, 'empty-entry');
         }
+        persistedBodiesRef.current.set(targetDate, '');
         logDebug('entry.load.empty', { targetDate });
         scheduleFlipRefresh();
         return;
@@ -678,6 +715,7 @@ export const useDiaryEntrySession = ({
         setBodyForDate(targetDate, nextBody);
         setCurrentBodyState(nextBody);
       }
+      persistedBodiesRef.current.set(targetDate, nextBody);
       externalChangeOriginRef.current = 'remote';
       clearDraft(targetDate);
       logDebug('entry.load.success', {
@@ -711,6 +749,7 @@ export const useDiaryEntrySession = ({
       void flushPendingSave(previousDate);
     }
     previousDateRef.current = navigation.currentDate;
+    lastQueuedBodyRef.current = null;
   }, [flushPendingSave, navigation.currentDate]);
 
   useEffect(() => {
