@@ -11,7 +11,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import HTMLFlipBook from 'react-pageflip';
 
 import type { TranslationAdapter, UIAdapter } from '@/features/diary/adapters/types';
 import { useDiaryData } from '@/features/diary/client/context/DiaryDataContext';
@@ -25,8 +24,9 @@ import { DiaryEntryEditor } from './DiaryEntryEditor';
 import { DiaryEntryPreview } from './DiaryEntryPreview';
 import { DiaryGoalLinkPanel } from './DiaryGoalLinkPanel';
 import { DiarySharePanel } from './DiarySharePanel';
+import { FocusSafeHTMLFlipBook } from './FocusSafeHTMLFlipBook';
 
-const FlipBook = HTMLFlipBook as unknown as ComponentType<any>;
+const FlipBook = FocusSafeHTMLFlipBook as unknown as ComponentType<any>;
 const PAGE_EDGE_WIDTH_CLASS = 'w-16'; // 64px edge activation zones
 const DEBUG_BUFFER_LIMIT = 200;
 const DEBUG_STUCK_TIMEOUT_MS = 1200;
@@ -2371,7 +2371,6 @@ export const DiaryViewport = ({
             usePortrait={false}
             useMouseEvents={debugOptions.enableMouseEvents}
             renderOnlyPageLengthChange
-            clickEventForward={false}
             className="w-full"
           >
             {flipPages}
