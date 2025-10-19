@@ -53,17 +53,32 @@
   width: 50%;
   height: 100%;
   padding: clamp(18px, 3vw, 42px);
-  background: linear-gradient(180deg, #ffffff 0%, #f9f5ea 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(129, 118, 102, 0.18),
-    inset 0 18px 24px rgba(255, 255, 255, 0.5),
-    inset 0 -18px 24px rgba(196, 175, 140, 0.25);
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
   border-radius: 12px;
   color: #2f2a24;
   overflow: hidden;
+}
+
+.pagePaper {
+  background: linear-gradient(180deg, #ffffff 0%, #f9f5ea 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(129, 118, 102, 0.18),
+    inset 0 18px 24px rgba(255, 255, 255, 0.5),
+    inset 0 -18px 24px rgba(196, 175, 140, 0.25);
+}
+
+.pagePaper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.55), transparent 45%),
+    radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.25), transparent 55%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.02) 35%, rgba(0, 0, 0, 0.08));
+  mix-blend-mode: multiply;
+  opacity: 0.28;
 }
 
 .pageLeft {
@@ -82,6 +97,15 @@
   flex: 1;
   overflow: auto;
   line-height: 1.6;
+}
+
+.pageInnerCover {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.5rem;
+  overflow: hidden;
 }
 
 .entryTitle {
@@ -208,11 +232,6 @@
   height: 100%;
   backface-visibility: hidden;
   border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #f7f1e5 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(129, 118, 102, 0.18),
-    inset 0 18px 24px rgba(255, 255, 255, 0.5),
-    inset 0 -18px 24px rgba(196, 175, 140, 0.25);
   padding: clamp(18px, 3vw, 42px);
   display: flex;
   flex-direction: column;
@@ -220,12 +239,15 @@
   color: #2f2a24;
 }
 
-.flipFaceBack {
-  transform: rotateY(180deg);
+.flipFacePaper {
+  background: linear-gradient(180deg, #ffffff 0%, #f7f1e5 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(129, 118, 102, 0.18),
+    inset 0 18px 24px rgba(255, 255, 255, 0.5),
+    inset 0 -18px 24px rgba(196, 175, 140, 0.25);
 }
 
-.flipFace::before,
-.page::before {
+.flipFacePaper::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -237,19 +259,15 @@
   opacity: 0.28;
 }
 
-.coverSurface {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 0.35rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  font-size: 0.8rem;
-  text-transform: uppercase;
+.flipFaceCover {
+  color: rgba(254, 244, 226, 0.9);
+  box-shadow:
+    inset 0 0 0 1px rgba(32, 14, 8, 0.45),
+    inset 0 28px 36px rgba(0, 0, 0, 0.32),
+    inset 0 -24px 32px rgba(0, 0, 0, 0.28);
 }
 
-.coverDesk {
+.flipFaceCoverDesk {
   background: linear-gradient(180deg, rgba(124, 84, 52, 0.98) 0%, rgba(74, 44, 24, 0.96) 100%),
     repeating-linear-gradient(
       120deg,
@@ -258,15 +276,10 @@
       rgba(120, 80, 50, 0.18) 8px,
       rgba(120, 80, 50, 0.18) 16px
     );
-  color: rgba(245, 233, 215, 0.88);
-  box-shadow:
-    inset 0 0 0 1px rgba(34, 20, 11, 0.35),
-    inset 0 24px 32px rgba(0, 0, 0, 0.35),
-    inset 0 -20px 28px rgba(0, 0, 0, 0.25);
 }
 
-.coverLeatherFront,
-.coverLeatherBack {
+.flipFaceCoverLeatherFront,
+.flipFaceCoverLeatherBack {
   background: linear-gradient(135deg, rgba(94, 47, 25, 0.95) 0%, rgba(54, 24, 12, 0.98) 100%),
     radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.18), transparent 55%),
     repeating-linear-gradient(
@@ -276,15 +289,11 @@
       rgba(0, 0, 0, 0.02) 2px,
       rgba(0, 0, 0, 0.02) 4px
     );
-  color: rgba(254, 244, 226, 0.85);
-  box-shadow:
-    inset 0 0 0 1px rgba(32, 14, 8, 0.5),
-    inset 0 20px 28px rgba(0, 0, 0, 0.35),
-    inset 0 -18px 24px rgba(0, 0, 0, 0.25);
 }
 
-.coverLeatherFront::after,
-.coverLeatherBack::after {
+.flipFaceCoverDesk::after,
+.flipFaceCoverLeatherFront::after,
+.flipFaceCoverLeatherBack::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -292,15 +301,48 @@
   background: linear-gradient(120deg, rgba(255, 255, 255, 0.22), transparent 45%),
     linear-gradient(-120deg, rgba(0, 0, 0, 0.2), transparent 65%);
   opacity: 0.65;
+  mix-blend-mode: screen;
 }
 
-.coverLeatherFront {
+.flipFaceBack {
+  transform: rotateY(180deg);
+}
+
+.coverSurface {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.45rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.coverTitle {
+  font-weight: 600;
+}
+
+.coverNote {
+  font-size: 0.65rem;
+  letter-spacing: 0.28em;
+  opacity: 0.75;
+}
+
+.pageCoverDesk .coverSurface {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.pageCoverLeatherFront .coverSurface {
   align-items: flex-end;
   text-align: right;
 }
 
-.coverLeatherBack {
+.pageCoverLeatherBack .coverSurface {
   align-items: flex-start;
+  text-align: left;
 }
 
 .faceContent {
@@ -334,4 +376,56 @@
   color: rgba(53, 43, 30, 0.65);
   font-style: italic;
   text-align: center;
+}
+.pageCover {
+  color: rgba(254, 244, 226, 0.9);
+  box-shadow:
+    inset 0 0 0 1px rgba(32, 14, 8, 0.45),
+    inset 0 28px 36px rgba(0, 0, 0, 0.32),
+    inset 0 -24px 32px rgba(0, 0, 0, 0.28);
+}
+
+.pageCoverDesk {
+  background: linear-gradient(180deg, rgba(124, 84, 52, 0.98) 0%, rgba(74, 44, 24, 0.96) 100%),
+    repeating-linear-gradient(
+      120deg,
+      rgba(230, 204, 168, 0.18),
+      rgba(230, 204, 168, 0.18) 8px,
+      rgba(120, 80, 50, 0.18) 8px,
+      rgba(120, 80, 50, 0.18) 16px
+    );
+}
+
+.pageCoverLeatherFront,
+.pageCoverLeatherBack {
+  background: linear-gradient(135deg, rgba(94, 47, 25, 0.95) 0%, rgba(54, 24, 12, 0.98) 100%),
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.18), transparent 55%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.04),
+      rgba(255, 255, 255, 0.04) 2px,
+      rgba(0, 0, 0, 0.02) 2px,
+      rgba(0, 0, 0, 0.02) 4px
+    );
+}
+
+.pageCoverDesk::after,
+.pageCoverLeatherFront::after,
+.pageCoverLeatherBack::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.22), transparent 45%),
+    linear-gradient(-120deg, rgba(0, 0, 0, 0.2), transparent 65%);
+  opacity: 0.65;
+  mix-blend-mode: screen;
+}
+
+.pageCoverLeatherFront {
+  align-items: flex-end;
+}
+
+.pageCoverLeatherBack {
+  align-items: flex-start;
 }

@@ -33,19 +33,19 @@ type AnimationState = {
 
 type CoverVariant = 'desk' | 'leather-front' | 'leather-back';
 
-const CoverSurface: React.FC<{ variant: CoverVariant; label: string }> = ({ variant, label }) => (
-  <div
-    className={cn(
-      styles.pageInner,
-      styles.coverSurface,
-      variant === 'desk' && styles.coverDesk,
-      variant === 'leather-front' && styles.coverLeatherFront,
-      variant === 'leather-back' && styles.coverLeatherBack,
-    )}
-  >
-    {label}
+const CoverSurface: React.FC<{ variant: CoverVariant; label: string; note?: string }> = ({ variant, label, note }) => (
+  <div data-cover-variant={variant} className={styles.coverSurface}>
+    <span className={styles.coverTitle}>{label}</span>
+    {note ? <span className={styles.coverNote}>{note}</span> : null}
   </div>
 );
+
+type PageVariant = 'paper' | 'cover-desk' | 'cover-leather-front' | 'cover-leather-back';
+
+type ResolvedPage = {
+  variant: PageVariant;
+  node: React.ReactNode;
+};
 
 const createSpreads = (pages: React.ReactNode[]): Spread[] => {
   const nodes = [...pages];
@@ -66,9 +66,25 @@ const BlankPage = () => (
   <div className={styles.placeholder}>Pagina vuota</div>
 );
 
-const ensureNode = (node: React.ReactNode) => (node === null || node === undefined
-  ? <BlankPage />
-  : node);
+const isCoverElement = (element: React.ReactElement): element is React.ReactElement<{ 'data-cover-variant': CoverVariant }> => (
+  Object.prototype.hasOwnProperty.call(element.props ?? {}, 'data-cover-variant')
+);
+
+const resolvePage = (node: React.ReactNode | null | undefined): ResolvedPage => {
+  if (node === null || node === undefined) {
+    return { variant: 'paper', node: <BlankPage /> };
+  }
+  if (React.isValidElement(node) && isCoverElement(node)) {
+    const coverVariant = node.props['data-cover-variant'];
+    const mappedVariant: PageVariant = coverVariant === 'desk'
+      ? 'cover-desk'
+      : coverVariant === 'leather-front'
+        ? 'cover-leather-front'
+        : 'cover-leather-back';
+    return { variant: mappedVariant, node };
+  }
+  return { variant: 'paper', node };
+};
 
 const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
   pages,
@@ -78,21 +94,43 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
 }) => {
   const augmentedPages = useMemo(() => {
     const frontDesk = (
-      <CoverSurface key="cover-desk-front" variant="desk" label="Scrivania" />
+      <CoverSurface key="cover-desk-front" variant="desk" label="Scrivania" note="Appunti di viaggio" />
     );
     const frontLeather = (
-      <CoverSurface key="cover-leather-front" variant="leather-front" label="Diario — Copertina" />
+      <CoverSurface key="cover-leather-front" variant="leather-front" label="Diario" note="Premi Successivo →" />
     );
     const backLeather = (
-      <CoverSurface key="cover-leather-back" variant="leather-back" label="Copertina — Retro" />
+      <CoverSurface key="cover-leather-back" variant="leather-back" label="Grazie" note="Hai raggiunto la fine" />
     );
     const backDesk = (
-      <CoverSurface key="cover-desk-back" variant="desk" label="Scrivania" />
+      <CoverSurface key="cover-desk-back" variant="desk" label="Scrivania" note="Alla prossima pagina" />
     );
     return [frontDesk, frontLeather, ...pages, backLeather, backDesk];
   }, [pages]);
 
   const spreads = useMemo(() => createSpreads(augmentedPages), [augmentedPages]);
+  const pageClassNames = useCallback((variant: PageVariant, side: 'left' | 'right') => cn(
+    styles.page,
+    side === 'left' ? styles.pageLeft : styles.pageRight,
+    variant === 'paper' ? styles.pagePaper : styles.pageCover,
+    variant === 'cover-desk' && styles.pageCoverDesk,
+    variant === 'cover-leather-front' && styles.pageCoverLeatherFront,
+    variant === 'cover-leather-back' && styles.pageCoverLeatherBack,
+  ), []);
+
+  const innerClassNames = useCallback((variant: PageVariant) => cn(
+    styles.pageInner,
+    variant !== 'paper' && styles.pageInnerCover,
+  ), []);
+
+  const flipFaceClassNames = useCallback((variant: PageVariant, extra?: string) => cn(
+    styles.flipFace,
+    variant === 'paper' ? styles.flipFacePaper : styles.flipFaceCover,
+    variant === 'cover-desk' && styles.flipFaceCoverDesk,
+    variant === 'cover-leather-front' && styles.flipFaceCoverLeatherFront,
+    variant === 'cover-leather-back' && styles.flipFaceCoverLeatherBack,
+    extra,
+  ), []);
   const [spreadIndex, setSpreadIndex] = useState(0);
   const [animation, setAnimation] = useState<AnimationState | null>(null);
   const animationTimerRef = useRef<number | null>(null);
@@ -162,19 +200,19 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
     setAnimation({ direction: 'prev', targetIndex });
   }, [canGoPrev, spreadIndex]);
 
-  const leftPage = animationDirection === 'prev' && previousSpread
-    ? ensureNode(previousSpread.left)
-    : ensureNode(currentSpread.left);
+  const leftResolved = resolvePage(
+    animationDirection === 'prev' && previousSpread ? previousSpread.left : currentSpread.left,
+  );
 
-  const rightPage = animationDirection === 'next' && nextSpread
-    ? ensureNode(nextSpread.right)
-    : ensureNode(currentSpread.right);
+  const rightResolved = resolvePage(
+    animationDirection === 'next' && nextSpread ? nextSpread.right : currentSpread.right,
+  );
 
-  const nextFlipFront = ensureNode(currentSpread.right);
-  const nextFlipBack = ensureNode(nextSpread?.left ?? null);
+  const nextFlipFrontResolved = resolvePage(currentSpread.right);
+  const nextFlipBackResolved = resolvePage(nextSpread?.left ?? null);
 
-  const prevFlipFront = ensureNode(currentSpread.left);
-  const prevFlipBack = ensureNode(previousSpread?.right ?? null);
+  const prevFlipFrontResolved = resolvePage(currentSpread.left);
+  const prevFlipBackResolved = resolvePage(previousSpread?.right ?? null);
 
   return (
     <div className={cn(styles.root, className)} style={style}>
@@ -184,14 +222,14 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
           style={{ '--flip-duration': `${FLIP_DURATION_MS}ms` } as React.CSSProperties}
         >
           <div className={styles.spread}>
-            <div className={cn(styles.page, styles.pageLeft)}>
-              <div className={styles.pageInner}>
-                {leftPage}
+            <div className={pageClassNames(leftResolved.variant, 'left')}>
+              <div className={innerClassNames(leftResolved.variant)}>
+                {leftResolved.node}
               </div>
             </div>
-            <div className={cn(styles.page, styles.pageRight)}>
-              <div className={styles.pageInner}>
-                {rightPage}
+            <div className={pageClassNames(rightResolved.variant, 'right')}>
+              <div className={innerClassNames(rightResolved.variant)}>
+                {rightResolved.node}
               </div>
             </div>
 
@@ -202,11 +240,11 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
                 animationDirection === 'next' && styles.flipSurfaceActive,
               )}
             >
-              <div className={styles.flipFace}>
-                <div className={styles.faceContent}>{nextFlipFront}</div>
+              <div className={flipFaceClassNames(nextFlipFrontResolved.variant)}>
+                <div className={styles.faceContent}>{nextFlipFrontResolved.node}</div>
               </div>
-              <div className={cn(styles.flipFace, styles.flipFaceBack)}>
-                <div className={styles.faceContent}>{nextFlipBack}</div>
+              <div className={flipFaceClassNames(nextFlipBackResolved.variant, styles.flipFaceBack)}>
+                <div className={styles.faceContent}>{nextFlipBackResolved.node}</div>
               </div>
             </div>
 
@@ -217,11 +255,11 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
                 animationDirection === 'prev' && styles.flipSurfaceActive,
               )}
             >
-              <div className={styles.flipFace}>
-                <div className={styles.faceContent}>{prevFlipFront}</div>
+              <div className={flipFaceClassNames(prevFlipFrontResolved.variant)}>
+                <div className={styles.faceContent}>{prevFlipFrontResolved.node}</div>
               </div>
-              <div className={cn(styles.flipFace, styles.flipFaceBack)}>
-                <div className={styles.faceContent}>{prevFlipBack}</div>
+              <div className={flipFaceClassNames(prevFlipBackResolved.variant, styles.flipFaceBack)}>
+                <div className={styles.faceContent}>{prevFlipBackResolved.node}</div>
               </div>
             </div>
           </div>
