@@ -2,9 +2,11 @@
 
 import { PageFlip } from 'page-flip';
 import React, {
+  forwardRef,
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -43,7 +45,7 @@ const collectElementChildren = (
   target.push(node);
 };
 
-const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBookProps>(
+const FocusSafeHTMLFlipBook = forwardRef<PageFlipHandle, FocusSafeFlipBookProps>(
   (
     {
       children,
@@ -60,68 +62,42 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
     ref,
   ) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
-    const childDomNodesRef = useRef<HTMLElement[]>([]);
-    const pageFlipRef = useRef<PageFlip>();
-    const [pages, setPages] = useState<React.ReactElement[]>([]);
+    const pageFlipRef = useRef<PageFlip | null>(null);
+    const childRefs = useRef<(HTMLElement | null)[]>([]);
     const previousLengthRef = useRef(0);
-    const previousKeysRef = useRef<(string | number | null)[] | null>(null);
-    const htmlRefreshModeRef = useRef<'force' | 'length-change' | 'reorder' | null>(null);
+    const initialStartPageRef = useRef<number | undefined>(
+      typeof rawSettings.startPage === 'number' ? rawSettings.startPage : undefined,
+    );
+    const layoutFrameRef = useRef<number | null>(null);
+    const settingsSignatureRef = useRef<string | null>(null);
     const lastObservedSizeRef = useRef<{ width: number; height: number } | null>(null);
+
+    const [flattenedPages, setFlattenedPages] = useState<React.ReactElement[]>([]);
 
     useImperativeHandle(
       ref,
       () => ({
-        pageFlip: () => pageFlipRef.current,
+        pageFlip: () => pageFlipRef.current ?? undefined,
       }),
       [],
     );
 
     useEffect(() => {
-      previousLengthRef.current = pages.length;
-    }, [pages.length]);
-
-    const refreshOnPageDelete = useCallback(() => {
-      if (pageFlipRef.current) {
-        pageFlipRef.current.clear();
-      }
-    }, []);
-
-    const removeHandlers = useCallback(() => {
-      const instance = pageFlipRef.current;
-      if (!instance) {
+      if (!children) {
+        setFlattenedPages([]);
+        previousLengthRef.current = 0;
         return;
       }
-      instance.off('flip');
-      instance.off('changeOrientation');
-      instance.off('changeState');
-      instance.off('init');
-      instance.off('update');
-    }, []);
+      const collected: React.ReactElement[] = [];
+      collectElementChildren(children, collected);
+      setFlattenedPages(collected);
+    }, [children]);
 
-    const settingsMemo = useMemo(() => ({ onFlip, onChangeOrientation, onChangeState, onInit, onUpdate }), [
-      onFlip,
-      onChangeOrientation,
-      onChangeState,
-      onInit,
-      onUpdate,
-    ]);
-
-    const scheduleLayoutUpdate = useCallback(() => {
-      if (!renderOnlyPageLengthChange) {
-        return;
+    useEffect(() => {
+      if (typeof rawSettings.startPage === 'number') {
+        initialStartPageRef.current = rawSettings.startPage;
       }
-      const instance = pageFlipRef.current;
-      if (!instance?.update) {
-        return;
-      }
-      if (typeof window === 'undefined') {
-        instance.update();
-        return;
-      }
-      window.requestAnimationFrame(() => {
-        instance.update();
-      });
-    }, [renderOnlyPageLengthChange]);
+    }, [rawSettings.startPage]);
 
     const {
       startPage,
@@ -148,6 +124,7 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
       ...unknownSettings
     } = rawSettings;
 
+    void startPage;
     void unknownSettings;
 
     const flipSettings = useMemo(
@@ -197,138 +174,147 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
       ],
     );
 
-    const childRefs = useRef<HTMLElement[]>([]);
-    const initialStartPageRef = useRef<number | undefined>(typeof startPage === 'number' ? startPage : undefined);
+    const settingsSignature = useMemo(() => JSON.stringify(flipSettings), [flipSettings]);
+
+    const callbacksRef = useRef<{
+      onFlip?: FocusSafeFlipBookProps['onFlip'];
+      onChangeOrientation?: FocusSafeFlipBookProps['onChangeOrientation'];
+      onChangeState?: FocusSafeFlipBookProps['onChangeState'];
+      onInit?: FocusSafeFlipBookProps['onInit'];
+      onUpdate?: FocusSafeFlipBookProps['onUpdate'];
+    }>({
+      onFlip,
+      onChangeOrientation,
+      onChangeState,
+      onInit,
+      onUpdate,
+    });
 
     useEffect(() => {
-      if (initialStartPageRef.current === undefined && typeof startPage === 'number') {
-        initialStartPageRef.current = startPage;
+      callbacksRef.current = {
+        onFlip,
+        onChangeOrientation,
+        onChangeState,
+        onInit,
+        onUpdate,
+      };
+    }, [onFlip, onChangeOrientation, onChangeState, onInit, onUpdate]);
+
+    const attachEvents = useCallback((instance: PageFlip) => {
+      instance.off('flip');
+      instance.off('changeOrientation');
+      instance.off('changeState');
+      instance.off('init');
+      instance.off('update');
+
+      instance.on('flip', (event: unknown) => {
+        callbacksRef.current.onFlip?.(event);
+      });
+      instance.on('changeOrientation', (event: unknown) => {
+        callbacksRef.current.onChangeOrientation?.(event);
+      });
+      instance.on('changeState', (event: unknown) => {
+        callbacksRef.current.onChangeState?.(event);
+      });
+      instance.on('init', (event: unknown) => {
+        callbacksRef.current.onInit?.(event);
+      });
+      instance.on('update', (event: unknown) => {
+        callbacksRef.current.onUpdate?.(event);
+      });
+    }, []);
+
+    const scheduleLayoutUpdate = useCallback(() => {
+      const instance = pageFlipRef.current;
+      if (!instance || typeof instance.update !== 'function') {
+        return;
       }
-    }, [startPage]);
+      if (typeof window === 'undefined') {
+        instance.update();
+        return;
+      }
+      if (layoutFrameRef.current !== null) {
+        window.cancelAnimationFrame(layoutFrameRef.current);
+      }
+      layoutFrameRef.current = window.requestAnimationFrame(() => {
+        layoutFrameRef.current = null;
+        instance.update();
+      });
+    }, []);
 
-    useEffect(() => {
-      if (!children) {
-        previousKeysRef.current = null;
-        childDomNodesRef.current = [];
-        setPages([]);
+    const pageNodes = useMemo(() => {
+      childRefs.current = Array.from({ length: flattenedPages.length }).fill(null);
+      return flattenedPages.map((child, index) => {
+        const handleRef = (node: HTMLElement | null) => {
+          childRefs.current[index] = node;
+        };
+        return React.cloneElement(child, { ref: handleRef });
+      });
+    }, [flattenedPages]);
+
+    useLayoutEffect(() => {
+      const container = containerRef.current;
+      if (!container) {
         return;
       }
 
-      const collected: React.ReactElement[] = [];
-      collectElementChildren(children, collected);
-      const childArray = collected;
+      const nodes = childRefs.current.filter((node): node is HTMLElement => Boolean(node));
 
-      const nextKeys = childArray.map(child => child.key ?? null);
-      const childCount = childArray.length;
-      const keysChanged = () => {
-        if (!previousKeysRef.current) {
-          return true;
+      if (nodes.length === 0) {
+        previousLengthRef.current = 0;
+        pageFlipRef.current?.clear?.();
+        return;
+      }
+
+      const signatureChanged = settingsSignatureRef.current !== settingsSignature;
+      let instance = pageFlipRef.current;
+
+      const createInstance = () => {
+        if (instance) {
+          instance.off('flip');
+          instance.off('changeOrientation');
+          instance.off('changeState');
+          instance.off('init');
+          instance.off('update');
+          instance.destroy();
         }
-        if (previousKeysRef.current.length !== nextKeys.length) {
-          return true;
-        }
-        for (let index = 0; index < nextKeys.length; index += 1) {
-          if (previousKeysRef.current[index] !== nextKeys[index]) {
-            return true;
-          }
-        }
-        return false;
+        instance = new PageFlip(container, {
+          ...flipSettings,
+          renderOnlyPageLengthChange,
+          ...(typeof initialStartPageRef.current === 'number' ? { startPage: initialStartPageRef.current } : {}),
+        } as Record<string, unknown>);
+        pageFlipRef.current = instance;
+        settingsSignatureRef.current = settingsSignature;
+        attachEvents(instance);
+        initialStartPageRef.current = undefined;
       };
 
-      const lengthChanged = previousLengthRef.current !== childCount;
-
-      let refreshMode: 'force' | 'length-change' | 'reorder' | null = null;
-      if (!renderOnlyPageLengthChange) {
-        refreshMode = 'force';
-      } else if (lengthChanged) {
-        refreshMode = 'length-change';
-      } else if (keysChanged()) {
-        refreshMode = 'reorder';
-      }
-
-      if (!refreshMode) {
+      if (!instance || signatureChanged) {
+        createInstance();
+        instance!.loadFromHTML(nodes);
+        previousLengthRef.current = nodes.length;
         scheduleLayoutUpdate();
         return;
       }
 
-      htmlRefreshModeRef.current = refreshMode;
-      previousKeysRef.current = nextKeys;
-      if (refreshMode === 'length-change' && childCount < previousLengthRef.current) {
-        refreshOnPageDelete();
-      }
+      const lengthChanged = nodes.length !== previousLengthRef.current;
 
-      childRefs.current = [];
-
-      const mapped = childArray.map((child) => {
-        const refCallback = (node: HTMLElement | null) => {
-          if (node) {
-            childRefs.current.push(node);
-          }
-        };
-        // eslint-disable-next-line react/no-clone-element
-        return React.cloneElement(child, { ref: refCallback });
-      });
-
-      setPages(mapped);
-    }, [children, pages.length, refreshOnPageDelete, renderOnlyPageLengthChange, scheduleLayoutUpdate]);
-
-    useEffect(() => {
-      childDomNodesRef.current = childRefs.current;
-    }, [pages]);
-
-    useEffect(() => {
-      const instance = pageFlipRef.current;
-      if (pages.length === 0 || childDomNodesRef.current.length === 0) {
-        htmlRefreshModeRef.current = null;
-        return;
-      }
-
-      removeHandlers();
-
-      if (!instance && containerRef.current) {
-        const startPageSetting = initialStartPageRef.current;
-        pageFlipRef.current = new PageFlip(containerRef.current, {
-          ...flipSettings,
-          ...(typeof startPageSetting === 'number' ? { startPage: startPageSetting } : {}),
-          renderOnlyPageLengthChange,
-        } as Record<string, unknown>);
-      }
-
-      const nextInstance = pageFlipRef.current;
-      if (!nextInstance) {
-        return;
-      }
-
-      const hasController = Boolean(nextInstance.getFlipController());
-      const refreshMode = htmlRefreshModeRef.current;
-      htmlRefreshModeRef.current = null;
-
-      if (!hasController) {
-        nextInstance.loadFromHTML(childDomNodesRef.current);
-      } else if (refreshMode === 'length-change' || refreshMode === 'force') {
-        nextInstance.updateFromHtml(childDomNodesRef.current);
-      }
-
-      if (settingsMemo.onFlip) {
-        nextInstance.on('flip', (event: unknown) => settingsMemo.onFlip?.(event));
-      }
-      if (settingsMemo.onChangeOrientation) {
-        nextInstance.on('changeOrientation', (event: unknown) => settingsMemo.onChangeOrientation?.(event));
-      }
-      if (settingsMemo.onChangeState) {
-        nextInstance.on('changeState', (event: unknown) => settingsMemo.onChangeState?.(event));
-      }
-      if (settingsMemo.onInit) {
-        nextInstance.on('init', (event: unknown) => settingsMemo.onInit?.(event));
-      }
-      if (settingsMemo.onUpdate) {
-        nextInstance.on('update', (event: unknown) => settingsMemo.onUpdate?.(event));
-      }
-
-      if (!hasController || renderOnlyPageLengthChange || refreshMode === 'reorder') {
+      if (!renderOnlyPageLengthChange || lengthChanged) {
+        instance.updateFromHtml(nodes);
+        previousLengthRef.current = nodes.length;
         scheduleLayoutUpdate();
+        return;
       }
-    }, [flipSettings, pages, removeHandlers, renderOnlyPageLengthChange, scheduleLayoutUpdate, settingsMemo]);
+
+      scheduleLayoutUpdate();
+    }, [
+      attachEvents,
+      flipSettings,
+      pageNodes,
+      renderOnlyPageLengthChange,
+      scheduleLayoutUpdate,
+      settingsSignature,
+    ]);
 
     useEffect(() => {
       if (!renderOnlyPageLengthChange) {
@@ -351,19 +337,19 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
         if (!entry) {
           return;
         }
-        const { width, height } = entry.contentRect;
-        const previous = lastObservedSizeRef.current;
+        const { width: nextWidth, height: nextHeight } = entry.contentRect;
+        const previousSize = lastObservedSizeRef.current;
         if (
-          previous
-          && Math.abs(previous.width - width) < 0.5
-          && Math.abs(previous.height - height) < 0.5
+          previousSize
+          && Math.abs(previousSize.width - nextWidth) < 0.5
+          && Math.abs(previousSize.height - nextHeight) < 0.5
         ) {
           return;
         }
-        lastObservedSizeRef.current = { width, height };
+        lastObservedSizeRef.current = { width: nextWidth, height: nextHeight };
 
         const instance = pageFlipRef.current;
-        if (!instance?.update) {
+        if (!instance || typeof instance.update !== 'function') {
           return;
         }
         if (frame !== null) {
@@ -386,9 +372,27 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
       };
     }, [renderOnlyPageLengthChange]);
 
+    useEffect(() => {
+      return () => {
+        if (layoutFrameRef.current !== null && typeof window !== 'undefined') {
+          window.cancelAnimationFrame(layoutFrameRef.current);
+        }
+        const instance = pageFlipRef.current;
+        if (instance) {
+          instance.off('flip');
+          instance.off('changeOrientation');
+          instance.off('changeState');
+          instance.off('init');
+          instance.off('update');
+          instance.destroy();
+        }
+        pageFlipRef.current = null;
+      };
+    }, []);
+
     return (
       <div ref={containerRef} className={className} style={style}>
-        {pages}
+        {pageNodes}
       </div>
     );
   },
