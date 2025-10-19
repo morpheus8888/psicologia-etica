@@ -75,6 +75,7 @@ type DebugOptionsState = {
   enableMobileScroll: boolean;
   verbose: boolean;
   filterEditabilityLogs: boolean;
+  disableManualFallback: boolean;
 };
 
 type DebugSnapshot = {
@@ -417,6 +418,7 @@ export const DiaryViewport = ({
     enableMobileScroll: false,
     verbose: false,
     filterEditabilityLogs: false,
+    disableManualFallback: false,
   });
   const flipbookSettingsKey = useMemo(
     () => JSON.stringify({
@@ -970,6 +972,12 @@ export const DiaryViewport = ({
     }
 
     clearManualFlipFallback();
+
+    if (debugOptionsRef.current.disableManualFallback) {
+      logDebug('flipbook.manual.fallback.skip', { reason: 'disabled' });
+      manualFlipFallbackTimeoutRef.current = null;
+      return;
+    }
 
     const snapshot = manualFlipStateRef.current;
     const attemptId = snapshot?.attemptId ?? null;
@@ -2293,6 +2301,14 @@ export const DiaryViewport = ({
                   onChange={() => handleDebugToggle('filterEditabilityLogs')}
                 />
                 <span>Filtra entry.page.editability</span>
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={debugOptions.disableManualFallback}
+                  onChange={() => handleDebugToggle('disableManualFallback')}
+                />
+                <span>Disabilita fallback manuale</span>
               </label>
             </div>
           </div>
