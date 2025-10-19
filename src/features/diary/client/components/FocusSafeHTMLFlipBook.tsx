@@ -102,6 +102,23 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
       onUpdate,
     ]);
 
+    const scheduleLayoutUpdate = useCallback(() => {
+      if (!renderOnlyPageLengthChange) {
+        return;
+      }
+      const instance = pageFlipRef.current;
+      if (!instance?.update) {
+        return;
+      }
+      if (typeof window === 'undefined') {
+        instance.update();
+        return;
+      }
+      window.requestAnimationFrame(() => {
+        instance.update();
+      });
+    }, [renderOnlyPageLengthChange]);
+
     const {
       startPage,
       size,
@@ -214,13 +231,15 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
         return false;
       };
 
+      const lengthChanged = previousLengthRef.current !== childCount;
       const mustRecreate = (
         !renderOnlyPageLengthChange
-        || previousLengthRef.current !== childCount
+        || lengthChanged
         || keysChanged()
       );
 
       if (!mustRecreate) {
+        scheduleLayoutUpdate();
         return;
       }
 
@@ -242,7 +261,7 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
       });
 
       setPages(mapped);
-    }, [children, pages.length, refreshOnPageDelete, renderOnlyPageLengthChange]);
+    }, [children, pages.length, refreshOnPageDelete, renderOnlyPageLengthChange, scheduleLayoutUpdate]);
 
     useEffect(() => {
       childDomNodesRef.current = childRefs.current;
@@ -270,7 +289,9 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
         return;
       }
 
-      if (!nextInstance.getFlipController()) {
+      const hasController = Boolean(nextInstance.getFlipController());
+
+      if (!hasController) {
         nextInstance.loadFromHTML(childDomNodesRef.current);
       } else {
         nextInstance.updateFromHtml(childDomNodesRef.current);
@@ -291,7 +312,11 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
       if (settingsMemo.onUpdate) {
         nextInstance.on('update', (event: unknown) => settingsMemo.onUpdate?.(event));
       }
-    }, [flipSettings, pages, removeHandlers, renderOnlyPageLengthChange, settingsMemo]);
+
+      if (!hasController || renderOnlyPageLengthChange) {
+        scheduleLayoutUpdate();
+      }
+    }, [flipSettings, pages, removeHandlers, renderOnlyPageLengthChange, scheduleLayoutUpdate, settingsMemo]);
 
     return (
       <div ref={containerRef} className={className} style={style}>
