@@ -1022,6 +1022,8 @@ export const DiaryViewport = ({
       const sinceProgress = lastManualProgressTsRef.current > 0
         ? nowTs - lastManualProgressTsRef.current
         : null;
+      const hasProgressAfterStart = lastManualProgressTsRef.current > manualState.startedAt;
+      const progressDelta = hasProgressAfterStart ? nowTs - lastManualProgressTsRef.current : null;
 
       if (followupState === 'flipping' || followupIndex !== manualState.originIndex) {
         logDebug('flipbook.manual.followup', {
@@ -1047,6 +1049,20 @@ export const DiaryViewport = ({
           navigationIndex,
           originIndex: manualState.originIndex,
           targetIndex: manualState.targetIndex,
+          elapsed,
+          attemptId,
+        });
+        manualFlipGuardRef.current = false;
+        manualFlipStateRef.current = null;
+        scheduleFlipRefresh();
+        return;
+      }
+
+      if (hasProgressAfterStart && progressDelta !== null && progressDelta < manualState.fallbackDelayMs) {
+        logDebug('flipbook.manual.fallback.skip', {
+          direction: manualState.direction,
+          reason: 'progress-after-start',
+          progressDelta,
           elapsed,
           attemptId,
         });
