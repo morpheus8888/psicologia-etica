@@ -974,6 +974,9 @@ export const DiaryViewport = ({
     if (!debugOptionsRef.current.manualFallbackEnabled) {
       logDebug('flipbook.manual.fallback.skip', { reason: 'disabled' });
       manualFlipFallbackTimeoutRef.current = null;
+      manualFlipGuardRef.current = false;
+      manualFlipStateRef.current = null;
+      pendingFlipRefreshRef.current = false;
       return;
     }
 
