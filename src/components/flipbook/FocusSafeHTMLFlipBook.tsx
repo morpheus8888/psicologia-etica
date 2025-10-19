@@ -65,6 +65,7 @@ const FocusSafeHTMLFlipBook = forwardRef<PageFlipHandle, FocusSafeFlipBookProps>
     const pageFlipRef = useRef<PageFlip | null>(null);
     const childRefs = useRef<(HTMLElement | null)[]>([]);
     const previousLengthRef = useRef(0);
+    const previousKeysRef = useRef<(string | number | null)[] | null>(null);
     const initialStartPageRef = useRef<number | undefined>(
       typeof rawSettings.startPage === 'number' ? rawSettings.startPage : undefined,
     );
@@ -81,17 +82,6 @@ const FocusSafeHTMLFlipBook = forwardRef<PageFlipHandle, FocusSafeFlipBookProps>
       }),
       [],
     );
-
-    useEffect(() => {
-      if (!children) {
-        setFlattenedPages([]);
-        previousLengthRef.current = 0;
-        return;
-      }
-      const collected: React.ReactElement[] = [];
-      collectElementChildren(children, collected);
-      setFlattenedPages(collected);
-    }, [children]);
 
     useEffect(() => {
       if (typeof rawSettings.startPage === 'number') {
@@ -241,6 +231,53 @@ const FocusSafeHTMLFlipBook = forwardRef<PageFlipHandle, FocusSafeFlipBookProps>
         instance.update();
       });
     }, []);
+
+    useEffect(() => {
+      if (!children) {
+        if (flattenedPages.length > 0) {
+          setFlattenedPages([]);
+        }
+        previousKeysRef.current = null;
+        if (previousLengthRef.current !== 0) {
+          previousLengthRef.current = 0;
+        }
+        return;
+      }
+
+      const collected: React.ReactElement[] = [];
+      collectElementChildren(children, collected);
+      const nextKeys = collected.map(child => child.key ?? null);
+      const lengthChanged = collected.length !== previousLengthRef.current;
+      const keysChanged = () => {
+        const previous = previousKeysRef.current;
+        if (!previous) {
+          return true;
+        }
+        if (previous.length !== nextKeys.length) {
+          return true;
+        }
+        for (let index = 0; index < nextKeys.length; index += 1) {
+          if (previous[index] !== nextKeys[index]) {
+            return true;
+          }
+        }
+        return false;
+      };
+
+      const requiresRebuild = !renderOnlyPageLengthChange || lengthChanged || keysChanged();
+
+      if (!requiresRebuild) {
+        scheduleLayoutUpdate();
+        return;
+      }
+
+      if (lengthChanged && collected.length < previousLengthRef.current) {
+        pageFlipRef.current?.clear?.();
+      }
+
+      previousKeysRef.current = nextKeys;
+      setFlattenedPages(collected);
+    }, [children, flattenedPages.length, renderOnlyPageLengthChange, scheduleLayoutUpdate]);
 
     const pageNodes = useMemo(() => {
       childRefs.current = Array.from({ length: flattenedPages.length }, () => null as HTMLElement | null);
