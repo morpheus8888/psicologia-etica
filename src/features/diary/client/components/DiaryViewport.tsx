@@ -1226,31 +1226,50 @@ export const DiaryViewport = ({
       ? book.getCurrentPageIndex()
       : rawCurrentIndex;
 
-    const normalizeControllerIndex = (note: string) => {
-      if (controllerIndexBefore !== normalizedCurrentIndex && typeof book.turnToPage === 'function') {
-        book.turnToPage(normalizedCurrentIndex);
+    const alignControllerIndex = (desiredIndex: number | null, note: string) => {
+      if (
+        desiredIndex !== null
+        && typeof desiredIndex === 'number'
+        && controllerIndexBefore !== desiredIndex
+        && typeof book.turnToPage === 'function'
+      ) {
+        book.turnToPage(desiredIndex);
         logDebug('flipbook.manual.debug', {
           note,
           controllerIndexBefore,
-          normalizedCurrentIndex,
+          desiredIndex,
         });
       }
     };
+    let controllerDesiredIndex: number | null = null;
 
     if (direction === 'prev' && canFlipPrev) {
-      normalizeControllerIndex('normalize-controller-before-flipPrev');
-      book.flipPrev?.('bottom');
+      controllerDesiredIndex = (() => {
+        const rightPageCandidate = normalizedCurrentIndex + 1;
+        if (pageCount !== null && rightPageCandidate < pageCount) {
+          return rightPageCandidate;
+        }
+        if (controllerIndexBefore % 2 !== 0) {
+          return controllerIndexBefore;
+        }
+        return normalizedCurrentIndex;
+      })();
+      alignControllerIndex(controllerDesiredIndex, 'normalize-controller-before-flipPrev');
+      book.flipPrev?.('top');
       method = 'flipPrev';
     } else if (direction === 'next' && canFlipNext) {
-      normalizeControllerIndex('normalize-controller-before-flipNext');
+      controllerDesiredIndex = normalizedCurrentIndex;
+      alignControllerIndex(controllerDesiredIndex, 'normalize-controller-before-flipNext');
       book.flipNext?.('top');
       method = 'flipNext';
     } else if (debugOptionsRef.current.manualFallbackEnabled && typeof book.flip === 'function') {
-      normalizeControllerIndex('normalize-controller-before-flip');
-      const corner: 'top' | 'bottom' = direction === 'prev' ? 'bottom' : 'top';
+      controllerDesiredIndex = normalizedCurrentIndex;
+      alignControllerIndex(controllerDesiredIndex, 'normalize-controller-before-flip');
+      const corner: 'top' | 'bottom' = direction === 'prev' ? 'top' : 'top';
       book.flip(targetIndex, corner);
       method = 'flip';
     } else if (debugOptionsRef.current.manualFallbackEnabled && typeof book.turnToPage === 'function') {
+      controllerDesiredIndex = targetIndex;
       book.turnToPage(targetIndex);
       method = 'turnToPage';
     } else {
@@ -1273,6 +1292,20 @@ export const DiaryViewport = ({
     const rawCurrentAfter = typeof book.getCurrentPageIndex === 'function'
       ? book.getCurrentPageIndex()
       : rawCurrentIndex;
+    if (
+      method === 'flipPrev'
+      && bookStateAfter === 'read'
+      && rawCurrentAfter === rawCurrentIndex
+    ) {
+      logDebug('flipbook.manual.debug', {
+        note: 'flipPrev-noop',
+        controllerIndexBefore,
+        normalizedCurrentIndex,
+        desiredControllerIndex: controllerDesiredIndex,
+        targetIndex,
+        rawCurrentAfter,
+      });
+    }
     let attemptId: number | null = null;
     if (method === 'flip' || method === 'flipPrev' || method === 'flipNext') {
       attemptId = manualFlipAttemptIdRef.current + 1;
@@ -1296,6 +1329,7 @@ export const DiaryViewport = ({
       rawCurrentAfter,
       controllerStateBefore,
       controllerIndexBefore,
+      controllerDesiredIndex,
       fallbackDelayMs: attemptId ? fallbackDelayMs : undefined,
       attemptId: attemptId ?? undefined,
     });
