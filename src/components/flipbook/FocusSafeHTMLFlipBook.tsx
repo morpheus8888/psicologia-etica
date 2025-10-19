@@ -1,3 +1,5 @@
+'use client';
+
 import { PageFlip } from 'page-flip';
 import React, {
   useCallback,
@@ -63,6 +65,7 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
     const [pages, setPages] = useState<React.ReactElement[]>([]);
     const previousLengthRef = useRef(0);
     const previousKeysRef = useRef<(string | number | null)[] | null>(null);
+    const htmlRefreshModeRef = useRef<'force' | 'length-change' | 'reorder' | null>(null);
 
     useImperativeHandle(
       ref,
@@ -232,19 +235,24 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
       };
 
       const lengthChanged = previousLengthRef.current !== childCount;
-      const mustRecreate = (
-        !renderOnlyPageLengthChange
-        || lengthChanged
-        || keysChanged()
-      );
 
-      if (!mustRecreate) {
+      let refreshMode: 'force' | 'length-change' | 'reorder' | null = null;
+      if (!renderOnlyPageLengthChange) {
+        refreshMode = 'force';
+      } else if (lengthChanged) {
+        refreshMode = 'length-change';
+      } else if (keysChanged()) {
+        refreshMode = 'reorder';
+      }
+
+      if (!refreshMode) {
         scheduleLayoutUpdate();
         return;
       }
 
+      htmlRefreshModeRef.current = refreshMode;
       previousKeysRef.current = nextKeys;
-      if (childCount < previousLengthRef.current) {
+      if (refreshMode === 'length-change' && childCount < previousLengthRef.current) {
         refreshOnPageDelete();
       }
 
@@ -270,6 +278,7 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
     useEffect(() => {
       const instance = pageFlipRef.current;
       if (pages.length === 0 || childDomNodesRef.current.length === 0) {
+        htmlRefreshModeRef.current = null;
         return;
       }
 
@@ -290,10 +299,12 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
       }
 
       const hasController = Boolean(nextInstance.getFlipController());
+      const refreshMode = htmlRefreshModeRef.current;
+      htmlRefreshModeRef.current = null;
 
       if (!hasController) {
         nextInstance.loadFromHTML(childDomNodesRef.current);
-      } else {
+      } else if (refreshMode === 'length-change' || refreshMode === 'force') {
         nextInstance.updateFromHtml(childDomNodesRef.current);
       }
 
@@ -313,10 +324,47 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
         nextInstance.on('update', (event: unknown) => settingsMemo.onUpdate?.(event));
       }
 
-      if (!hasController || renderOnlyPageLengthChange) {
+      if (!hasController || renderOnlyPageLengthChange || refreshMode === 'reorder') {
         scheduleLayoutUpdate();
       }
     }, [flipSettings, pages, removeHandlers, renderOnlyPageLengthChange, scheduleLayoutUpdate, settingsMemo]);
+
+    useEffect(() => {
+      if (!renderOnlyPageLengthChange) {
+        return;
+      }
+      if (typeof window === 'undefined' || typeof ResizeObserver === 'undefined') {
+        return;
+      }
+      const container = containerRef.current;
+      if (!container) {
+        return;
+      }
+
+      let frame: number | null = null;
+      const observer = new ResizeObserver(() => {
+        const instance = pageFlipRef.current;
+        if (!instance?.update) {
+          return;
+        }
+        if (frame !== null) {
+          window.cancelAnimationFrame(frame);
+        }
+        frame = window.requestAnimationFrame(() => {
+          frame = null;
+          instance.update();
+        });
+      });
+
+      observer.observe(container);
+
+      return () => {
+        if (frame !== null) {
+          window.cancelAnimationFrame(frame);
+        }
+        observer.disconnect();
+      };
+    }, [renderOnlyPageLengthChange]);
 
     return (
       <div ref={containerRef} className={className} style={style}>
@@ -328,5 +376,5 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
 
 FocusSafeHTMLFlipBook.displayName = 'FocusSafeHTMLFlipBook';
 
-export type { PageFlipHandle };
+export type { FocusSafeFlipBookProps, PageFlipHandle };
 export { FocusSafeHTMLFlipBook };

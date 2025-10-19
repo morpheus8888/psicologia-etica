@@ -4,7 +4,8 @@
  * Reusable FlipBook component (client-only) for Next.js App Router.
  *
  * Features
- * - Dynamic import of react-pageflip with { ssr: false } to avoid hydration issues
+ * - Usa il wrapper FocusSafeHTMLFlipBook per applicare `renderOnlyPageLengthChange`
+ *   e gestire gli update() in linea con docs/react-pageflip.md
  * - Rectangular pages and covers (no border radius)
  * - Front/Back hard covers with optional wood texture via `coverTextureUrl`
  * - Responsive sizing with configurable min/max and size="stretch" by default
@@ -12,10 +13,11 @@
  * - Styling customizable via `className`, `style` and CSS var `--cover-bg`
  */
 
-import dynamic from 'next/dynamic';
 import React, { forwardRef } from 'react';
 
 import { cn } from '@/utils/Helpers';
+
+import { FocusSafeHTMLFlipBook } from './flipbook/FocusSafeHTMLFlipBook';
 
 type Dimensions = {
   width?: number;
@@ -36,13 +38,6 @@ export type FlipBookProps = {
   className?: string;
   style?: React.CSSProperties;
 };
-
-// Import HTMLFlipBook only on the client to prevent SSR/hydration issues
-type HTMLFlipBookUnknownProps = Record<string, unknown>;
-
-const HTMLFlipBook = dynamic(() => import('react-pageflip'), {
-  ssr: false,
-}) as React.ComponentType<HTMLFlipBookUnknownProps>;
 
 export type PageProps = React.HTMLAttributes<HTMLDivElement>;
 
@@ -124,7 +119,7 @@ export const FlipBook: React.FC<FlipBookProps> = ({
 
   return (
     <div className={className} style={style}>
-      <HTMLFlipBook
+      <FocusSafeHTMLFlipBook
         showCover
         size={dims.size}
         width={dims.width}
@@ -151,7 +146,7 @@ export const FlipBook: React.FC<FlipBookProps> = ({
           );
         })}
         <PageCover textureUrl={coverTextureUrl}>{coverBack}</PageCover>
-      </HTMLFlipBook>
+      </FocusSafeHTMLFlipBook>
     </div>
   );
 };

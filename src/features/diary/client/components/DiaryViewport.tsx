@@ -2,7 +2,6 @@
 
 import { CalendarDays, ChevronLeft, ChevronRight, Link2, Settings2, Target } from 'lucide-react';
 import {
-  type ComponentType,
   Fragment,
   type ReactNode,
   useCallback,
@@ -12,6 +11,7 @@ import {
   useState,
 } from 'react';
 
+import { FocusSafeHTMLFlipBook, type PageFlipHandle } from '@/components/flipbook/FocusSafeHTMLFlipBook';
 import type { TranslationAdapter, UIAdapter } from '@/features/diary/adapters/types';
 import { useDiaryData } from '@/features/diary/client/context/DiaryDataContext';
 import { useDiaryEncryption } from '@/features/diary/client/context/DiaryEncryptionContext';
@@ -24,9 +24,7 @@ import { DiaryEntryEditor } from './DiaryEntryEditor';
 import { DiaryEntryPreview } from './DiaryEntryPreview';
 import { DiaryGoalLinkPanel } from './DiaryGoalLinkPanel';
 import { DiarySharePanel } from './DiarySharePanel';
-import { FocusSafeHTMLFlipBook } from './FocusSafeHTMLFlipBook';
 
-const FlipBook = FocusSafeHTMLFlipBook as unknown as ComponentType<any>;
 const PAGE_EDGE_WIDTH_CLASS = 'w-16'; // 64px edge activation zones
 const DEBUG_BUFFER_LIMIT = 200;
 const DEBUG_STUCK_TIMEOUT_MS = 1200;
@@ -160,10 +158,6 @@ type PageFlipApi = {
   flipPrev?: (corner?: 'top' | 'bottom') => void;
   getState?: () => string;
   getSettings?: () => ({ flippingTime?: number } & Record<string, unknown>);
-};
-
-type FlipBookHandle = {
-  pageFlip: () => (PageFlipApi & { ui?: unknown }) | undefined;
 };
 
 type ManualFlipState = {
@@ -378,7 +372,7 @@ export const DiaryViewport = ({
   const coverBrand = tCover.t('brand');
   const data = useDiaryData();
   const navigation = useDiaryNavigation();
-  const flipRef = useRef<FlipBookHandle | null>(null);
+  const flipRef = useRef<PageFlipHandle | null>(null);
   const flipRefreshFrameRef = useRef<number | null>(null);
   const flipBookReadyRef = useRef(false);
   const [hasTouchSupport, setHasTouchSupport] = useState(false);
@@ -429,6 +423,10 @@ export const DiaryViewport = ({
     [debugOptions.enableClickFlip, debugOptions.enableMobileScroll, debugOptions.enableMouseEvents],
   );
   const debugOptionsRef = useRef(debugOptions);
+  const getPageFlipInstance = useCallback(
+    () => flipRef.current?.pageFlip?.() as (PageFlipApi & { ui?: unknown }) | undefined,
+    [flipRef],
+  );
   const debugLastUserInputRef = useRef(0);
   const debugStuckTimeoutRef = useRef<number | null>(null);
   const [debugActionMessage, setDebugActionMessage] = useState<{ text: string; tone: 'info' | 'success' | 'error' } | null>(null);
@@ -805,7 +803,7 @@ export const DiaryViewport = ({
       logDebug('touch.passive.skip', { reason: 'blockTouchReattach' });
       return false;
     }
-    const book = flipRef.current?.pageFlip?.();
+    const book = getPageFlipInstance();
     const uiInstance: any = book?.ui;
     if (!uiInstance || typeof uiInstance.getDistElement !== 'function') {
       logDebug('touch.passive.unavailable', { reason: 'missing-ui-instance' });
@@ -857,7 +855,7 @@ export const DiaryViewport = ({
       distElement: uiInstance.getDistElement()?.tagName ?? 'unknown',
     });
     return true;
-  }, [hasTouchSupport, incrementCounter, logDebug]);
+  }, [getPageFlipInstance, hasTouchSupport, incrementCounter, logDebug]);
 
   const handleDebugDump = useCallback(() => {
     logDebug('debug.dump', {}, true);
@@ -943,7 +941,7 @@ export const DiaryViewport = ({
         return;
       }
 
-      const pageFlipInstance = flipRef.current?.pageFlip?.();
+      const pageFlipInstance = getPageFlipInstance();
       if (!pageFlipInstance?.update) {
         pendingFlipRefreshRef.current = false;
         incrementCounter('flipUpdatesSkipped');
@@ -957,7 +955,7 @@ export const DiaryViewport = ({
       lastFlipUpdateTimeRef.current = typeof performance !== 'undefined' ? performance.now() : Date.now();
       ensurePassiveTouchHandlers();
     });
-  }, [ensurePassiveTouchHandlers, incrementCounter, logDebug]);
+  }, [ensurePassiveTouchHandlers, getPageFlipInstance, incrementCounter, logDebug]);
 
   const clearManualFlipFallback = useCallback(() => {
     if (manualFlipFallbackTimeoutRef.current !== null && typeof window !== 'undefined') {
@@ -987,7 +985,7 @@ export const DiaryViewport = ({
       manualFlipFallbackTimeoutRef.current = null;
 
       const manualState = manualFlipStateRef.current;
-      const pageFlipInstance = flipRef.current?.pageFlip?.();
+      const pageFlipInstance = getPageFlipInstance();
       const guardActive = manualFlipGuardRef.current;
       const nowTs = typeof performance !== 'undefined' ? performance.now() : Date.now();
 
@@ -1130,10 +1128,10 @@ export const DiaryViewport = ({
       manualFlipGuardRef.current = false;
       manualFlipStateRef.current = null;
     }, delayMs);
-  }, [clearManualFlipFallback, lastManualProgressTsRef, logDebug, navigation, scheduleFlipRefresh]);
+  }, [clearManualFlipFallback, getPageFlipInstance, lastManualProgressTsRef, logDebug, navigation, scheduleFlipRefresh]);
 
   const handleManualFlip = useCallback((direction: 'prev' | 'next') => {
-    const book = flipRef.current?.pageFlip?.();
+    const book = getPageFlipInstance();
     if (!book) {
       logDebug('flipbook.manual.skip', { direction, reason: 'no-instance' });
       return;
@@ -1141,6 +1139,16 @@ export const DiaryViewport = ({
     if (!flipBookReadyRef.current) {
       const pendingState = typeof book.getState === 'function' ? book.getState() : null;
       logDebug('flipbook.manual.skip', { direction, reason: 'not-ready', bookState: pendingState });
+      return;
+    }
+
+    if (manualFlipGuardRef.current) {
+      logDebug('flipbook.manual.skip', {
+        direction,
+        reason: 'manual-guard-active',
+        flipState,
+        pendingAttempt: manualFlipStateRef.current?.attemptId ?? null,
+      });
       return;
     }
 
@@ -1165,7 +1173,31 @@ export const DiaryViewport = ({
     const hasPrevSpread = normalizedCurrentIndex > 0;
     const hasNextSpread = normalizedCurrentIndex < normalizedMaxIndex
       || (trailingSinglePageIndex !== null && normalizedCurrentIndex < trailingSinglePageIndex);
+    if (flipState === 'flipping') {
+      logDebug('flipbook.manual.skip', {
+        direction,
+        reason: 'state-flipping',
+        currentIndex: rawCurrentIndex,
+        normalizedCurrentIndex,
+        pageCount,
+        normalizedMaxIndex,
+        trailingSinglePageIndex,
+      });
+      return;
+    }
     const bookStateBefore = typeof book.getState === 'function' ? book.getState() : null;
+    if (bookStateBefore === 'flipping') {
+      logDebug('flipbook.manual.skip', {
+        direction,
+        reason: 'controller-flipping',
+        currentIndex: rawCurrentIndex,
+        normalizedCurrentIndex,
+        pageCount,
+        normalizedMaxIndex,
+        trailingSinglePageIndex,
+      });
+      return;
+    }
     const settings = typeof book.getSettings === 'function' ? book.getSettings() : null;
     const flippingTimeSetting = typeof settings?.flippingTime === 'number' ? settings.flippingTime : null;
     const fallbackDelayMs = deriveManualFlipDelay(flippingTimeSetting);
@@ -1184,16 +1216,6 @@ export const DiaryViewport = ({
       bookState: bookStateBefore,
       flippingTime: flippingTimeSetting ?? undefined,
     });
-
-    if (flipState === 'flipping') {
-      logDebug('flipbook.manual.note', {
-        direction,
-        reason: 'in-flight-state',
-        currentIndex: rawCurrentIndex,
-        normalizedCurrentIndex,
-        bookState: bookStateBefore,
-      });
-    }
 
     if ((direction === 'prev' && !hasPrevSpread) || (direction === 'next' && !hasNextSpread)) {
       logDebug('flipbook.manual.skip', {
@@ -1363,7 +1385,7 @@ export const DiaryViewport = ({
         targetIndex,
         method,
         startedAt: typeof performance !== 'undefined' ? performance.now() : Date.now(),
-        sawStateChange: flipState === 'flipping',
+        sawStateChange: false,
         attemptId,
         fallbackDelayMs,
       };
@@ -1372,7 +1394,7 @@ export const DiaryViewport = ({
       manualFlipGuardRef.current = false;
       manualFlipStateRef.current = null;
     }
-  }, [clearManualFlipFallback, flipState, logDebug, navigation.currentIndex, navigation.pages, scheduleManualFlipCheck]);
+  }, [clearManualFlipFallback, getPageFlipInstance, flipState, logDebug, navigation.currentIndex, navigation.pages, scheduleManualFlipCheck]);
 
   useEffect(() => {
     return () => {
@@ -1466,7 +1488,14 @@ export const DiaryViewport = ({
   }, [navigation.currentDate]);
 
   useEffect(() => {
-    const book = flipRef.current?.pageFlip?.();
+    if (!flipBookReadyRef.current) {
+      return;
+    }
+    scheduleFlipRefresh();
+  }, [goalLinkOpen, scheduleFlipRefresh, shareOpen]);
+
+  useEffect(() => {
+    const book = getPageFlipInstance();
     if (!book) {
       logDebug('flipbook.syncNavigation.skip', { reason: 'no-instance' });
       return;
@@ -1533,7 +1562,7 @@ export const DiaryViewport = ({
       bookState,
     });
     book.turnToPage(navigation.currentIndex);
-  }, [flipState, logDebug, navigation.currentIndex]);
+  }, [flipState, getPageFlipInstance, logDebug, navigation.currentIndex]);
 
   useEffect(() => {
     if (!hasTouchSupport) {
@@ -1601,7 +1630,8 @@ export const DiaryViewport = ({
       console.info('[DiaryFlipbook] orientation changed:', event.data);
     }
     logDebug('flipbook.orientation', { mode: event.data }, true);
-  }, [logDebug]);
+    scheduleFlipRefresh();
+  }, [logDebug, scheduleFlipRefresh]);
 
   const handleStateChange = useCallback((event: { data: string }) => {
     if (process.env.NODE_ENV !== 'production') {
@@ -1615,7 +1645,7 @@ export const DiaryViewport = ({
     }
     lastFlipStateRef.current = state;
     lastFlipStateTsRef.current = nowTs;
-    const book = flipRef.current?.pageFlip?.();
+    const book = getPageFlipInstance();
     const currentPageIndex = typeof book?.getCurrentPageIndex === 'function'
       ? book.getCurrentPageIndex()
       : null;
@@ -1665,7 +1695,7 @@ export const DiaryViewport = ({
       }
     }
     setFlipState(state as 'user_fold' | 'fold_corner' | 'flipping' | 'read');
-  }, [clearManualFlipFallback, flipState, logDebug, navigation.currentIndex, scheduleManualFlipCheck]);
+  }, [clearManualFlipFallback, flipState, getPageFlipInstance, logDebug, navigation.currentIndex, scheduleManualFlipCheck]);
 
   const goToIndex = useCallback(
     (index: number) => {
@@ -1679,7 +1709,7 @@ export const DiaryViewport = ({
   const handleFlipbookInit = useCallback(() => {
     flipBookReadyRef.current = true;
     setIsFlipbookReady(true);
-    const pageFlipInstance = flipRef.current?.pageFlip?.();
+    const pageFlipInstance = getPageFlipInstance();
     incrementCounter('flipInit');
     const pageCount = pageFlipInstance && typeof (pageFlipInstance as any).getPageCount === 'function'
       ? (pageFlipInstance as any).getPageCount()
@@ -1690,7 +1720,7 @@ export const DiaryViewport = ({
     }, true);
     scheduleFlipRefresh();
     ensurePassiveTouchHandlers();
-  }, [ensurePassiveTouchHandlers, incrementCounter, logDebug, navigation.currentIndex, scheduleFlipRefresh]);
+  }, [ensurePassiveTouchHandlers, getPageFlipInstance, incrementCounter, logDebug, navigation.currentIndex, scheduleFlipRefresh]);
 
   const handleEditorDebug = useCallback((type: string, payload?: Record<string, unknown>) => {
     if (type === 'setEditable') {
@@ -2934,7 +2964,7 @@ export const DiaryViewport = ({
         </div>
 
         <div className="diary-flipbook-shell">
-          <FlipBook
+          <FocusSafeHTMLFlipBook
             key={flipbookSettingsKey}
             ref={flipRef}
             width={540}
@@ -2960,7 +2990,7 @@ export const DiaryViewport = ({
             className="w-full"
           >
             {flipPages}
-          </FlipBook>
+          </FocusSafeHTMLFlipBook>
         </div>
         {activeDebugPanel}
       </div>
