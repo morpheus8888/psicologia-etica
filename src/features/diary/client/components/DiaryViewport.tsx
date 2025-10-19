@@ -75,7 +75,7 @@ type DebugOptionsState = {
   enableMobileScroll: boolean;
   verbose: boolean;
   filterEditabilityLogs: boolean;
-  disableManualFallback: boolean;
+  manualFallbackEnabled: boolean;
 };
 
 type DebugSnapshot = {
@@ -418,7 +418,7 @@ export const DiaryViewport = ({
     enableMobileScroll: false,
     verbose: false,
     filterEditabilityLogs: false,
-    disableManualFallback: false,
+    manualFallbackEnabled: true,
   });
   const flipbookSettingsKey = useMemo(
     () => JSON.stringify({
@@ -973,7 +973,7 @@ export const DiaryViewport = ({
 
     clearManualFlipFallback();
 
-    if (debugOptionsRef.current.disableManualFallback) {
+    if (!debugOptionsRef.current.manualFallbackEnabled) {
       logDebug('flipbook.manual.fallback.skip', { reason: 'disabled' });
       manualFlipFallbackTimeoutRef.current = null;
       return;
@@ -1237,12 +1237,7 @@ export const DiaryViewport = ({
       }
     };
 
-    if (typeof book.flip === 'function') {
-      normalizeControllerIndex('normalize-controller-before-flip');
-      const corner: 'top' | 'bottom' = direction === 'prev' ? 'bottom' : 'top';
-      book.flip(targetIndex, corner);
-      method = 'flip';
-    } else if (direction === 'prev' && canFlipPrev) {
+    if (direction === 'prev' && canFlipPrev) {
       normalizeControllerIndex('normalize-controller-before-flipPrev');
       book.flipPrev?.('bottom');
       method = 'flipPrev';
@@ -1250,7 +1245,12 @@ export const DiaryViewport = ({
       normalizeControllerIndex('normalize-controller-before-flipNext');
       book.flipNext?.('top');
       method = 'flipNext';
-    } else if (typeof book.turnToPage === 'function') {
+    } else if (debugOptionsRef.current.manualFallbackEnabled && typeof book.flip === 'function') {
+      normalizeControllerIndex('normalize-controller-before-flip');
+      const corner: 'top' | 'bottom' = direction === 'prev' ? 'bottom' : 'top';
+      book.flip(targetIndex, corner);
+      method = 'flip';
+    } else if (debugOptionsRef.current.manualFallbackEnabled && typeof book.turnToPage === 'function') {
       book.turnToPage(targetIndex);
       method = 'turnToPage';
     } else {
@@ -2305,10 +2305,10 @@ export const DiaryViewport = ({
               <label className="flex items-center gap-1">
                 <input
                   type="checkbox"
-                  checked={debugOptions.disableManualFallback}
-                  onChange={() => handleDebugToggle('disableManualFallback')}
+                  checked={debugOptions.manualFallbackEnabled}
+                  onChange={() => handleDebugToggle('manualFallbackEnabled')}
                 />
-                <span>Disabilita fallback manuale</span>
+                <span>Fallback manuale attivo</span>
               </label>
             </div>
           </div>
