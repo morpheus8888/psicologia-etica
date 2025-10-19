@@ -31,6 +31,22 @@ type AnimationState = {
   targetIndex: number;
 };
 
+type CoverVariant = 'desk' | 'leather-front' | 'leather-back';
+
+const CoverSurface: React.FC<{ variant: CoverVariant; label: string }> = ({ variant, label }) => (
+  <div
+    className={cn(
+      styles.pageInner,
+      styles.coverSurface,
+      variant === 'desk' && styles.coverDesk,
+      variant === 'leather-front' && styles.coverLeatherFront,
+      variant === 'leather-back' && styles.coverLeatherBack,
+    )}
+  >
+    {label}
+  </div>
+);
+
 const createSpreads = (pages: React.ReactNode[]): Spread[] => {
   const nodes = [...pages];
   if (nodes.length % 2 !== 0) {
@@ -60,7 +76,23 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
   style,
   onSpreadChange,
 }) => {
-  const spreads = useMemo(() => createSpreads(pages), [pages]);
+  const augmentedPages = useMemo(() => {
+    const frontDesk = (
+      <CoverSurface key="cover-desk-front" variant="desk" label="Scrivania" />
+    );
+    const frontLeather = (
+      <CoverSurface key="cover-leather-front" variant="leather-front" label="Diario — Copertina" />
+    );
+    const backLeather = (
+      <CoverSurface key="cover-leather-back" variant="leather-back" label="Copertina — Retro" />
+    );
+    const backDesk = (
+      <CoverSurface key="cover-desk-back" variant="desk" label="Scrivania" />
+    );
+    return [frontDesk, frontLeather, ...pages, backLeather, backDesk];
+  }, [pages]);
+
+  const spreads = useMemo(() => createSpreads(augmentedPages), [augmentedPages]);
   const [spreadIndex, setSpreadIndex] = useState(0);
   const [animation, setAnimation] = useState<AnimationState | null>(null);
   const animationTimerRef = useRef<number | null>(null);
