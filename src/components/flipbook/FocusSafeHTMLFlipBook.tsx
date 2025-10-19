@@ -243,7 +243,7 @@ const FocusSafeHTMLFlipBook = forwardRef<PageFlipHandle, FocusSafeFlipBookProps>
     }, []);
 
     const pageNodes = useMemo(() => {
-      childRefs.current = Array.from({ length: flattenedPages.length }).fill(null);
+      childRefs.current = Array.from({ length: flattenedPages.length }, () => null as HTMLElement | null);
       return flattenedPages.map((child, index) => {
         const handleRef = (node: HTMLElement | null) => {
           childRefs.current[index] = node;
