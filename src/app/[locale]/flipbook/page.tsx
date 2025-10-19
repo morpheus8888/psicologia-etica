@@ -1,7 +1,7 @@
 import { unstable_setRequestLocale } from 'next-intl/server';
 import React from 'react';
 
-import FlipBook from '@/components/FlipBook';
+import { AnimatedDiaryDemo } from '@/features/diary-lite/components';
 import { Navbar } from '@/templates/Navbar';
 
 type PageProps = {
@@ -11,31 +11,24 @@ type PageProps = {
 export default async function FlipbookDemo({ params }: PageProps) {
   unstable_setRequestLocale(params.locale);
 
-  const pages = [
-    <div key="p1" className="flex h-full items-center justify-center">
-      <div className="size-12 rounded-full border-2 border-dashed border-border" aria-hidden />
-    </div>,
-    <div key="p2" className="flex h-full items-center justify-center">
-      <div className="h-10 w-24 border border-dashed border-border" aria-hidden />
-    </div>,
-    <div key="p3" className="flex h-full items-center justify-center">
-      <div className="size-10 rotate-12 border border-border" aria-hidden />
-    </div>,
-  ];
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar locale={params.locale} />
-      <main className="mx-auto w-full max-w-5xl px-4 py-10">
-        <div className="rounded-xl border bg-card p-4">
-          <FlipBook
-            // coverTextureUrl="/textures/wood.jpg" // Optional: provide your texture asset
-            pages={pages}
-            coverFront={<div className="size-full" aria-hidden />}
-            coverBack={<div className="size-full" aria-hidden />}
-            dimensions={{ size: 'stretch', minWidth: 360, maxWidth: 900, minHeight: 420, maxHeight: 980 }}
-          />
-        </div>
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12">
+        <header className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">
+            Prototipo
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Diario animato (prototipo CSS)
+          </h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            Questa pagina sostituisce il vecchio flipbook e usa il nuovo wrapper leggero basato su animazioni CSS 3D.
+            Usa i controlli per sfogliare gli spread e valuta il feeling visivo rispetto all&rsquo;implementazione precedente.
+          </p>
+        </header>
+
+        <AnimatedDiaryDemo locale={params.locale} />
       </main>
     </div>
   );
