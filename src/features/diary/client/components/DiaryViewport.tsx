@@ -1255,7 +1255,7 @@ export const DiaryViewport = ({
         return normalizedCurrentIndex;
       })();
       alignControllerIndex(controllerDesiredIndex, 'normalize-controller-before-flipPrev');
-      book.flipPrev?.('top');
+      book.flipPrev?.('bottom');
       method = 'flipPrev';
     } else if (direction === 'next' && canFlipNext) {
       controllerDesiredIndex = normalizedCurrentIndex;
@@ -1265,7 +1265,7 @@ export const DiaryViewport = ({
     } else if (debugOptionsRef.current.manualFallbackEnabled && typeof book.flip === 'function') {
       controllerDesiredIndex = normalizedCurrentIndex;
       alignControllerIndex(controllerDesiredIndex, 'normalize-controller-before-flip');
-      const corner: 'top' | 'bottom' = direction === 'prev' ? 'top' : 'top';
+      const corner: 'top' | 'bottom' = direction === 'prev' ? 'bottom' : 'top';
       book.flip(targetIndex, corner);
       method = 'flip';
     } else if (debugOptionsRef.current.manualFallbackEnabled && typeof book.turnToPage === 'function') {
