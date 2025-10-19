@@ -1257,6 +1257,25 @@ export const DiaryViewport = ({
       alignControllerIndex(controllerDesiredIndex, 'normalize-controller-before-flipPrev');
       book.flipPrev?.('bottom');
       method = 'flipPrev';
+      const postState = typeof book.getState === 'function' ? book.getState() : null;
+      const postIndex = typeof book.getCurrentPageIndex === 'function'
+        ? book.getCurrentPageIndex()
+        : rawCurrentIndex;
+      const flipPrevStalled = (postState === null || postState === 'read') && postIndex === rawCurrentIndex;
+      if (flipPrevStalled && typeof book.flip === 'function') {
+        logDebug('flipbook.manual.debug', {
+          note: 'flipPrev-fallback-flip',
+          controllerIndexBefore,
+          desiredIndex: controllerDesiredIndex,
+          targetIndex,
+          postIndex,
+          postState,
+        });
+        alignControllerIndex(normalizedCurrentIndex, 'normalize-controller-before-flip-fallback');
+        book.flip(targetIndex, 'bottom');
+        method = 'flip';
+        controllerDesiredIndex = normalizedCurrentIndex;
+      }
     } else if (direction === 'next' && canFlipNext) {
       controllerDesiredIndex = normalizedCurrentIndex;
       alignControllerIndex(controllerDesiredIndex, 'normalize-controller-before-flipNext');
