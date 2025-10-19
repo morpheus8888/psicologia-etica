@@ -66,6 +66,7 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
     const previousLengthRef = useRef(0);
     const previousKeysRef = useRef<(string | number | null)[] | null>(null);
     const htmlRefreshModeRef = useRef<'force' | 'length-change' | 'reorder' | null>(null);
+    const lastObservedSizeRef = useRef<{ width: number; height: number } | null>(null);
 
     useImperativeHandle(
       ref,
@@ -341,8 +342,26 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
         return;
       }
 
+      const rect = container.getBoundingClientRect();
+      lastObservedSizeRef.current = { width: rect.width, height: rect.height };
+
       let frame: number | null = null;
-      const observer = new ResizeObserver(() => {
+      const observer = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) {
+          return;
+        }
+        const { width, height } = entry.contentRect;
+        const previous = lastObservedSizeRef.current;
+        if (
+          previous
+          && Math.abs(previous.width - width) < 0.5
+          && Math.abs(previous.height - height) < 0.5
+        ) {
+          return;
+        }
+        lastObservedSizeRef.current = { width, height };
+
         const instance = pageFlipRef.current;
         if (!instance?.update) {
           return;
@@ -363,6 +382,7 @@ const FocusSafeHTMLFlipBook = React.forwardRef<PageFlipHandle, FocusSafeFlipBook
           window.cancelAnimationFrame(frame);
         }
         observer.disconnect();
+        lastObservedSizeRef.current = null;
       };
     }, [renderOnlyPageLengthChange]);
 
