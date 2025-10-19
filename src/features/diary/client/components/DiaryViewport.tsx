@@ -1621,8 +1621,10 @@ export const DiaryViewport = ({
       }
       if (previousIndex !== nextIndex) {
         navigation.setIndex(nextIndex);
+        scheduleFlipRefresh();
+      } else if (pendingFlipRefreshRef.current) {
+        scheduleFlipRefresh();
       }
-      scheduleFlipRefresh();
     },
     [clearManualFlipFallback, incrementCounter, logDebug, navigation, scheduleFlipRefresh],
   );
