@@ -1237,7 +1237,12 @@ export const DiaryViewport = ({
       }
     };
 
-    if (direction === 'prev' && canFlipPrev) {
+    if (typeof book.flip === 'function') {
+      normalizeControllerIndex('normalize-controller-before-flip');
+      const corner: 'top' | 'bottom' = direction === 'prev' ? 'bottom' : 'top';
+      book.flip(targetIndex, corner);
+      method = 'flip';
+    } else if (direction === 'prev' && canFlipPrev) {
       normalizeControllerIndex('normalize-controller-before-flipPrev');
       book.flipPrev?.('bottom');
       method = 'flipPrev';
@@ -1245,11 +1250,6 @@ export const DiaryViewport = ({
       normalizeControllerIndex('normalize-controller-before-flipNext');
       book.flipNext?.('top');
       method = 'flipNext';
-    } else if (typeof book.flip === 'function') {
-      normalizeControllerIndex('normalize-controller-before-flip');
-      const corner: 'top' | 'bottom' = direction === 'prev' ? 'bottom' : 'top';
-      book.flip(targetIndex, corner);
-      method = 'flip';
     } else if (typeof book.turnToPage === 'function') {
       book.turnToPage(targetIndex);
       method = 'turnToPage';
