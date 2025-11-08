@@ -1,4 +1,3 @@
-```
 import React, { useMemo, useState } from 'react';
 
 import { AnimatedDiary } from './AnimatedDiary';
