@@ -1,10 +1,17 @@
-'use client';
-
+```
 import React, { useMemo, useState } from 'react';
 
 import { AnimatedDiary } from './AnimatedDiary';
 
 const sampleEntries = [
+  {
+    title: 'Pagina di scrittura',
+    subtitle: 'Prova a scrivere qui',
+    mode: 'writing' as const,
+    content: [
+      'Questo slot è solo di esempio e non salva il contenuto. Ti permette però di valutare l’effetto visivo della carta rigata.',
+    ],
+  },
   {
     title: 'Benvenuto nel diario',
     subtitle: 'Setup iniziale',
@@ -68,30 +75,68 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
   const [flipMode, setFlipMode] = useState<'3d' | 'flat'>('3d');
   const [flipDuration, setFlipDuration] = useState(720);
   const [texture, setTexture] = useState(0.28);
-  const pages = useMemo(() => sampleEntries.map((entry, index) => (
-    <div key={`${entry.title}-${index.toString()}`}>
-      <h2 className="text-lg font-semibold text-foreground">{entry.title}</h2>
-      <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-        {entry.subtitle}
-      </p>
-      <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
-        {entry.content.map((paragraph, paragraphIndex) => (
-          <p key={`${entry.title}-${paragraphIndex.toString()}`}>{paragraph}</p>
-        ))}
+  const [curvature, setCurvature] = useState(0.45);
+  const [paperMode, setPaperMode] = useState<'plain' | 'lined'>('lined');
+
+  const pages = useMemo(() => sampleEntries.map((entry, index) => {
+    if (entry.mode === 'writing') {
+      return (
+        <div key={`${entry.title}-${index.toString()}`} className="flex h-full flex-col gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">{entry.title}</h2>
+            <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              {entry.subtitle}
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{entry.content[0]}</p>
+          </div>
+          <div
+            contentEditable
+            suppressContentEditableWarning
+            spellCheck={false}
+            aria-label="Simulazione pagina scrittura"
+            className="relative min-h-[180px] flex-1 rounded-2xl border border-border/70 bg-background/80 px-4 py-3 text-base text-foreground shadow-inner focus:outline-none focus:ring-2 focus:ring-primary/50"
+            style={{
+              backgroundImage:
+                'linear-gradient(180deg, transparent 40%, rgba(110,131,170,0.28) 40%, rgba(110,131,170,0.28) 42%, transparent 42%)',
+              backgroundSize: '100% 32px',
+            }}
+          >
+            Scrivi qualcosa qui…
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div key={`${entry.title}-${index.toString()}`}>
+        <h2 className="text-lg font-semibold text-foreground">{entry.title}</h2>
+        <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          {entry.subtitle}
+        </p>
+        <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
+          {entry.content.map((paragraph, paragraphIndex) => (
+            <p key={`${entry.title}-${paragraphIndex.toString()}`}>{paragraph}</p>
+          ))}
+        </div>
+        <div className="mt-6 text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
+          Locale:
+          {' '}
+          {locale}
+        </div>
       </div>
-      <div className="mt-6 text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
-        Locale:
-        {' '}
-        {locale}
-      </div>
-    </div>
-  )), [locale]);
+    );
+  }), [locale]);
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
       <AnimatedDiary
         pages={pages}
-        appearance={{ theme, textureIntensity: texture }}
+        appearance={{
+          theme,
+          textureIntensity: texture,
+          curvatureIntensity: curvature,
+          paperMode,
+        }}
         flipOptions={{ durationMs: flipDuration, mode: flipMode }}
       />
 
@@ -100,7 +145,7 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
           <h3 className="text-lg font-semibold text-foreground">Controlli estetici & flip (demo)</h3>
           <p className="text-sm text-muted-foreground">
             Questa sezione personalizza solo il prototipo “AnimatedDiary”. Usa i selettori per testare temi,
-            texture della carta e modalità di sfoglio prima di portarli nel diario reale.
+            curvatura, texture e modalità di flip prima di portarli nel diario reale.
           </p>
         </header>
 
@@ -136,6 +181,37 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
                 {(texture * 100).toFixed(0)}
                 %
               </span>
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-foreground">Curvatura pagina</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={curvature}
+                onChange={(event) => setCurvature(Number(event.currentTarget.value))}
+                className="accent-primary"
+              />
+              <span className="text-xs text-muted-foreground">
+                Curvatura:
+                {' '}
+                {(curvature * 100).toFixed(0)}
+                %
+              </span>
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-foreground">Stile carta</span>
+              <select
+                className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                value={paperMode}
+                onChange={(event) => setPaperMode(event.currentTarget.value as typeof paperMode)}
+              >
+                <option value="plain">Liscia</option>
+                <option value="lined">Rigata (quaderno)</option>
+              </select>
             </label>
           </div>
 

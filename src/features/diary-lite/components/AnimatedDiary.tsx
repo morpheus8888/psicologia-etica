@@ -21,6 +21,8 @@ type FlipMode = '3d' | 'flat';
 type AnimatedDiaryAppearance = {
   theme?: ThemePreset;
   textureIntensity?: number;
+  curvatureIntensity?: number;
+  paperMode?: 'plain' | 'lined';
 };
 
 type AnimatedDiaryFlipOptions = {
@@ -105,6 +107,9 @@ const resolvePage = (node: React.ReactNode | null | undefined): ResolvedPage => 
 type CSSVarStyle = CSSProperties & {
   '--flip-duration'?: string;
   '--texture-opacity'?: string;
+  '--page-curve-angle'?: string;
+  '--page-curve-scale'?: string;
+  '--page-curve-offset'?: string;
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -161,13 +166,21 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
   const animationTimerRef = useRef<number | null>(null);
   const theme = appearance?.theme ?? 'classic';
   const textureIntensity = clamp(appearance?.textureIntensity ?? 0.28, 0, 0.6);
+  const curvatureIntensity = clamp(appearance?.curvatureIntensity ?? 0.4, 0, 1);
+  const paperMode = appearance?.paperMode ?? 'plain';
   const flipDurationMs = clamp(flipOptions?.durationMs ?? FLIP_DURATION_MS, 200, 2000);
   const flipMode: FlipMode = flipOptions?.mode ?? '3d';
+  const pageCurveAngle = 2 + curvatureIntensity * 5.5;
+  const pageCurveScale = 1 - curvatureIntensity * 0.08;
+  const pageCurveOffset = curvatureIntensity * 12;
   const rootStyle = useMemo<CSSVarStyle>(() => ({
     ...(style ?? {}),
     '--flip-duration': `${flipDurationMs}ms`,
     '--texture-opacity': textureIntensity.toFixed(2),
-  }), [style, flipDurationMs, textureIntensity]);
+    '--page-curve-angle': `${pageCurveAngle.toFixed(2)}deg`,
+    '--page-curve-scale': pageCurveScale.toFixed(3),
+    '--page-curve-offset': `${pageCurveOffset.toFixed(2)}px`,
+  }), [flipDurationMs, pageCurveAngle, pageCurveOffset, pageCurveScale, style, textureIntensity]);
 
   useEffect(() => {
     if (spreads.length === 0) {
@@ -254,6 +267,7 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
       style={rootStyle}
       data-theme={theme}
       data-flip-mode={flipMode}
+      data-paper={paperMode}
     >
       <div className={styles.stage}>
         <div

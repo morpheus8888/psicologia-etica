@@ -30,6 +30,9 @@
   --dot-color: rgba(53, 43, 30, 0.28);
   --dot-color-active: rgba(53, 43, 30, 0.75);
   --chrome-muted: rgba(53, 43, 30, 0.65);
+  --page-curve-angle: 2deg;
+  --page-curve-scale: 1;
+  --page-curve-offset: 0px;
 }
 
 .stage {
@@ -92,16 +95,42 @@
   opacity: var(--texture-opacity, 0.28);
 }
 
+.root[data-paper='lined'] .pagePaper::after,
+.root[data-paper='lined'] .flipFacePaper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      180deg,
+      transparent 40%,
+      rgba(74, 95, 136, 0.28) 40%,
+      rgba(74, 95, 136, 0.28) 42%,
+      transparent 42%
+    ),
+    linear-gradient(90deg, transparent 96%, rgba(74, 95, 136, 0.14) 96%);
+  background-size: 100% 32px, 48px 100%;
+  opacity: 0.55;
+  mix-blend-mode: multiply;
+}
+
 .pageLeft {
   border-right: 1px solid rgba(153, 133, 99, 0.25);
   transform-origin: right center;
-  transform: rotateY(-2deg) translateX(-1px);
+  transform:
+    rotateY(calc(-1 * var(--page-curve-angle, 2deg)))
+    translateX(calc(-1px - var(--page-curve-offset, 0px)))
+    scaleX(var(--page-curve-scale, 1));
 }
 
 .pageRight {
   border-left: 1px solid rgba(153, 133, 99, 0.25);
   transform-origin: left center;
-  transform: rotateY(2deg) translateX(1px);
+  transform:
+    rotateY(var(--page-curve-angle, 2deg))
+    translateX(calc(1px + var(--page-curve-offset, 0px)))
+    scaleX(var(--page-curve-scale, 1));
 }
 
 .pageInner {
