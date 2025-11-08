@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { AnimatedDiary } from './AnimatedDiary';
 
@@ -64,6 +64,10 @@ type AnimatedDiaryDemoProps = {
 };
 
 const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
+  const [theme, setTheme] = useState<'classic' | 'nocturne' | 'minimal'>('classic');
+  const [flipMode, setFlipMode] = useState<'3d' | 'flat'>('3d');
+  const [flipDuration, setFlipDuration] = useState(720);
+  const [texture, setTexture] = useState(0.28);
   const pages = useMemo(() => sampleEntries.map((entry, index) => (
     <div key={`${entry.title}-${index.toString()}`}>
       <h2 className="text-lg font-semibold text-foreground">{entry.title}</h2>
@@ -84,7 +88,93 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
   )), [locale]);
 
   return (
-    <AnimatedDiary pages={pages} />
+    <div className="flex w-full flex-col items-center gap-6">
+      <AnimatedDiary
+        pages={pages}
+        appearance={{ theme, textureIntensity: texture }}
+        flipOptions={{ durationMs: flipDuration, mode: flipMode }}
+      />
+
+      <section className="w-full max-w-4xl rounded-2xl border border-border/60 bg-background/70 p-6 shadow-sm">
+        <header className="mb-4 space-y-1">
+          <h3 className="text-lg font-semibold text-foreground">Controlli estetici & flip (demo)</h3>
+          <p className="text-sm text-muted-foreground">
+            Questa sezione personalizza solo il prototipo “AnimatedDiary”. Usa i selettori per testare temi,
+            texture della carta e modalità di sfoglio prima di portarli nel diario reale.
+          </p>
+        </header>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-foreground">Tema</span>
+              <select
+                className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                value={theme}
+                onChange={(event) => setTheme(event.currentTarget.value as typeof theme)}
+              >
+                <option value="classic">Classico (caldo)</option>
+                <option value="nocturne">Nocturne (scuro)</option>
+                <option value="minimal">Minimal (chiaro)</option>
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-foreground">Texture carta</span>
+              <input
+                type="range"
+                min={0}
+                max={0.6}
+                step={0.02}
+                value={texture}
+                onChange={(event) => setTexture(Number(event.currentTarget.value))}
+                className="accent-primary"
+              />
+              <span className="text-xs text-muted-foreground">
+                Intensità:
+                {' '}
+                {(texture * 100).toFixed(0)}
+                %
+              </span>
+            </label>
+          </div>
+
+          <div className="space-y-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-foreground">Modalità sfoglio</span>
+              <select
+                className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                value={flipMode}
+                onChange={(event) => setFlipMode(event.currentTarget.value as typeof flipMode)}
+              >
+                <option value="3d">3D completo (curva)</option>
+                <option value="flat">Flat (flip rapido)</option>
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-foreground">Durata animazione</span>
+              <input
+                type="range"
+                min={200}
+                max={2000}
+                step={20}
+                value={flipDuration}
+                onChange={(event) => setFlipDuration(Number(event.currentTarget.value))}
+                className="accent-primary"
+              />
+              <span className="text-xs text-muted-foreground">
+                Velocità:
+                {' '}
+                {flipDuration}
+                {' '}
+                ms
+              </span>
+            </label>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 };
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, {
+  type CSSProperties,
   useCallback,
   useEffect,
   useMemo,
@@ -14,11 +15,26 @@ import styles from './AnimatedDiary.module.css';
 
 const FLIP_DURATION_MS = 720;
 
+type ThemePreset = 'classic' | 'nocturne' | 'minimal';
+type FlipMode = '3d' | 'flat';
+
+type AnimatedDiaryAppearance = {
+  theme?: ThemePreset;
+  textureIntensity?: number;
+};
+
+type AnimatedDiaryFlipOptions = {
+  durationMs?: number;
+  mode?: FlipMode;
+};
+
 type AnimatedDiaryProps = {
   pages: React.ReactNode[];
   className?: string;
   style?: React.CSSProperties;
   onSpreadChange?: (index: number) => void;
+  appearance?: AnimatedDiaryAppearance;
+  flipOptions?: AnimatedDiaryFlipOptions;
 };
 
 type Spread = {
@@ -86,11 +102,20 @@ const resolvePage = (node: React.ReactNode | null | undefined): ResolvedPage => 
   return { variant: 'paper', node };
 };
 
+type CSSVarStyle = CSSProperties & {
+  '--flip-duration'?: string;
+  '--texture-opacity'?: string;
+};
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
 const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
   pages,
   className,
   style,
   onSpreadChange,
+  appearance,
+  flipOptions,
 }) => {
   const augmentedPages = useMemo(() => {
     const frontDesk = (
@@ -134,6 +159,15 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
   const [spreadIndex, setSpreadIndex] = useState(0);
   const [animation, setAnimation] = useState<AnimationState | null>(null);
   const animationTimerRef = useRef<number | null>(null);
+  const theme = appearance?.theme ?? 'classic';
+  const textureIntensity = clamp(appearance?.textureIntensity ?? 0.28, 0, 0.6);
+  const flipDurationMs = clamp(flipOptions?.durationMs ?? FLIP_DURATION_MS, 200, 2000);
+  const flipMode: FlipMode = flipOptions?.mode ?? '3d';
+  const rootStyle = useMemo<CSSVarStyle>(() => ({
+    ...(style ?? {}),
+    '--flip-duration': `${flipDurationMs}ms`,
+    '--texture-opacity': textureIntensity.toFixed(2),
+  }), [style, flipDurationMs, textureIntensity]);
 
   useEffect(() => {
     if (spreads.length === 0) {
@@ -158,14 +192,14 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
       setSpreadIndex(animation.targetIndex);
       setAnimation(null);
       onSpreadChange?.(animation.targetIndex);
-    }, FLIP_DURATION_MS);
+    }, flipDurationMs);
     return () => {
       if (animationTimerRef.current !== null) {
         window.clearTimeout(animationTimerRef.current);
         animationTimerRef.current = null;
       }
     };
-  }, [animation, onSpreadChange]);
+  }, [animation, flipDurationMs, onSpreadChange]);
 
   useEffect(() => () => {
     if (animationTimerRef.current !== null) {
@@ -215,11 +249,15 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
   const prevFlipBackResolved = resolvePage(previousSpread?.right ?? null);
 
   return (
-    <div className={cn(styles.root, className)} style={style}>
+    <div
+      className={cn(styles.root, className)}
+      style={rootStyle}
+      data-theme={theme}
+      data-flip-mode={flipMode}
+    >
       <div className={styles.stage}>
         <div
           className={styles.book}
-          style={{ '--flip-duration': `${FLIP_DURATION_MS}ms` } as React.CSSProperties}
         >
           <div className={styles.spread}>
             <div className={pageClassNames(leftResolved.variant, 'left')}>
@@ -238,6 +276,7 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
                 styles.flipSurface,
                 styles.flipSurfaceNext,
                 animationDirection === 'next' && styles.flipSurfaceActive,
+                flipMode === 'flat' && styles.flipSurfaceFlat,
               )}
             >
               <div className={flipFaceClassNames(nextFlipFrontResolved.variant)}>
@@ -253,6 +292,7 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
                 styles.flipSurface,
                 styles.flipSurfacePrev,
                 animationDirection === 'prev' && styles.flipSurfaceActive,
+                flipMode === 'flat' && styles.flipSurfaceFlat,
               )}
             >
               <div className={flipFaceClassNames(prevFlipFrontResolved.variant)}>
