@@ -194,6 +194,28 @@
           "ocean": "Oceano"
         }
       },
+      "testControls": {
+        "title": "Controlli di test",
+        "description": "Modifica estetica e sfoglio del diario mentre verifichi nuove esperienze. Le preferenze restano solo sul tuo dispositivo.",
+        "appearanceHeading": "Aspetto pagina",
+        "flipHeading": "Comportamento sfoglio",
+        "fontLabel": "Carattere",
+        "colorLabel": "Colore inchiostro",
+        "lineHeightLabel": "Interlinea",
+        "lineOffsetLabel": "Offset superiore",
+        "lineHeightValue": "{value} rem",
+        "lineOffsetValue": "{value} rem",
+        "flipSpeedLabel": "Velocità sfoglio",
+        "flipSpeedValue": "{value} ms",
+        "swipeDistanceLabel": "Sensibilità swipe",
+        "swipeDistanceValue": "{value} px",
+        "shadowOpacityLabel": "Opacità ombre",
+        "shadowOpacityValue": "{value}%",
+        "portraitLabel": "Modalità pagina singola",
+        "shadowLabel": "Ombre attive",
+        "cornersLabel": "Mostra angoli pagina",
+        "reset": "Ripristina default"
+      },
       "debug": {
         "title": "Debug diario",
         "resolvedTimezone": "Timezone calcolata",

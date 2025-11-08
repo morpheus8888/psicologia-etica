@@ -19,6 +19,8 @@ import { useDiaryNavigation } from '@/features/diary/client/context/DiaryNavigat
 import { useDiaryEntrySession } from '@/features/diary/client/hooks/useDiaryEntrySession';
 import { isEntryEditable } from '@/features/diary/client/utils/is-entry-editable';
 
+import { useDiaryTestControls, type DiaryTestControlsState } from '@/features/diary/client/hooks/useDiaryTestControls';
+
 import { DiaryCoachDock } from './DiaryCoachDock';
 import { DiaryEntryEditor } from './DiaryEntryEditor';
 import { DiaryEntryPreview } from './DiaryEntryPreview';
@@ -369,6 +371,9 @@ export const DiaryViewport = ({
 }: DiaryViewportProps) => {
   const tCover = t.getNamespace('cover');
   const tClosing = t.getNamespace('closing');
+  const tEntry = t.getNamespace('entry');
+  const tEntryEditor = tEntry.getNamespace('editor');
+  const tEntryTestControls = tEntry.getNamespace('testControls');
   const coverBrand = tCover.t('brand');
   const data = useDiaryData();
   const navigation = useDiaryNavigation();
@@ -414,13 +419,74 @@ export const DiaryViewport = ({
     filterEditabilityLogs: false,
     manualFallbackEnabled: true,
   });
+  const {
+    state: diaryTestControls,
+    updateAppearance: updateAppearanceControls,
+    updateFlip: updateFlipControls,
+    reset: resetDiaryTestControls,
+    enabled: diaryTestControlsEnabled,
+  } = useDiaryTestControls();
+  const appearanceControls = diaryTestControls.appearance;
+  const flipControls = diaryTestControls.flip;
+  const fontClassByOption: Record<DiaryTestControlsState['appearance']['font'], string> = {
+    sans: DEFAULT_ENTRY_FONT_CLASS,
+    serif: 'diary-entry-font-serif',
+    mono: 'diary-entry-font-mono',
+  };
+  const colorClassByOption: Record<DiaryTestControlsState['appearance']['color'], string> = {
+    ink: DEFAULT_ENTRY_COLOR_CLASS,
+    sepia: 'diary-entry-color-sepia',
+    ocean: 'diary-entry-color-ocean',
+  };
+  const entryFontClass = fontClassByOption[appearanceControls.font] ?? DEFAULT_ENTRY_FONT_CLASS;
+  const entryColorClass = colorClassByOption[appearanceControls.color] ?? DEFAULT_ENTRY_COLOR_CLASS;
+  const cornerClicksEnabled = diaryTestControlsEnabled
+    ? flipControls.showPageCorners
+    : debugOptions.enableClickFlip;
+  const flipbookPortrait = diaryTestControlsEnabled ? flipControls.usePortrait : false;
+  const flipbookFlippingTime = diaryTestControlsEnabled ? flipControls.flippingTimeMs : undefined;
+  const flipbookSwipeDistance = diaryTestControlsEnabled ? flipControls.swipeDistance : undefined;
+  const flipbookDrawShadow = diaryTestControlsEnabled ? flipControls.drawShadow : false;
+  const flipbookShadowOpacity = diaryTestControlsEnabled ? flipControls.maxShadowOpacity : undefined;
+  const fontOptions = useMemo(
+    () => [
+      { value: 'sans' as const, label: tEntryEditor.t('fontOptions.sans') },
+      { value: 'serif' as const, label: tEntryEditor.t('fontOptions.serif') },
+      { value: 'mono' as const, label: tEntryEditor.t('fontOptions.mono') },
+    ],
+    [tEntryEditor],
+  );
+  const colorOptions = useMemo(
+    () => [
+      { value: 'ink' as const, label: tEntryEditor.t('colorOptions.ink') },
+      { value: 'sepia' as const, label: tEntryEditor.t('colorOptions.sepia') },
+      { value: 'ocean' as const, label: tEntryEditor.t('colorOptions.ocean') },
+    ],
+    [tEntryEditor],
+  );
   const flipbookSettingsKey = useMemo(
     () => JSON.stringify({
       enableMouseEvents: debugOptions.enableMouseEvents,
       enableClickFlip: debugOptions.enableClickFlip,
       enableMobileScroll: debugOptions.enableMobileScroll,
+      flippingTime: flipControls.flippingTimeMs,
+      usePortrait: flipControls.usePortrait,
+      swipeDistance: flipControls.swipeDistance,
+      drawShadow: flipControls.drawShadow,
+      maxShadowOpacity: flipControls.maxShadowOpacity,
+      showPageCorners: flipControls.showPageCorners,
     }),
-    [debugOptions.enableClickFlip, debugOptions.enableMobileScroll, debugOptions.enableMouseEvents],
+    [
+      debugOptions.enableClickFlip,
+      debugOptions.enableMobileScroll,
+      debugOptions.enableMouseEvents,
+      flipControls.drawShadow,
+      flipControls.flippingTimeMs,
+      flipControls.maxShadowOpacity,
+      flipControls.showPageCorners,
+      flipControls.swipeDistance,
+      flipControls.usePortrait,
+    ],
   );
   const debugOptionsRef = useRef(debugOptions);
   const getPageFlipInstance = useCallback(
@@ -2400,6 +2466,230 @@ export const DiaryViewport = ({
               </label>
             </div>
           </div>
+          {diaryTestControlsEnabled && (
+            <div className="mb-3 grid gap-3 rounded-lg border border-sky-400/40 bg-sky-100/60 p-3 text-[11px] text-sky-900 dark:border-sky-500/40 dark:bg-sky-900/40 dark:text-sky-100">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="font-semibold uppercase tracking-wide text-sky-900 dark:text-sky-100">
+                    {tEntryTestControls.t('title')}
+                  </p>
+                  <p className="text-[10px] text-sky-700 dark:text-sky-200/80">
+                    {tEntryTestControls.t('description')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-md border border-sky-500/50 px-2 py-1 text-[11px] font-semibold text-sky-900 transition hover:bg-sky-200/60 dark:border-sky-400/60 dark:text-sky-100 dark:hover:bg-sky-800/40"
+                  onClick={resetDiaryTestControls}
+                >
+                  {tEntryTestControls.t('reset')}
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-800 dark:text-sky-200">
+                  {tEntryTestControls.t('appearanceHeading')}
+                </p>
+                <div className="grid gap-2">
+                  <div className="grid gap-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-200">
+                      {tEntryTestControls.t('fontLabel')}
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {fontOptions.map(option => (
+                        <label
+                          key={option.value}
+                          className="flex cursor-pointer items-center gap-1 rounded border border-sky-400/60 bg-white/60 px-2 py-1 text-sky-900 dark:border-sky-500/50 dark:bg-sky-900/40 dark:text-sky-100"
+                        >
+                          <input
+                            type="radio"
+                            name="diary-test-font"
+                            value={option.value}
+                            checked={appearanceControls.font === option.value}
+                            onChange={() => updateAppearanceControls({ font: option.value })}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-200">
+                      {tEntryTestControls.t('colorLabel')}
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {colorOptions.map(option => (
+                        <label
+                          key={option.value}
+                          className="flex cursor-pointer items-center gap-1 rounded border border-sky-400/60 bg-white/60 px-2 py-1 text-sky-900 dark:border-sky-500/50 dark:bg-sky-900/40 dark:text-sky-100"
+                        >
+                          <input
+                            type="radio"
+                            name="diary-test-color"
+                            value={option.value}
+                            checked={appearanceControls.color === option.value}
+                            onChange={() => updateAppearanceControls({ color: option.value })}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <label className="grid gap-1">
+                    <span className="flex items-center justify-between">
+                      <span>{tEntryTestControls.t('lineHeightLabel')}</span>
+                      <span className="font-mono text-sky-800 dark:text-sky-200">
+                        {tEntryTestControls.t('lineHeightValue', {
+                          value: appearanceControls.lineHeightRem.toFixed(2),
+                        })}
+                      </span>
+                    </span>
+                    <input
+                      type="range"
+                      min={1.4}
+                      max={2.2}
+                      step={0.05}
+                      value={appearanceControls.lineHeightRem}
+                      onChange={(event) => updateAppearanceControls({
+                        lineHeightRem: Number(event.currentTarget.value),
+                      })}
+                      className="w-full accent-sky-600"
+                    />
+                  </label>
+
+                  <label className="grid gap-1">
+                    <span className="flex items-center justify-between">
+                      <span>{tEntryTestControls.t('lineOffsetLabel')}</span>
+                      <span className="font-mono text-sky-800 dark:text-sky-200">
+                        {tEntryTestControls.t('lineOffsetValue', {
+                          value: appearanceControls.lineOffsetRem.toFixed(2),
+                        })}
+                      </span>
+                    </span>
+                    <input
+                      type="range"
+                      min={0.9}
+                      max={2}
+                      step={0.05}
+                      value={appearanceControls.lineOffsetRem}
+                      onChange={(event) => updateAppearanceControls({
+                        lineOffsetRem: Number(event.currentTarget.value),
+                      })}
+                      className="w-full accent-sky-600"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-800 dark:text-sky-200">
+                  {tEntryTestControls.t('flipHeading')}
+                </p>
+                <div className="grid gap-2">
+                  <label className="grid gap-1">
+                    <span className="flex items-center justify-between">
+                      <span>{tEntryTestControls.t('flipSpeedLabel')}</span>
+                      <span className="font-mono text-sky-800 dark:text-sky-200">
+                        {tEntryTestControls.t('flipSpeedValue', {
+                          value: Math.round(flipControls.flippingTimeMs),
+                        })}
+                      </span>
+                    </span>
+                    <input
+                      type="range"
+                      min={180}
+                      max={1200}
+                      step={10}
+                      value={flipControls.flippingTimeMs}
+                      onChange={(event) => updateFlipControls({
+                        flippingTimeMs: Number(event.currentTarget.value),
+                      })}
+                      className="w-full accent-sky-600"
+                    />
+                  </label>
+
+                  <label className="grid gap-1">
+                    <span className="flex items-center justify-between">
+                      <span>{tEntryTestControls.t('swipeDistanceLabel')}</span>
+                      <span className="font-mono text-sky-800 dark:text-sky-200">
+                        {tEntryTestControls.t('swipeDistanceValue', {
+                          value: Math.round(flipControls.swipeDistance),
+                        })}
+                      </span>
+                    </span>
+                    <input
+                      type="range"
+                      min={10}
+                      max={60}
+                      step={1}
+                      value={flipControls.swipeDistance}
+                      onChange={(event) => updateFlipControls({
+                        swipeDistance: Number(event.currentTarget.value),
+                      })}
+                      className="w-full accent-sky-600"
+                    />
+                  </label>
+
+                  <label className="grid gap-1">
+                    <span className="flex items-center justify-between">
+                      <span>{tEntryTestControls.t('shadowOpacityLabel')}</span>
+                      <span className="font-mono text-sky-800 dark:text-sky-200">
+                        {tEntryTestControls.t('shadowOpacityValue', {
+                          value: Math.round(flipControls.maxShadowOpacity * 100),
+                        })}
+                      </span>
+                    </span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={flipControls.maxShadowOpacity}
+                      onChange={(event) => updateFlipControls({
+                        maxShadowOpacity: Number(event.currentTarget.value),
+                      })}
+                      className="w-full accent-sky-600"
+                    />
+                  </label>
+
+                  <div className="flex flex-wrap gap-3">
+                    <label className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={flipControls.usePortrait}
+                        onChange={(event) => updateFlipControls({
+                          usePortrait: event.currentTarget.checked,
+                        })}
+                      />
+                      <span>{tEntryTestControls.t('portraitLabel')}</span>
+                    </label>
+                    <label className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={flipControls.drawShadow}
+                        onChange={(event) => updateFlipControls({
+                          drawShadow: event.currentTarget.checked,
+                        })}
+                      />
+                      <span>{tEntryTestControls.t('shadowLabel')}</span>
+                    </label>
+                    <label className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={flipControls.showPageCorners}
+                        onChange={(event) => updateFlipControls({
+                          showPageCorners: event.currentTarget.checked,
+                        })}
+                      />
+                      <span>{tEntryTestControls.t('cornersLabel')}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="mb-3 grid gap-1 text-[11px] text-sky-900 dark:text-sky-100">
             <span className="font-semibold">Counters</span>
             <div className="grid grid-cols-2 gap-1 md:grid-cols-3">
@@ -2737,8 +3027,10 @@ export const DiaryViewport = ({
               externalChangeOriginRef.current = null;
               scheduleDebugStuckCheck();
             }}
-            fontClassName={DEFAULT_ENTRY_FONT_CLASS}
-            colorClassName={DEFAULT_ENTRY_COLOR_CLASS}
+            fontClassName={entryFontClass}
+            colorClassName={entryColorClass}
+            lineHeightRem={appearanceControls.lineHeightRem}
+            lineOffsetRem={appearanceControls.lineOffsetRem}
             onDebugEvent={handleEditorDebug}
           />
         )
@@ -2748,8 +3040,10 @@ export const DiaryViewport = ({
             statusLabel={statusLabelText}
             body={previewBody}
             placeholder={previewPlaceholder}
-            fontClassName={DEFAULT_ENTRY_FONT_CLASS}
-            colorClassName={DEFAULT_ENTRY_COLOR_CLASS}
+            fontClassName={entryFontClass}
+            colorClassName={entryColorClass}
+            lineHeightRem={appearanceControls.lineHeightRem}
+            lineOffsetRem={appearanceControls.lineOffsetRem}
             actions={headingActions}
           />
         );
@@ -2981,15 +3275,18 @@ export const DiaryViewport = ({
             maxHeight={820}
             startPage={navigation.currentIndex}
             showCover={false}
-            drawShadow={false}
+            drawShadow={flipbookDrawShadow}
+            flippingTime={flipbookFlippingTime}
+            swipeDistance={flipbookSwipeDistance}
+            maxShadowOpacity={flipbookShadowOpacity}
             onFlip={handleFlip}
             onChangeOrientation={handleOrientationChange}
             onChangeState={handleStateChange}
             onInit={handleFlipbookInit}
-            disableFlipByClick={!debugOptions.enableClickFlip}
-            showPageCorners={debugOptions.enableClickFlip}
+            disableFlipByClick={!cornerClicksEnabled}
+            showPageCorners={cornerClicksEnabled}
             mobileScrollSupport={debugOptions.enableMobileScroll}
-            usePortrait={false}
+            usePortrait={flipbookPortrait}
             useMouseEvents={debugOptions.enableMouseEvents}
             renderOnlyPageLengthChange
             className="w-full"

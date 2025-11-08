@@ -17,6 +17,7 @@ import {
   type EditorThemeClasses,
 } from 'lexical';
 import {
+  type CSSProperties,
   type MutableRefObject,
   type ReactNode,
   useEffect,
@@ -49,6 +50,8 @@ type DiaryEntryEditorProps = {
   side: 'left' | 'right';
   onDebugEvent?: (type: string, payload?: Record<string, unknown>) => void;
   onUserInteraction?: (event: EditorInteractionEvent, details?: EditorInteractionDetails) => void;
+  lineHeightRem?: number;
+  lineOffsetRem?: number;
 };
 
 const theme: EditorThemeClasses = {
@@ -148,6 +151,8 @@ const DiaryEntryEditor = ({
   side,
   onDebugEvent,
   onUserInteraction,
+  lineHeightRem,
+  lineOffsetRem,
 }: DiaryEntryEditorProps) => {
   const initialConfig = useMemo<InitialConfigType>(() => ({
     namespace: 'diary-entry',
@@ -160,6 +165,20 @@ const DiaryEntryEditor = ({
   }), [editable]);
 
   const sideClass = side === 'left' ? 'diary-entry-sheet--left' : 'diary-entry-sheet--right';
+  type LineStyles = CSSProperties & {
+    '--diary-line-height'?: string;
+    '--diary-line-offset'?: string;
+  };
+  const lineStyles = useMemo<LineStyles>(() => {
+    const styles: LineStyles = {};
+    if (typeof lineHeightRem === 'number') {
+      styles['--diary-line-height'] = `${lineHeightRem}rem`;
+    }
+    if (typeof lineOffsetRem === 'number') {
+      styles['--diary-line-offset'] = `${lineOffsetRem}rem`;
+    }
+    return styles;
+  }, [lineHeightRem, lineOffsetRem]);
   const contentEditableRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -352,7 +371,7 @@ const DiaryEntryEditor = ({
               )
             : null}
         </div>
-        <div className="diary-entry-lines">
+        <div className="diary-entry-lines" style={lineStyles}>
           <div className={`diary-entry-text ${fontClassName} ${colorClassName}`}>
             <RichTextPlugin
               contentEditable={(

@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react';
+import { memo, type CSSProperties, type ReactNode, useMemo } from 'react';
 
 type DiaryEntryPreviewProps = {
   heading: string;
@@ -8,6 +8,8 @@ type DiaryEntryPreviewProps = {
   fontClassName: string;
   colorClassName: string;
   actions?: ReactNode;
+  lineHeightRem?: number;
+  lineOffsetRem?: number;
 };
 
 const MAX_PREVIEW_LINES = 8;
@@ -35,9 +37,25 @@ const DiaryEntryPreviewComponent = ({
   fontClassName,
   colorClassName,
   actions,
+  lineHeightRem,
+  lineOffsetRem,
 }: DiaryEntryPreviewProps) => {
   const previewLines = takePreviewLines(body, placeholder);
   const lineOccurrences = new Map<string, number>();
+  type LineStyles = CSSProperties & {
+    '--diary-line-height'?: string;
+    '--diary-line-offset'?: string;
+  };
+  const lineStyles = useMemo<LineStyles>(() => {
+    const styles: LineStyles = {};
+    if (typeof lineHeightRem === 'number') {
+      styles['--diary-line-height'] = `${lineHeightRem}rem`;
+    }
+    if (typeof lineOffsetRem === 'number') {
+      styles['--diary-line-offset'] = `${lineOffsetRem}rem`;
+    }
+    return styles;
+  }, [lineHeightRem, lineOffsetRem]);
 
   return (
     <div
@@ -63,7 +81,7 @@ const DiaryEntryPreviewComponent = ({
             )
           : null}
       </div>
-      <div className="diary-entry-lines">
+      <div className="diary-entry-lines" style={lineStyles}>
         <div className={`diary-entry-text ${fontClassName} ${colorClassName}`}>
           <div className="diary-entry-content whitespace-pre-wrap break-words leading-relaxed">
             {previewLines.map((line) => {

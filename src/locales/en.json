@@ -194,6 +194,28 @@
           "ocean": "Ocean"
         }
       },
+      "testControls": {
+        "title": "Test controls",
+        "description": "Tweak the diary look and flip behaviour while validating new flows. These settings only persist locally.",
+        "appearanceHeading": "Page appearance",
+        "flipHeading": "Flip behaviour",
+        "fontLabel": "Font",
+        "colorLabel": "Ink color",
+        "lineHeightLabel": "Line height",
+        "lineOffsetLabel": "Top offset",
+        "lineHeightValue": "{value} rem",
+        "lineOffsetValue": "{value} rem",
+        "flipSpeedLabel": "Flip speed",
+        "flipSpeedValue": "{value} ms",
+        "swipeDistanceLabel": "Swipe distance",
+        "swipeDistanceValue": "{value} px",
+        "shadowOpacityLabel": "Shadow opacity",
+        "shadowOpacityValue": "{value}%",
+        "portraitLabel": "Single-page mode",
+        "shadowLabel": "Enable shadows",
+        "cornersLabel": "Show page corners",
+        "reset": "Reset defaults"
+      },
       "debug": {
         "title": "Diary debug",
         "resolvedTimezone": "Resolved timezone",
