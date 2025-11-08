@@ -23,6 +23,8 @@ type AnimatedDiaryAppearance = {
   textureIntensity?: number;
   curvatureIntensity?: number;
   paperMode?: 'plain' | 'lined';
+  shadowIntensity?: number;
+  shadowWidth?: number;
 };
 
 type AnimatedDiaryFlipOptions = {
@@ -110,6 +112,8 @@ type CSSVarStyle = CSSProperties & {
   '--page-curve-angle'?: string;
   '--page-curve-scale'?: string;
   '--page-curve-offset'?: string;
+  '--page-shadow-opacity'?: string;
+  '--page-shadow-width'?: string;
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -168,6 +172,8 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
   const textureIntensity = clamp(appearance?.textureIntensity ?? 0.28, 0, 0.6);
   const curvatureIntensity = clamp(appearance?.curvatureIntensity ?? 0.4, 0, 1);
   const paperMode = appearance?.paperMode ?? 'plain';
+  const shadowIntensity = clamp(appearance?.shadowIntensity ?? 0.35, 0, 1);
+  const shadowWidth = clamp(appearance?.shadowWidth ?? 22, 4, 48);
   const flipDurationMs = clamp(flipOptions?.durationMs ?? FLIP_DURATION_MS, 200, 2000);
   const flipMode: FlipMode = flipOptions?.mode ?? '3d';
   const pageCurveAngle = 2 + curvatureIntensity * 5.5;
@@ -180,7 +186,9 @@ const AnimatedDiary: React.FC<AnimatedDiaryProps> = ({
     '--page-curve-angle': `${pageCurveAngle.toFixed(2)}deg`,
     '--page-curve-scale': pageCurveScale.toFixed(3),
     '--page-curve-offset': `${pageCurveOffset.toFixed(2)}px`,
-  }), [flipDurationMs, pageCurveAngle, pageCurveOffset, pageCurveScale, style, textureIntensity]);
+    '--page-shadow-opacity': shadowIntensity.toFixed(2),
+    '--page-shadow-width': `${shadowWidth.toFixed(0)}px`,
+  }), [flipDurationMs, pageCurveAngle, pageCurveOffset, pageCurveScale, shadowIntensity, shadowWidth, style, textureIntensity]);
 
   useEffect(() => {
     if (spreads.length === 0) {

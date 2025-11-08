@@ -77,6 +77,8 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
   const [texture, setTexture] = useState(0.28);
   const [curvature, setCurvature] = useState(0.45);
   const [paperMode, setPaperMode] = useState<'plain' | 'lined'>('lined');
+  const [shadowIntensity, setShadowIntensity] = useState(0.35);
+  const [shadowWidth, setShadowWidth] = useState(24);
 
   const pages = useMemo(() => sampleEntries.map((entry, index) => {
     if (entry.mode === 'writing') {
@@ -136,6 +138,8 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
           textureIntensity: texture,
           curvatureIntensity: curvature,
           paperMode,
+          shadowIntensity,
+          shadowWidth,
         }}
         flipOptions={{ durationMs: flipDuration, mode: flipMode }}
       />
@@ -212,6 +216,45 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
                 <option value="plain">Liscia</option>
                 <option value="lined">Rigata (quaderno)</option>
               </select>
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-foreground">Ombra pagina (intensità)</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={shadowIntensity}
+                onChange={(event) => setShadowIntensity(Number(event.currentTarget.value))}
+                className="accent-primary"
+              />
+              <span className="text-xs text-muted-foreground">
+                Opacità ombra:
+                {' '}
+                {(shadowIntensity * 100).toFixed(0)}
+                %
+              </span>
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-foreground">Ombra pagina (spessore)</span>
+              <input
+                type="range"
+                min={6}
+                max={48}
+                step={1}
+                value={shadowWidth}
+                onChange={(event) => setShadowWidth(Number(event.currentTarget.value))}
+                className="accent-primary"
+              />
+              <span className="text-xs text-muted-foreground">
+                Larghezza ombra:
+                {' '}
+                {shadowWidth.toFixed(0)}
+                {' '}
+                px
+              </span>
             </label>
           </div>
 

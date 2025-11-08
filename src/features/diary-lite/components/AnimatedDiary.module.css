@@ -95,6 +95,36 @@
   opacity: var(--texture-opacity, 0.28);
 }
 
+.pageLeft::after,
+.pageRight::after {
+  content: '';
+  position: absolute;
+  top: -12%;
+  bottom: -12%;
+  width: var(--page-shadow-width, 24px);
+  pointer-events: none;
+  opacity: var(--page-shadow-opacity, 0.35);
+  transition: opacity 0.2s ease;
+}
+
+.pageLeft::after {
+  right: -2px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, var(--page-shadow-opacity, 0.35)),
+    rgba(0, 0, 0, 0)
+  );
+}
+
+.pageRight::after {
+  left: -2px;
+  background: linear-gradient(
+    270deg,
+    rgba(0, 0, 0, var(--page-shadow-opacity, 0.35)),
+    rgba(0, 0, 0, 0)
+  );
+}
+
 .root[data-paper='lined'] .pagePaper::after,
 .root[data-paper='lined'] .flipFacePaper::after {
   content: '';
