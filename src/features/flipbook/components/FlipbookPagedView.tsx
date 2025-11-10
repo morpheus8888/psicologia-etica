@@ -54,10 +54,12 @@ const FlipbookPagedView: React.FC<FlipbookPagedViewProps> = ({ pages }) => {
           <div className={styles.spread}>
             {settings.twoPage && (
               <div className={cn(styles.page, styles.pageLeft)}>
+                <div className={styles.pageLined} aria-hidden="true" />
                 <div className={styles.pageInner}>{renderNode(currentSpread.left)}</div>
               </div>
             )}
             <div className={cn(styles.page, settings.twoPage ? styles.pageRight : styles.pageSingle)}>
+              <div className={styles.pageLined} aria-hidden="true" />
               <div className={styles.pageInner}>{renderNode(currentSpread.right)}</div>
             </div>
 

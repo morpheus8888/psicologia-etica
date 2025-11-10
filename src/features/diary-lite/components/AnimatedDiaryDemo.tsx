@@ -152,24 +152,19 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
     showToc: false,
   }), [curvature, flipDuration, flipMode, shadowIntensity, shadowWidth, texture, theme]);
 
-  const paperStyle = paperMode === 'lined'
-    ? {
-        backgroundImage:
-          'linear-gradient(180deg, rgba(2, 65, 120, 0.14) 1px, transparent 1px)',
-        backgroundSize: '100% 28px',
-      }
-    : undefined;
+  const flipbookStyle = useMemo<React.CSSProperties | undefined>(() => (paperMode === 'lined'
+    ? { '--flipbook-lined': '1' } as React.CSSProperties
+    : undefined), [paperMode]);
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
-      <div className="w-full" style={paperStyle}>
-        <Flipbook
-          pages={pages}
-          flipbookId={`demo-${locale}`}
-          showSettings={false}
-          settingsOverride={settingsOverride}
-        />
-      </div>
+      <Flipbook
+        pages={pages}
+        flipbookId={`demo-${locale}`}
+        showSettings={false}
+        settingsOverride={settingsOverride}
+        style={flipbookStyle}
+      />
 
       <section className="w-full max-w-4xl rounded-2xl border border-border/60 bg-background/70 p-6 shadow-sm">
         <header className="mb-4 space-y-1">
