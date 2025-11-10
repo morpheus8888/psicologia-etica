@@ -54,4 +54,7 @@ export const buildCssVariables = (settings: FlipbookSettings): Record<string, st
   '--flipbook-thickness': settings.pageThickness.toString(),
   '--flipbook-gutter': settings.gutterDepth.toString(),
   '--flipbook-zoom': settings.zoom.toString(),
+  '--flipbook-texture': (0.18 + settings.shadows * 0.35).toString(),
+  '--flipbook-page-shadow-opacity': (0.25 + settings.shadows * 0.45).toString(),
+  '--flipbook-page-shadow-width': `${Math.max(16, Math.round(settings.gutterDepth * 1.6))}px`,
 });
