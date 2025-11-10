@@ -106,15 +106,17 @@
 .pageLeft {
   border-right: 1px solid rgba(0, 0, 0, 0.08);
   transform-origin: right center;
-  transform: rotateY(calc(-1.8deg * var(--flipbook-curl, 0.7)))
-    translateX(calc(-1px - 0.5px * var(--flipbook-thickness, 4)));
+  transform: rotateY(calc(-1 * var(--flipbook-curve-angle, 2deg)))
+    translateX(calc(-1px - 0.5px * var(--flipbook-thickness, 4) - var(--flipbook-curve-offset, 0px)))
+    scaleX(var(--flipbook-curve-scale, 1));
 }
 
 .pageRight {
   border-left: 1px solid rgba(0, 0, 0, 0.08);
   transform-origin: left center;
-  transform: rotateY(calc(1.8deg * var(--flipbook-curl, 0.7)))
-    translateX(calc(1px + 0.5px * var(--flipbook-thickness, 4)));
+  transform: rotateY(var(--flipbook-curve-angle, 2deg))
+    translateX(calc(1px + 0.5px * var(--flipbook-thickness, 4) + var(--flipbook-curve-offset, 0px)))
+    scaleX(var(--flipbook-curve-scale, 1));
 }
 
 .pageInner {
@@ -180,11 +182,11 @@
     box-shadow: 0 32px 42px rgba(0, 0, 0, 0.22);
   }
   55% {
-    transform: rotateY(calc(-120deg - 8deg * var(--flipbook-curl, 0.7)))
+    transform: rotateY(calc(-120deg - 0.8 * var(--flipbook-curve-angle, 2deg)))
       translateX(calc(-3% - 0.15 * var(--flipbook-gutter, 8)));
   }
   100% {
-    transform: rotateY(calc(-178deg - 10deg * var(--flipbook-curl, 0.7)))
+    transform: rotateY(calc(-178deg - var(--flipbook-curve-angle, 2deg)))
       translateX(calc(-4% - 0.3 * var(--flipbook-gutter, 8)));
     box-shadow: 0 12px 18px rgba(0, 0, 0, 0.14);
   }
@@ -196,11 +198,11 @@
     box-shadow: 0 32px 42px rgba(0, 0, 0, 0.22);
   }
   55% {
-    transform: rotateY(calc(120deg + 8deg * var(--flipbook-curl, 0.7)))
+    transform: rotateY(calc(120deg + 0.8 * var(--flipbook-curve-angle, 2deg)))
       translateX(calc(3% + 0.15 * var(--flipbook-gutter, 8)));
   }
   100% {
-    transform: rotateY(calc(178deg + 10deg * var(--flipbook-curl, 0.7)))
+    transform: rotateY(calc(178deg + var(--flipbook-curve-angle, 2deg)))
       translateX(calc(4% + 0.3 * var(--flipbook-gutter, 8)));
     box-shadow: 0 12px 18px rgba(0, 0, 0, 0.14);
   }
