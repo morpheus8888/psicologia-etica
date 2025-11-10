@@ -194,28 +194,6 @@
           "ocean": "Ocean"
         }
       },
-      "testControls": {
-        "title": "Test controls",
-        "description": "Tweak the diary look and flip behaviour while validating new flows. These settings only persist locally.",
-        "appearanceHeading": "Page appearance",
-        "flipHeading": "Flip behaviour",
-        "fontLabel": "Font",
-        "colorLabel": "Ink color",
-        "lineHeightLabel": "Line height",
-        "lineOffsetLabel": "Top offset",
-        "lineHeightValue": "{value} rem",
-        "lineOffsetValue": "{value} rem",
-        "flipSpeedLabel": "Flip speed",
-        "flipSpeedValue": "{value} ms",
-        "swipeDistanceLabel": "Swipe distance",
-        "swipeDistanceValue": "{value} px",
-        "shadowOpacityLabel": "Shadow opacity",
-        "shadowOpacityValue": "{value}%",
-        "portraitLabel": "Single-page mode",
-        "shadowLabel": "Enable shadows",
-        "cornersLabel": "Show page corners",
-        "reset": "Reset defaults"
-      },
       "debug": {
         "title": "Diary debug",
         "resolvedTimezone": "Resolved timezone",
@@ -568,6 +546,77 @@
     "Onboarding": {
       "selection_title": "Team configuration coming soon",
       "selection_description": "Organization selection is not available yet."
+    }
+  },
+  "flipbook": {
+    "toolbar": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {current} / {total}",
+      "twoPage": "Spread view",
+      "singlePage": "Single page",
+      "modeContinuous": "Continuous scroll",
+      "modePaged": "Paged flip",
+      "zoomOut": "Zoom −",
+      "zoomIn": "Zoom +",
+      "soundOn": "Sound on",
+      "soundOff": "Sound off",
+      "showSettings": "Show settings",
+      "hideSettings": "Hide settings"
+    },
+    "settings": {
+      "title": "Flipbook settings",
+      "description": "Tune animations, rendering and accessibility.",
+      "reset": "Reset preset",
+      "sections": {
+        "animation": "Animation & physics",
+        "style": "Style & materials",
+        "layout": "Layout & content",
+        "accessibility": "Accessibility & input"
+      },
+      "fields": {
+        "animation": "Animation style",
+        "speed": "Speed",
+        "inertia": "Inertia",
+        "snapThreshold": "Snap threshold",
+        "shadows": "Shadows",
+        "curlIntensity": "Curl",
+        "pageThickness": "Page thickness",
+        "gutterDepth": "Gutter",
+        "zoom": "Zoom",
+        "soundVolume": "Sound volume",
+        "theme": "Theme",
+        "showThumbnails": "Show thumbnails",
+        "showBookmarks": "Show bookmarks",
+        "showToc": "Show index",
+        "sound": "Page turn sound",
+        "reduceMotion": "Reduce motion",
+        "continuousScroll": "Continuous scroll",
+        "twoPage": "Double page"
+      },
+      "animationOptions": {
+        "curl": "Curl 3D",
+        "slide": "Slide",
+        "fade": "Fade",
+        "none": "None"
+      },
+      "themes": {
+        "paper": "Classic paper",
+        "dark": "Dark studio",
+        "sepia": "Sepia",
+        "custom": "Custom"
+      },
+      "reduceMotionOptions": {
+        "system": "Match system",
+        "on": "On",
+        "off": "Off"
+      },
+      "modeOptions": {
+        "paged": "Paged flip",
+        "continuous": "Continuous scroll"
+      },
+      "twoPage": "Spread view",
+      "singlePage": "Single page"
     }
   }
 }

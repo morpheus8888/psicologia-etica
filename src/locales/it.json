@@ -194,28 +194,6 @@
           "ocean": "Oceano"
         }
       },
-      "testControls": {
-        "title": "Controlli di test",
-        "description": "Modifica estetica e sfoglio del diario mentre verifichi nuove esperienze. Le preferenze restano solo sul tuo dispositivo.",
-        "appearanceHeading": "Aspetto pagina",
-        "flipHeading": "Comportamento sfoglio",
-        "fontLabel": "Carattere",
-        "colorLabel": "Colore inchiostro",
-        "lineHeightLabel": "Interlinea",
-        "lineOffsetLabel": "Offset superiore",
-        "lineHeightValue": "{value} rem",
-        "lineOffsetValue": "{value} rem",
-        "flipSpeedLabel": "Velocità sfoglio",
-        "flipSpeedValue": "{value} ms",
-        "swipeDistanceLabel": "Sensibilità swipe",
-        "swipeDistanceValue": "{value} px",
-        "shadowOpacityLabel": "Opacità ombre",
-        "shadowOpacityValue": "{value}%",
-        "portraitLabel": "Modalità pagina singola",
-        "shadowLabel": "Ombre attive",
-        "cornersLabel": "Mostra angoli pagina",
-        "reset": "Ripristina default"
-      },
       "debug": {
         "title": "Debug diario",
         "resolvedTimezone": "Timezone calcolata",
@@ -568,6 +546,77 @@
     "Onboarding": {
       "selection_title": "La configurazione del team sarà disponibile a breve",
       "selection_description": "La selezione dell'organizzazione non è ancora disponibile."
+    }
+  },
+  "flipbook": {
+    "toolbar": {
+      "previous": "Precedente",
+      "next": "Successivo",
+      "page": "Pagina {current} / {total}",
+      "twoPage": "Doppia pagina",
+      "singlePage": "Pagina singola",
+      "modeContinuous": "Scroll continuo",
+      "modePaged": "Sfoglia",
+      "zoomOut": "Zoom −",
+      "zoomIn": "Zoom +",
+      "soundOn": "Suono attivo",
+      "soundOff": "Suono disattivato",
+      "showSettings": "Mostra impostazioni",
+      "hideSettings": "Nascondi impostazioni"
+    },
+    "settings": {
+      "title": "Impostazioni flipbook",
+      "description": "Personalizza animazioni, materiali e accessibilità del diario.",
+      "reset": "Ripristina preset",
+      "sections": {
+        "animation": "Animazione e fisica",
+        "style": "Stile e materiali",
+        "layout": "Layout e contenuti",
+        "accessibility": "Accessibilità e input"
+      },
+      "fields": {
+        "animation": "Stile animazione",
+        "speed": "Velocità",
+        "inertia": "Inerzia",
+        "snapThreshold": "Soglia snap",
+        "shadows": "Ombre",
+        "curlIntensity": "Curvatura",
+        "pageThickness": "Spessore pagina",
+        "gutterDepth": "Dorso",
+        "zoom": "Zoom",
+        "soundVolume": "Volume suono",
+        "theme": "Tema",
+        "showThumbnails": "Mostra miniature",
+        "showBookmarks": "Mostra segnalibri",
+        "showToc": "Mostra indice",
+        "sound": "Suono sfoglio",
+        "reduceMotion": "Riduci movimento",
+        "continuousScroll": "Scroll continuo",
+        "twoPage": "Doppia pagina"
+      },
+      "animationOptions": {
+        "curl": "Curva 3D",
+        "slide": "Slide",
+        "fade": "Dissolvenza",
+        "none": "Nessuna"
+      },
+      "themes": {
+        "paper": "Carta classica",
+        "dark": "Studio scuro",
+        "sepia": "Seppia",
+        "custom": "Personalizzato"
+      },
+      "reduceMotionOptions": {
+        "system": "Segui sistema",
+        "on": "Attiva",
+        "off": "Disattiva"
+      },
+      "modeOptions": {
+        "paged": "Sfoglia a pagina",
+        "continuous": "Scroll continuo"
+      },
+      "twoPage": "Doppia pagina",
+      "singlePage": "Pagina singola"
     }
   }
 }

@@ -2,7 +2,8 @@
 
 import React, { useMemo, useState } from 'react';
 
-import { AnimatedDiary } from './AnimatedDiary';
+import type { FlipbookSettings } from '@/features/flipbook';
+import { Flipbook } from '@/features/flipbook';
 
 const sampleEntries = [
   {
@@ -62,13 +63,21 @@ const sampleEntries = [
     subtitle: 'Prova il prototipo',
     content: [
       'Sfoglia le pagine e valuta se l’effetto visivo è sufficiente per sostituire Gradualmente lo StPageFlip tradizionale.',
-      'La struttura del codice è volutamente modulare: puoi riutilizzare `AnimatedDiary` in qualsiasi sezione dell’app.',
+      'La struttura del codice è volutamente modulare: puoi riutilizzare il nuovo Flipbook in qualsiasi sezione dell’app.',
     ],
   },
 ];
 
 type AnimatedDiaryDemoProps = {
   locale: string;
+};
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const themeMap: Record<'classic' | 'nocturne' | 'minimal', FlipbookSettings['theme']> = {
+  classic: 'paper',
+  nocturne: 'dark',
+  minimal: 'sepia',
 };
 
 const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
@@ -130,26 +139,43 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
     );
   }), [locale]);
 
+  const settingsOverride = useMemo<Partial<FlipbookSettings>>(() => ({
+    theme: themeMap[theme],
+    animation: (flipMode === '3d' ? 'curl' : 'slide') as FlipbookSettings['animation'],
+    speed: clamp(720 / flipDuration, 0.2, 2),
+    curlIntensity: clamp(curvature, 0, 1),
+    pageThickness: clamp(Math.round(texture * 12), 0, 12),
+    gutterDepth: clamp(Math.round(shadowWidth / 2), 0, 24),
+    shadows: clamp(shadowIntensity, 0, 1),
+    showThumbnails: false,
+    showBookmarks: false,
+    showToc: false,
+  }), [curvature, flipDuration, flipMode, shadowIntensity, shadowWidth, texture, theme]);
+
+  const paperStyle = paperMode === 'lined'
+    ? {
+        backgroundImage:
+          'linear-gradient(180deg, rgba(2, 65, 120, 0.14) 1px, transparent 1px)',
+        backgroundSize: '100% 28px',
+      }
+    : undefined;
+
   return (
     <div className="flex w-full flex-col items-center gap-6">
-      <AnimatedDiary
-        pages={pages}
-        appearance={{
-          theme,
-          textureIntensity: texture,
-          curvatureIntensity: curvature,
-          paperMode,
-          shadowIntensity,
-          shadowWidth,
-        }}
-        flipOptions={{ durationMs: flipDuration, mode: flipMode }}
-      />
+      <div className="w-full" style={paperStyle}>
+        <Flipbook
+          pages={pages}
+          flipbookId={`demo-${locale}`}
+          showSettings={false}
+          settingsOverride={settingsOverride}
+        />
+      </div>
 
       <section className="w-full max-w-4xl rounded-2xl border border-border/60 bg-background/70 p-6 shadow-sm">
         <header className="mb-4 space-y-1">
           <h3 className="text-lg font-semibold text-foreground">Controlli estetici & flip (demo)</h3>
           <p className="text-sm text-muted-foreground">
-            Questa sezione personalizza solo il prototipo “AnimatedDiary”. Usa i selettori per testare temi,
+            Questa sezione personalizza solo il prototipo Flipbook. Usa i selettori per testare temi,
             curvatura, texture e modalità di flip prima di portarli nel diario reale.
           </p>
         </header>
@@ -161,7 +187,7 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
               <select
                 className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 value={theme}
-                onChange={(event) => setTheme(event.currentTarget.value as typeof theme)}
+                onChange={event => setTheme(event.currentTarget.value as typeof theme)}
               >
                 <option value="classic">Classico (caldo)</option>
                 <option value="nocturne">Nocturne (scuro)</option>
@@ -177,7 +203,7 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
                 max={0.6}
                 step={0.02}
                 value={texture}
-                onChange={(event) => setTexture(Number(event.currentTarget.value))}
+                onChange={event => setTexture(Number(event.currentTarget.value))}
                 className="accent-primary"
               />
               <span className="text-xs text-muted-foreground">
@@ -196,7 +222,7 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
                 max={1}
                 step={0.01}
                 value={curvature}
-                onChange={(event) => setCurvature(Number(event.currentTarget.value))}
+                onChange={event => setCurvature(Number(event.currentTarget.value))}
                 className="accent-primary"
               />
               <span className="text-xs text-muted-foreground">
@@ -212,7 +238,7 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
               <select
                 className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 value={paperMode}
-                onChange={(event) => setPaperMode(event.currentTarget.value as typeof paperMode)}
+                onChange={event => setPaperMode(event.currentTarget.value as typeof paperMode)}
               >
                 <option value="plain">Liscia</option>
                 <option value="lined">Rigata (quaderno)</option>
@@ -227,7 +253,7 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
                 max={1}
                 step={0.01}
                 value={shadowIntensity}
-                onChange={(event) => setShadowIntensity(Number(event.currentTarget.value))}
+                onChange={event => setShadowIntensity(Number(event.currentTarget.value))}
                 className="accent-primary"
               />
               <span className="text-xs text-muted-foreground">
@@ -246,7 +272,7 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
                 max={48}
                 step={1}
                 value={shadowWidth}
-                onChange={(event) => setShadowWidth(Number(event.currentTarget.value))}
+                onChange={event => setShadowWidth(Number(event.currentTarget.value))}
                 className="accent-primary"
               />
               <span className="text-xs text-muted-foreground">
@@ -265,7 +291,7 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
               <select
                 className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
                 value={flipMode}
-                onChange={(event) => setFlipMode(event.currentTarget.value as typeof flipMode)}
+                onChange={event => setFlipMode(event.currentTarget.value as typeof flipMode)}
               >
                 <option value="3d">3D completo (curva)</option>
                 <option value="flat">Flat (flip rapido)</option>
@@ -280,7 +306,7 @@ const AnimatedDiaryDemo: React.FC<AnimatedDiaryDemoProps> = ({ locale }) => {
                 max={2000}
                 step={20}
                 value={flipDuration}
-                onChange={(event) => setFlipDuration(Number(event.currentTarget.value))}
+                onChange={event => setFlipDuration(Number(event.currentTarget.value))}
                 className="accent-primary"
               />
               <span className="text-xs text-muted-foreground">
