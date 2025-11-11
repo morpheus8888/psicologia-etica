@@ -1,6 +1,6 @@
 'use client';
 
-import 'page-flip/dist/page-flip.css';
+import 'page-flip/src/Style/stPageFlip.css';
 import '../flipbook2.css';
 
 import { useTranslations } from 'next-intl';
