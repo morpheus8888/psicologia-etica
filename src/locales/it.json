@@ -682,6 +682,12 @@
         "title": "Grazie per il test",
         "subtitle": "Chiudi con → e condividi feedback"
       }
+    },
+    "controls_panel": {
+      "title": "Controlli rapidi",
+      "description": "Clicca i pulsanti oppure usa le frecce della tastiera per sfogliare.",
+      "previous": "Indietro",
+      "next": "Avanti"
     }
   }
 }

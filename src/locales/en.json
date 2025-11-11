@@ -682,6 +682,12 @@
         "title": "Thanks for testing",
         "subtitle": "Close with → and drop feedback"
       }
+    },
+    "controls_panel": {
+      "title": "Quick controls",
+      "description": "Click the buttons or keep using the arrow keys to flip the diary.",
+      "previous": "Previous",
+      "next": "Next"
     }
   }
 }

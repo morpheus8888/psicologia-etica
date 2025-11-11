@@ -141,6 +141,21 @@ const Flipbook2Demo = ({ locale }: Flipbook2DemoProps) => {
     return () => window.removeEventListener('keydown', handleKeyNavigation);
   }, []);
 
+  const flipUsing = useCallback((direction: 'prev' | 'next') => {
+    const instance = flipRef.current?.pageFlip?.();
+    if (!instance) {
+      return;
+    }
+    if (direction === 'prev') {
+      instance.flipPrev('top');
+    } else {
+      instance.flipNext('top');
+    }
+  }, []);
+
+  const handleButtonPrev = useCallback(() => flipUsing('prev'), [flipUsing]);
+  const handleButtonNext = useCallback(() => flipUsing('next'), [flipUsing]);
+
   const handleEditableInput = useCallback((pageId: string, event: FormEvent<HTMLDivElement>) => {
     const editor = event.currentTarget;
     const value = editor.textContent ?? '';
@@ -328,6 +343,37 @@ const Flipbook2Demo = ({ locale }: Flipbook2DemoProps) => {
                 );
               })}
             </FocusSafeHTMLFlipBook>
+
+            <div
+              className="flipbook2-controls"
+              role="group"
+              aria-label={t('controls_panel.title')}
+            >
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.4em] text-white/60">{t('controls_panel.title')}</p>
+                <p className="text-xs text-white/70">{t('controls_panel.description')}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="flipbook2-control"
+                  onClick={handleButtonPrev}
+                  aria-label={t('controls_panel.previous')}
+                >
+                  <span aria-hidden="true">←</span>
+                  <span>{t('controls_panel.previous')}</span>
+                </button>
+                <button
+                  type="button"
+                  className="flipbook2-control"
+                  onClick={handleButtonNext}
+                  aria-label={t('controls_panel.next')}
+                >
+                  <span>{t('controls_panel.next')}</span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
