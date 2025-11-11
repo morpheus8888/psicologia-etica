@@ -1,0 +1,113 @@
+.flipbook2-stage {
+  position: relative;
+  width: 100%;
+  padding: 2rem;
+  background: radial-gradient(circle at 10% 20%, rgba(32, 40, 95, 0.35), transparent 50%),
+    radial-gradient(circle at 80% 0%, rgba(3, 126, 183, 0.35), transparent 40%),
+    radial-gradient(circle at 50% 70%, rgba(244, 114, 182, 0.18), transparent 55%), #05050d;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 35px 120px rgba(5, 4, 15, 0.75);
+}
+
+.flipbook2-viewer {
+  width: 100%;
+  border-radius: 32px;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 25px 80px rgba(3, 6, 23, 0.65);
+}
+
+.flipbook2-book {
+  width: 100%;
+  height: 100%;
+}
+
+.flipbook2-book .page {
+  background: transparent;
+  box-shadow: none;
+}
+
+.flipbook2-page {
+  height: 100%;
+  width: 100%;
+  border-radius: 28px;
+  padding: 2.25rem;
+  box-sizing: border-box;
+  background: linear-gradient(140deg, #f9f5eb 0%, #f4e7cd 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(107, 73, 33, 0.05),
+    0 25px 65px rgba(15, 23, 42, 0.25);
+}
+
+.flipbook2-page--cover {
+  background: linear-gradient(135deg, #141629, #3d2c53 60%, #8f3c83);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 12px rgba(0, 0, 0, 0.35),
+    0 35px 80px rgba(4, 5, 10, 0.55);
+}
+
+.flipbook2-page--back {
+  background: linear-gradient(135deg, #05060f, #141a2f 70%, #2d2b55);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 12px rgba(0, 0, 0, 0.45),
+    0 35px 80px rgba(4, 5, 10, 0.55);
+}
+
+.flipbook2-page--editable {
+  background: repeating-linear-gradient(
+      180deg,
+      rgba(244, 229, 210, 0.6) 0,
+      rgba(244, 229, 210, 0.6) 28px,
+      rgba(253, 245, 236, 0.9) 28px,
+      rgba(253, 245, 236, 0.9) 58px
+    ),
+    linear-gradient(145deg, #fbf8f1, #f3e0c9);
+}
+
+.flipbook2-editor {
+  flex: 1;
+  min-height: 320px;
+  width: 100%;
+  border-radius: 20px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  padding: 1.5rem 1.75rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: #0f172a;
+  background: repeating-linear-gradient(
+      180deg,
+      rgba(138, 161, 210, 0.18) 0,
+      rgba(138, 161, 210, 0.18) 32px,
+      rgba(255, 255, 255, 0.6) 32px,
+      rgba(255, 255, 255, 0.6) 64px
+    ),
+    rgba(255, 255, 255, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 0 0 999px rgba(255, 255, 255, 0.07);
+  outline: none;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.flipbook2-editor:focus {
+  border-color: rgba(249, 115, 22, 0.8);
+  box-shadow:
+    0 0 0 3px rgba(249, 115, 22, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.flipbook2-editor[data-has-content='false']::before {
+  content: attr(data-placeholder);
+  color: rgba(15, 23, 42, 0.45);
+  pointer-events: none;
+}

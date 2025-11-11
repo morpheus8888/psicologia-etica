@@ -618,5 +618,70 @@
       "twoPage": "Spread view",
       "singlePage": "Single page"
     }
+  },
+  "Flipbook2Page": {
+    "badge": "Prototype",
+    "title": "Flipbook 2 — StPageFlip testbed",
+    "description": "A third diary playground that mirrors the official StPageFlip demo: keyboard-only navigation with writable spreads.",
+    "keyboard_hint": "Use the ← and → arrow keys to flip through the spreads.",
+    "keyboard_secondary": "While typing you can still use the arrows for the caret: click outside or press Esc before using ←/→ to change spread.",
+    "bullets": [
+      "Layout, materials and shadows follow the public StPageFlip demo.",
+      "Mouse, tap and swipe gestures are disabled so only the keyboard drives the book.",
+      "Editable pages save their content locally to prevent accidental losses on refresh."
+    ],
+    "stats": {
+      "locale_label": "Active locale",
+      "pages_label": "Total pages"
+    },
+    "pages": {
+      "cover": {
+        "title": "Flipbook • 02",
+        "subtitle": "Playground notebook",
+        "footnote": "Made with StPageFlip"
+      },
+      "intro": {
+        "heading": "Why clone the demo",
+        "body": [
+          "This variation mirrors the proportions and materials from the official example to confirm the original feel survives our custom styles.",
+          "It also works as a visual benchmark against the CSS-only prototypes."
+        ]
+      },
+      "controls": {
+        "heading": "Arrow keys only",
+        "body": [
+          "Corner clicks and swipe gestures are ignored: only ArrowLeft / ArrowRight reach PageFlip.",
+          "A global listener forwards the keys to flipPrev / flipNext while we keep the stock animation.",
+          "Editors stay interactive because we avoid destroying DOM nodes during the animation."
+        ]
+      },
+      "gratitude": {
+        "heading": "Daily wins",
+        "subheading": "Capture positives",
+        "placeholder": "Write down three positive things that happened today…"
+      },
+      "notes": {
+        "heading": "Quick notes",
+        "subheading": "Drafts & ideas",
+        "placeholder": "Jot anything here — it stays on this device."
+      },
+      "free": {
+        "heading": "Blank canvas",
+        "subheading": "Flipbook 02",
+        "placeholder": "Sketch, outline or paste snippets while testing."
+      },
+      "summary": {
+        "heading": "What to observe",
+        "body": [
+          "How the default shadows react to the customized palette and gradients.",
+          "Whether the persisted content survives refreshes and multiple flips.",
+          "Potential glitches when the viewport collapses to portrait mode."
+        ]
+      },
+      "back": {
+        "title": "Thanks for testing",
+        "subtitle": "Close with → and drop feedback"
+      }
+    }
   }
 }

@@ -618,5 +618,70 @@
       "twoPage": "Doppia pagina",
       "singlePage": "Pagina singola"
     }
+  },
+  "Flipbook2Page": {
+    "badge": "Prototipo",
+    "title": "Flipbook 2 — test StPageFlip",
+    "description": "Terzo diario di prova: replica la demo ufficiale di StPageFlip, limita lo sfoglio ai tasti direzionali e lascia le pagine editabili.",
+    "keyboard_hint": "Usa esclusivamente i tasti direzionali ← e → per cambiare spread.",
+    "keyboard_secondary": "Quando stai scrivendo puoi continuare a usare le frecce per muovere il cursore: sfoglia cliccando fuori dall'editor oppure premi Esc prima di usare ←/→.",
+    "bullets": [
+      "Layout, materiali e ombre riprendono la demo pubblica della libreria.",
+      "Mouse, tap e swipe sono disattivati: controlli lo sfoglio solo da tastiera.",
+      "Le pagine editabili salvano il contenuto in locale così non perdi il testo durante i refresh."
+    ],
+    "stats": {
+      "locale_label": "Locale attivo",
+      "pages_label": "Pagine totali"
+    },
+    "pages": {
+      "cover": {
+        "title": "Flipbook • 02",
+        "subtitle": "Archivio di prove e appunti",
+        "footnote": "Made with StPageFlip"
+      },
+      "intro": {
+        "heading": "Perché un clone della demo",
+        "body": [
+          "Questa variante riproduce proporzioni e materiali dell'esempio ufficiale per verificare se la libreria rimane stabile con il nostro stack.",
+          "Serve anche come benchmark visivo per confrontare i prototipi CSS basati su animazioni personalizzate."
+        ]
+      },
+      "controls": {
+        "heading": "Tasti direzionali soltanto",
+        "body": [
+          "I click sugli angoli e gli swipe vengono ignorati: solo ArrowLeft / ArrowRight comandano PageFlip.",
+          "Un listener globale intercetta le frecce e richiama flipPrev / flipNext mantenendo l'animazione originale.",
+          "Gli editor rimangono interattivi perché non distruggiamo i nodi DOM durante lo sfoglio."
+        ]
+      },
+      "gratitude": {
+        "heading": "Pagina libera",
+        "subheading": "Traccia le vittorie di oggi",
+        "placeholder": "Annota tre cose positive accadute oggi…"
+      },
+      "notes": {
+        "heading": "Appunti rapidi",
+        "subheading": "Bozze e idee",
+        "placeholder": "Scrivi qui liberamente, il testo resta nel browser."
+      },
+      "free": {
+        "heading": "Canvas vuoto",
+        "subheading": "Flipbook 02",
+        "placeholder": "Disegna, elenca o incolla frammenti per questo test."
+      },
+      "summary": {
+        "heading": "Cosa osservare",
+        "body": [
+          "L’allineamento delle ombre rispetto alla luce centrale e ai gradienti personalizzati.",
+          "La persistenza locale del testo dopo un refresh o dopo aver sfogliato più spread.",
+          "Eventuali glitch nella modalità portrait quando la finestra diventa stretta."
+        ]
+      },
+      "back": {
+        "title": "Grazie per il test",
+        "subtitle": "Chiudi con → e condividi feedback"
+      }
+    }
   }
 }

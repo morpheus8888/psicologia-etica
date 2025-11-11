@@ -88,3 +88,8 @@ Le variabili CSS sono applicate sul contenitore e controllano tema/sfocature (`-
 - UI: prevedi una Playwright suite (`tests/flipbook.spec.ts`) per gesture + impostazioni quando il componente verrà connesso al diario completo.
 
 Per ulteriori note vedere anche `docs/react-pageflip.md` (per la compatibilità con la versione legacy). Quando rimuoviamo completamente StPageFlip, aggiornare questo documento con i nuovi flussi QA.
+
+## Prototipi legacy StPageFlip
+
+- `/[locale]/flipbook` → ancorato al prototipo CSS 3D (`AnimatedDiaryDemo`). Usa il nuovo motore React senza dipendenze esterne.
+- `/[locale]/flipbook2` → replica visiva della demo ufficiale StPageFlip. Lo sfoglio è limitato alle frecce ←/→, il mouse è disattivato e le pagine `contentEditable` salvano il testo in locale (`flipbook2-page-{id}`).
