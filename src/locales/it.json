@@ -689,5 +689,112 @@
       "previous": "Indietro",
       "next": "Avanti"
     }
+  },
+  "Flipbook3Page": {
+    "badge": "Prototipo",
+    "title": "Flipbook 3 — diario solo pulsanti",
+    "description": "Terzo diario di prova centrato sulla grafica: 30 pagine scrivibili, navigazione limitata alle due frecce.",
+    "hint": {
+      "title": "Navigazione",
+      "body": "Sfoglia soltanto con i pulsanti ← / → qui sotto; i clic o tap sul libro non hanno effetto."
+    },
+    "bullets": [
+      "Usa StPageFlip in modalità HTML per validare materiali, ombre e proporzioni.",
+      "Flip via mouse o touch disattivato; solo i due pulsanti richiamano flipPrev / flipNext.",
+      "Trenta pagine semplici di diario, tutte contentEditable per i test visivi."
+    ],
+    "stats": {
+      "locale_label": "Locale attivo",
+      "pages_label": "Pagine totali"
+    },
+    "pages": {
+      "cover": {
+        "title": "Flipbook • 03",
+        "subtitle": "Diario solo pulsanti",
+        "footnote": "Prototipo StPageFlip"
+      },
+      "diary": {
+        "heading": "Note personali",
+        "subheading": "Pagina {page}",
+        "placeholder": "Scrivi qui i tuoi pensieri…"
+      },
+      "back": {
+        "title": "Fine del taccuino",
+        "subtitle": "Continua a esplorare con le frecce"
+      }
+    },
+    "controls_panel": {
+      "title": "Navigazione",
+      "description": "Usa i pulsanti per muoverti a sinistra o destra; le gesture sono disattivate.",
+      "previous": "Indietro",
+      "next": "Avanti"
+    }
+  },
+  "Flipbook5Page": {
+    "badge": "Prototipo",
+    "title": "Flipbook 5 — diario grafico",
+    "description": "Flipbook solo pulsanti con slot per sfondo/copertine e pagine miste scrivibili/bloccate.",
+    "hint": {
+      "title": "Copertine e sfondo",
+      "body": "Inserisci i JPG in /public/flipbook5 con i nomi qui sotto: il layout li applica automaticamente."
+    },
+    "bullets": [
+      "Lo sfoglio avviene solo con Avanti/Indietro; click e swipe sono disattivati.",
+      "Copertine rigide personalizzabili con JPG front/back; dentro mix di pagine scrivibili e uno slot bloccato per il calendario.",
+      "Sfondo globale e texture carta caricati da /public/flipbook5."
+    ],
+    "stats": {
+      "locale_label": "Locale attivo",
+      "pages_label": "Pagine totali"
+    },
+    "assets": {
+      "title": "Slot immagini",
+      "hint": "Metti i JPG in /public/flipbook5: verranno applicati a scena, copertine rigide e texture della carta.",
+      "background": "Sfondo scena",
+      "cover_front": "Copertina rigida iniziale",
+      "cover_back": "Copertina rigida finale",
+      "paper": "Texture pagine"
+    },
+    "controls_panel": {
+      "title": "Navigazione",
+      "description": "Usa solo i due pulsanti per sfogliare; click e swipe sono ignorati.",
+      "assets": "Le immagini vengono caricate automaticamente se presenti.",
+      "previous": "Indietro",
+      "next": "Avanti"
+    },
+    "pages": {
+      "cover": {
+        "title": "Flipbook • 05",
+        "subtitle": "Involucro grafico pronto a sostituire il diario",
+        "footnote": "Sostituisci cover-front.jpg per usare la copertina reale"
+      },
+      "mood": {
+        "title": "Moodboard / Sfondo",
+        "body": "Pagina statica per osservare come convivono sfondo globale e copertina. Cambia i JPG per provare l'atmosfera finale.",
+        "footnote": "Pagina statica"
+      },
+      "note": {
+        "heading": "Pagina scrivibile {page}",
+        "editable": "Scrivibile",
+        "placeholder": "Scrivi qui per provare lo spread editabile…"
+      },
+      "calendar": {
+        "heading": "Slot calendario bloccato",
+        "subheading": "Pagina non editabile",
+        "hint": "Più avanti qui metteremo il calendario o un'immagine dedicata."
+      },
+      "summary": {
+        "heading": "Cosa verificare",
+        "items": [
+          "Sfondi e copertine vengono letti da /public/flipbook5 senza toccare il codice.",
+          "Solo i due pulsanti attivano flipPrev / flipNext; il libro non reagisce ai click.",
+          "Le pagine scrivibili mantengono il focus; quelle statiche restano in sola lettura."
+        ]
+      },
+      "back": {
+        "title": "Copertina finale",
+        "subtitle": "Usa cover-back.jpg per chiudere il diario"
+      }
+    }
   }
 }

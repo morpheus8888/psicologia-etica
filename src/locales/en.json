@@ -689,5 +689,112 @@
       "previous": "Previous",
       "next": "Next"
     }
+  },
+  "Flipbook3Page": {
+    "badge": "Prototype",
+    "title": "Flipbook 3 — button-only diary",
+    "description": "Third diary sandbox focused on visuals: 30 writable pages and navigation limited to the two arrows.",
+    "hint": {
+      "title": "Navigation",
+      "body": "Flip pages only with the ← / → buttons below; clicks and taps on the book are ignored."
+    },
+    "bullets": [
+      "Uses StPageFlip in HTML mode to validate materials, shadows and proportions.",
+      "Mouse and touch flipping are disabled; only the two buttons trigger flipPrev / flipNext.",
+      "Thirty plain diary spreads, each page is contentEditable for quick visual checks."
+    ],
+    "stats": {
+      "locale_label": "Active locale",
+      "pages_label": "Total pages"
+    },
+    "pages": {
+      "cover": {
+        "title": "Flipbook • 03",
+        "subtitle": "Button-only diary",
+        "footnote": "StPageFlip prototype"
+      },
+      "diary": {
+        "heading": "Personal notes",
+        "subheading": "Page {page}",
+        "placeholder": "Write your thoughts here…"
+      },
+      "back": {
+        "title": "End of notebook",
+        "subtitle": "Keep exploring with the arrows"
+      }
+    },
+    "controls_panel": {
+      "title": "Navigation",
+      "description": "Use the buttons to move left or right; gestures are disabled.",
+      "previous": "Previous",
+      "next": "Next"
+    }
+  },
+  "Flipbook5Page": {
+    "badge": "Prototype",
+    "title": "Flipbook 5 — graphic diary shell",
+    "description": "Button-only flipbook with background/cover slots and mixed writable/static spreads.",
+    "hint": {
+      "title": "Covers & background",
+      "body": "Drop JPGs in /public/flipbook5 with the names below; the layout applies them automatically."
+    },
+    "bullets": [
+      "Two buttons drive all navigation; mouse and touch flips are disabled.",
+      "Front/back covers accept rigid artwork; interior pages mix editable notes and locked slots (calendar placeholder).",
+      "Stage supports a global background plus a paper texture for pages."
+    ],
+    "stats": {
+      "locale_label": "Active locale",
+      "pages_label": "Total pages"
+    },
+    "assets": {
+      "title": "Asset slots",
+      "hint": "Place JPG files in /public/flipbook5 to skin the stage, the rigid covers and the paper texture.",
+      "background": "Background",
+      "cover_front": "Front cover",
+      "cover_back": "Back cover",
+      "paper": "Paper texture"
+    },
+    "controls_panel": {
+      "title": "Navigation",
+      "description": "Use only the two buttons to flip the diary; clicks and swipes are ignored.",
+      "assets": "Covers and textures auto-load if the files exist.",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "pages": {
+      "cover": {
+        "title": "Flipbook • 05",
+        "subtitle": "Graphic shell, ready for the main diary",
+        "footnote": "Load cover-front.jpg to replace this texture"
+      },
+      "mood": {
+        "title": "Moodboard / Background",
+        "body": "This static page shows how the global background and the cover texture coexist. Swap the stage and cover JPGs to preview the final mood.",
+        "footnote": "Static page"
+      },
+      "note": {
+        "heading": "Writable page {page}",
+        "editable": "Editable",
+        "placeholder": "Type here to test the editable spread…"
+      },
+      "calendar": {
+        "heading": "Locked calendar slot",
+        "subheading": "Non-editable spread",
+        "hint": "Replace with a calendar image or widget later; for now it stays read-only."
+      },
+      "summary": {
+        "heading": "What to verify",
+        "items": [
+          "Background and cover JPGs load from /public/flipbook5 without code changes.",
+          "Only the two buttons trigger flipPrev / flipNext; clicks on the book do nothing.",
+          "Editable pages keep focus while typing; static pages stay read-only."
+        ]
+      },
+      "back": {
+        "title": "Back cover",
+        "subtitle": "Use cover-back.jpg for the rigid ending"
+      }
+    }
   }
 }
