@@ -796,5 +796,72 @@
         "subtitle": "Use cover-back.jpg for the rigid ending"
       }
     }
+  },
+  "Flipbook6Page": {
+    "badge": "Prototype",
+    "title": "Flipbook 6 — self-contained graphic mock",
+    "description": "Custom CSS flip effect (no StPageFlip) with editable and locked pages, ready to skin with your JPGs.",
+    "hint": {
+      "title": "Covers & background",
+      "body": "Drop JPGs in /public/flipbook6 with the names below; they apply automatically."
+    },
+    "bullets": [
+      "Built without the PageFlip wrapper so the layout always renders (simple CSS 3D tilt on flip).",
+      "Front/back covers + stage + paper texture pulled from /public/flipbook6 when present.",
+      "Three editable note pages plus a locked calendar slot to simulate non-writable spreads."
+    ],
+    "stats": {
+      "locale_label": "Active locale",
+      "pages_label": "Total pages"
+    },
+    "assets": {
+      "title": "Asset slots",
+      "hint": "Place JPG files in /public/flipbook6 to skin stage, rigid covers and paper texture.",
+      "background": "Background",
+      "cover_front": "Front cover",
+      "cover_back": "Back cover",
+      "paper": "Paper texture"
+    },
+    "controls_panel": {
+      "title": "Navigation",
+      "description": "Use the two buttons; clicks on the book itself are ignored.",
+      "assets": "Images auto-load if present.",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "pages": {
+      "cover": {
+        "title": "Flipbook • 06",
+        "subtitle": "CSS-only shell, ready to replace the diary",
+        "footnote": "Swap cover-front.jpg to use the real artwork"
+      },
+      "mood": {
+        "title": "Moodboard / Background",
+        "body": "Static page to see how the global background and cover texture blend. Replace JPGs to preview the final mood.",
+        "footnote": "Static page"
+      },
+      "note": {
+        "heading": "Writable page {page}",
+        "editable": "Editable",
+        "placeholder": "Type here to test the editable spread…"
+      },
+      "calendar": {
+        "heading": "Locked calendar slot",
+        "subheading": "Non-editable spread",
+        "hint": "Later we can drop a calendar image or widget here."
+      },
+      "summary": {
+        "heading": "What to verify",
+        "items": [
+          "Covers and background load from /public/flipbook6 without touching code.",
+          "Only the two buttons flip spreads; the book ignores clicks.",
+          "Editable pages keep focus while typing; calendar/static pages stay read-only."
+        ]
+      },
+      "back": {
+        "title": "Back cover",
+        "subtitle": "Use cover-back.jpg to close the diary"
+      }
+    }
   }
 }

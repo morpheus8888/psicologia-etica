@@ -1,0 +1,276 @@
+.flipbook6-stage {
+  --flipbook6-bg: url('/flipbook6/background.jpg');
+  --flipbook6-cover-front: url('/flipbook6/cover-front.jpg');
+  --flipbook6-cover-back: url('/flipbook6/cover-back.jpg');
+  --flipbook6-paper: url('/flipbook6/paper-texture.jpg');
+
+  position: relative;
+  width: 100%;
+  padding: 2rem;
+  background: radial-gradient(circle at 12% 18%, rgba(104, 181, 255, 0.25), transparent 45%),
+    radial-gradient(circle at 85% 14%, rgba(241, 162, 72, 0.2), transparent 40%),
+    linear-gradient(145deg, rgba(7, 13, 29, 0.92), rgba(11, 20, 38, 0.92)), var(--flipbook6-bg);
+  background-blend-mode: screen, screen, normal, soft-light;
+  background-size: cover;
+  border-radius: 32px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 30px 80px rgba(0, 0, 0, 0.45);
+}
+
+.flipbook6-stage::after {
+  content: '';
+  position: absolute;
+  inset: 1.25rem;
+  border-radius: 28px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.flipbook6-viewer {
+  width: 100%;
+  border-radius: 28px;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 20px 60px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.flipbook6-book {
+  position: relative;
+  perspective: 2400px;
+  min-height: 560px;
+}
+
+.flipbook6-spread {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition:
+    transform 0.6s ease,
+    opacity 0.6s ease;
+}
+
+.flipbook6-spread.flipping-next {
+  transform: rotateY(-8deg) translateX(-12px);
+  opacity: 0.96;
+}
+
+.flipbook6-spread.flipping-prev {
+  transform: rotateY(8deg) translateX(12px);
+  opacity: 0.96;
+}
+
+.flipbook6-page {
+  position: relative;
+  height: 100%;
+  border-radius: 26px;
+  padding: 1.75rem;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(246, 246, 241, 0.95)), var(--flipbook6-paper);
+  background-blend-mode: multiply;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(107, 114, 128, 0.08),
+    0 20px 60px rgba(15, 23, 42, 0.25);
+  color: #0f172a;
+  overflow: hidden;
+}
+
+.flipbook6-page--cover {
+  color: #f6f7fb;
+  background-image: linear-gradient(135deg, rgba(9, 12, 24, 0.55), rgba(12, 19, 41, 0.25)),
+    linear-gradient(120deg, #1c2644, #2b3a6a 55%, #6e5db8), var(--flipbook6-cover-front);
+  background-blend-mode: overlay, normal, multiply;
+  background-size: cover;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    0 35px 85px rgba(0, 0, 0, 0.45);
+}
+
+.flipbook6-page--back {
+  color: #f7f9ff;
+  background-image: linear-gradient(135deg, rgba(6, 10, 20, 0.75), rgba(7, 8, 15, 0.8)),
+    linear-gradient(140deg, #0b101f, #1b223b 65%, #2c384f), var(--flipbook6-cover-back);
+  background-blend-mode: overlay, normal, multiply;
+  background-size: cover;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45),
+    0 35px 85px rgba(0, 0, 0, 0.5);
+}
+
+.flipbook6-page--note {
+  background-image: repeating-linear-gradient(
+      180deg,
+      rgba(14, 116, 144, 0.08) 0,
+      rgba(14, 116, 144, 0.08) 32px,
+      rgba(255, 255, 255, 0.7) 32px,
+      rgba(255, 255, 255, 0.7) 64px
+    ),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.94), rgba(247, 246, 240, 0.96)), var(--flipbook6-paper);
+  background-blend-mode: normal, multiply, multiply;
+}
+
+.flipbook6-page--calendar {
+  background-image: linear-gradient(120deg, rgba(255, 255, 255, 0.95), rgba(245, 246, 250, 0.95)),
+    var(--flipbook6-paper);
+  background-blend-mode: screen, multiply;
+}
+
+.flipbook6-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.flipbook6-editor {
+  flex: 1;
+  min-height: 260px;
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  padding: 1.2rem 1.4rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #0f172a;
+  background: repeating-linear-gradient(
+      180deg,
+      rgba(161, 191, 255, 0.24) 0,
+      rgba(161, 191, 255, 0.24) 34px,
+      rgba(255, 255, 255, 0.85) 34px,
+      rgba(255, 255, 255, 0.85) 68px
+    ),
+    rgba(255, 255, 255, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 0 0 999px rgba(255, 255, 255, 0.05);
+  outline: none;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.flipbook6-editor:focus {
+  border-color: rgba(16, 185, 129, 0.9);
+  box-shadow:
+    0 0 0 3px rgba(16, 185, 129, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.flipbook6-editor[data-has-content='false']::before {
+  content: attr(data-placeholder);
+  color: rgba(15, 23, 42, 0.45);
+  pointer-events: none;
+}
+
+.flipbook6-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 1rem;
+  border-radius: 18px;
+  border: 1px dashed rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.flipbook6-calendar-grid span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  background: rgba(14, 165, 233, 0.08);
+  border-radius: 12px;
+  padding: 0.35rem 0.25rem;
+  border: 1px solid rgba(14, 165, 233, 0.18);
+}
+
+.flipbook6-controls {
+  margin-top: 1.25rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(145deg, rgba(10, 15, 30, 0.9), rgba(16, 24, 45, 0.9));
+  color: #e2e8f0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 15px 50px rgba(0, 0, 0, 0.35);
+}
+
+.flipbook6-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 1.15rem;
+  border-radius: 999px;
+  border: 1px solid rgba(226, 232, 240, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.flipbook6-control:hover {
+  transform: translateY(-1px);
+  border-color: rgba(94, 234, 212, 0.5);
+  background: linear-gradient(120deg, rgba(94, 234, 212, 0.22), rgba(59, 130, 246, 0.18));
+  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.18);
+}
+
+.flipbook6-control:active {
+  transform: translateY(0);
+  border-color: rgba(94, 234, 212, 0.9);
+}
+
+.flipbook6-asset-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.65rem;
+}
+
+.flipbook6-asset {
+  border-radius: 14px;
+  padding: 0.65rem 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+}
+
+.flipbook6-asset code {
+  display: inline-block;
+  margin-top: 0.2rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 0.8rem;
+}

@@ -796,5 +796,72 @@
         "subtitle": "Usa cover-back.jpg per chiudere il diario"
       }
     }
+  },
+  "Flipbook6Page": {
+    "badge": "Prototipo",
+    "title": "Flipbook 6 — mock grafico autonomo",
+    "description": "Effetto flip in CSS (senza StPageFlip) con pagine scrivibili e bloccate, pronto da skinnare con i tuoi JPG.",
+    "hint": {
+      "title": "Copertine e sfondo",
+      "body": "Inserisci i JPG in /public/flipbook6 con i nomi indicati: vengono applicati automaticamente."
+    },
+    "bullets": [
+      "Costruito senza il wrapper PageFlip, render sempre visibile con un tilt 3D CSS semplice.",
+      "Copertine rigide + sfondo scena + texture carta lette da /public/flipbook6 se presenti.",
+      "Tre pagine scrivibili e uno slot calendario bloccato per simulare spread non editabili."
+    ],
+    "stats": {
+      "locale_label": "Locale attivo",
+      "pages_label": "Pagine totali"
+    },
+    "assets": {
+      "title": "Slot immagini",
+      "hint": "Metti i JPG in /public/flipbook6: scena, copertine rigide e texture carta verranno applicate.",
+      "background": "Sfondo scena",
+      "cover_front": "Copertina rigida iniziale",
+      "cover_back": "Copertina rigida finale",
+      "paper": "Texture pagine"
+    },
+    "controls_panel": {
+      "title": "Navigazione",
+      "description": "Usa i due pulsanti; i click sul libro non hanno effetto.",
+      "assets": "Le immagini si caricano da sole se presenti.",
+      "previous": "Indietro",
+      "next": "Avanti"
+    },
+    "pages": {
+      "cover": {
+        "title": "Flipbook • 06",
+        "subtitle": "Shell solo CSS pronta a sostituire il diario",
+        "footnote": "Sostituisci cover-front.jpg con l'artwork reale"
+      },
+      "mood": {
+        "title": "Moodboard / Sfondo",
+        "body": "Pagina statica per vedere come convivono sfondo globale e copertina. Cambia i JPG per provare l'atmosfera finale.",
+        "footnote": "Pagina statica"
+      },
+      "note": {
+        "heading": "Pagina scrivibile {page}",
+        "editable": "Scrivibile",
+        "placeholder": "Scrivi qui per provare lo spread editabile…"
+      },
+      "calendar": {
+        "heading": "Slot calendario bloccato",
+        "subheading": "Pagina non editabile",
+        "hint": "Più avanti qui inseriremo un calendario o un'immagine dedicata."
+      },
+      "summary": {
+        "heading": "Cosa verificare",
+        "items": [
+          "Copertine e sfondo vengono letti da /public/flipbook6 senza toccare il codice.",
+          "Solo i due pulsanti girano le pagine; il libro ignora i click.",
+          "Le pagine scrivibili mantengono il focus; quelle statiche restano in sola lettura."
+        ]
+      },
+      "back": {
+        "title": "Copertina finale",
+        "subtitle": "Usa cover-back.jpg per chiudere il diario"
+      }
+    }
   }
 }
